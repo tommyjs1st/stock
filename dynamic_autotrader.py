@@ -107,6 +107,7 @@ class KISAutoTrader:
 
     def __init__(self, config_path: str = "config.yaml"):
         """KIS API 기반 모멘텀 자동매매 시스템"""
+
         # 먼저 필수 속성들을 초기화
         self.token_file = "token.json"  # 기존 프로그램과 동일한 파일명
         self.access_token = None
@@ -116,6 +117,16 @@ class KISAutoTrader:
         self.last_token_time = None
         self.strategy_map = {}  # 종목별 전략 매핑
         
+        self.skip_stock_name_api = False
+        self.api_error_count = 0
+
+        # MACD 설정 추가
+        self.macd_fast = 12
+        self.macd_slow = 26
+        self.macd_signal = 9
+        self.macd_cross_lookback = 3
+        self.macd_trend_confirmation = 5
+
         # 종목명 캐시 초기화
         self.stock_names = {}
         self.stock_names_file = "stock_names.json"
@@ -178,6 +189,11 @@ class KISAutoTrader:
         self.skip_stock_name_api = False
         self.api_error_count = 0
 
+        
+        # MACD 골든크로스 감지 설정
+        self.macd_cross_lookback = 3  # 몇 봉 전까지 크로스 확인
+        self.macd_trend_confirmation = 5  # 추세 확인 기간
+
     def load_position_settings(self):
         """포지션 관리 설정 로드"""
         try:
@@ -237,7 +253,7 @@ class KISAutoTrader:
 
             # 거래 설정
             trading_config = config['trading']
-            self.max_symbols = trading_config.get('max_symbols', 4)
+            self.max_symbols = trading_config.get('max_symbols', 5)
             self.max_position_ratio = trading_config['max_position_ratio']
             self.daily_loss_limit = trading_config['daily_loss_limit']
             self.stop_loss_pct = trading_config['stop_loss_pct']
@@ -377,7 +393,7 @@ class KISAutoTrader:
                 'account_no': 'YOUR_ACCOUNT_NO'
             },
             'trading': {
-                'max_symbols': 4,
+                'max_symbols': 5,
                 'max_position_ratio': 0.1,
                 'daily_loss_limit': 0.02,
                 'stop_loss_pct': 0.05,
@@ -2102,6 +2118,7 @@ class KISAutoTrader:
             additional_candidates = [
                 "281820",  # 케이씨텍
                 "272210",  # 한화시스템
+                "348210",  # 넥스틴
             ]
             
             # 중복 제거
@@ -2203,60 +2220,70 @@ class KISAutoTrader:
             self.logger.error(f"종목명 저장 실패: {e}")
     
     def get_stock_name(self, code: str) -> str:
-
-        """종목 코드로 종목명 조회 (캐시 우선, 없으면 API)"""
+        """안전한 종목명 조회 - 속성 오류 방지"""
+        
+        # 필수 속성들 확인 및 초기화
+        if not hasattr(self, 'skip_stock_name_api'):
+            self.skip_stock_name_api = False
+        if not hasattr(self, 'api_error_count'):
+            self.api_error_count = 0
+        
         # 1. 메모리 캐시 확인
         if code in self.stock_names and self.stock_names[code]:
-            self.logger.debug(f"📋 캐시에서 종목명 조회: {code} -> {self.stock_names[code]}")
             return self.stock_names[code]
         
-        # 하드코딩 사전 확인
-        hardcoded = {
+        # 2. 하드코딩된 사전 확인
+        hardcoded_stocks = {
+            '005930': '삼성전자',
+            '035720': '카카오', 
+            '000660': 'SK하이닉스',
             '042660': '한화오션',
-            '062040': '산일전기', 
+            '062040': '산일전기',
             '272210': '한화시스템',
-            '161580': '필옵틱스'
+            '161580': '필옵틱스',
+            '281820': '케이씨텍',
+            '014620': '성광밴드',
+            '278470': '에이피알'
         }
-    
-        if code in hardcoded:
-            self.stock_names[code] = hardcoded[code]
+        
+        if code in hardcoded_stocks:
+            name = hardcoded_stocks[code]
+            self.stock_names[code] = name
             self.save_stock_names()
-            return hardcoded[code]
-
-        # API 오류가 많으면 건너뛰기
+            self.logger.info(f"✅ 하드코딩에서 종목명 조회: {code} -> {name}")
+            return name
+        
+        # 3. API 오류가 많으면 건너뛰기
         if self.skip_stock_name_api or self.api_error_count >= 3:
-            self.logger.warning(f"⚠️ {code} 종목명 API 건너뛰기")
+            self.logger.warning(f"⚠️ {code} 종목명 API 건너뛰기 (오류 {self.api_error_count}회)")
             self.stock_names[code] = code
             return code
-
-        # 2. API에서 조회
+        
+        # 4. API 호출 (타임아웃 처리)
         try:
-            name = self.fetch_stock_name_from_api(code)
+            name = self.fetch_stock_name_from_api_safe(code)
             if name and name != code:
                 self.stock_names[code] = name
                 self.save_stock_names()
+                self.logger.info(f"✅ API에서 종목명 조회: {code} -> {name}")
                 return name
         except Exception as e:
             self.api_error_count += 1
             self.logger.error(f"종목명 조회 실패 ({self.api_error_count}/3): {e}")
-        
+            
             if self.api_error_count >= 3:
                 self.skip_stock_name_api = True
                 self.logger.warning("🚨 종목명 API 호출 중단 (타임아웃 빈발)")
-    
-
-
+        
+        # 5. 실패 시 종목코드 반환
         self.stock_names[code] = code
         return code
-    
+
+
     
     def fetch_stock_name_from_api(self, symbol: str) -> str:
-        """KIS API에서 종목명 조회 - 여러 API 시도"""
-        
-        # 방법 1: 현재가 조회 API (가장 확실한 방법)
+        """안전한 API 종목명 조회 - 짧은 타임아웃"""
         try:
-            self.logger.debug(f"🔍 현재가 API로 종목명 조회: {symbol}")
-            
             url = f"{self.base_url}/uapi/domestic-stock/v1/quotations/inquire-price"
             headers = {
                 "content-type": "application/json",
@@ -2265,121 +2292,53 @@ class KISAutoTrader:
                 "appsecret": self.app_secret,
                 "tr_id": "FHKST01010100"
             }
-            params = {
-                "fid_cond_mrkt_div_code": "J", 
-                "fid_input_iscd": symbol
-            }
+            params = {"fid_cond_mrkt_div_code": "J", "fid_input_iscd": symbol}
             
-            response = requests.get(url, headers=headers, params=params, timeout=30)
+            # 짧은 타임아웃 (5초)
+            response = requests.get(url, headers=headers, params=params, timeout=5)
             
             if response.status_code == 200:
                 data = response.json()
-                self.logger.debug(f"현재가 API 응답: rt_cd={data.get('rt_cd')}")
-                
                 if data.get('rt_cd') == '0' and data.get('output'):
                     output = data['output']
                     
-                    # 여러 필드에서 종목명 찾기 (우선순위 순)
-                    name_fields = [
-                        'hts_kor_isnm',    # 한글종목명
-                        'prdt_abrv_name',  # 종목약명  
-                        'stck_shnm',       # 종목단축명
-                        'prdt_name',       # 상품명
-                        'prdt_eng_name'    # 영문명
-                    ]
-                    
+                    # 종목명 필드들 확인
+                    name_fields = ['hts_kor_isnm', 'prdt_abrv_name', 'stck_shnm']
                     for field in name_fields:
                         stock_name = output.get(field, '').strip()
                         if stock_name and stock_name != symbol:
-                            self.logger.info(f"✅ 현재가 API에서 종목명 조회 성공: {symbol} -> {stock_name} (필드: {field})")
                             return stock_name
-                    
-                    self.logger.warning(f"현재가 API 응답에 종목명이 없음: {symbol}")
-                    self.logger.debug(f"output 내용: {output}")
-                else:
-                    error_msg = data.get('msg1', 'Unknown error')
-                    self.logger.warning(f"현재가 API 오류: {error_msg}")
-            else:
-                self.logger.warning(f"현재가 API HTTP 오류: {response.status_code}")
-                
+            
+        except requests.exceptions.Timeout:
+            self.logger.warning(f"⏰ {symbol} 종목명 조회 타임아웃")
         except Exception as e:
-            self.logger.error(f"현재가 API 종목명 조회 오류 ({symbol}): {e}")
+            self.logger.debug(f"종목명 API 오류 ({symbol}): {e}")
         
-        # 방법 2: 종목 검색 API 시도
-        try:
-            self.logger.debug(f"🔍 종목검색 API로 종목명 조회: {symbol}")
-            
-            url = f"{self.base_url}/uapi/domestic-stock/v1/quotations/search-stock-info"
-            headers = {
-                "content-type": "application/json",
-                "authorization": f"Bearer {self.get_access_token()}",
-                "appkey": self.app_key,
-                "appsecret": self.app_secret,
-                "tr_id": "CTPF1604R"
-            }
-            params = {
-                "PRDT_TYPE_CD": "300",
-                "PDNO": symbol
-            }
-            
-            response = requests.get(url, headers=headers, params=params, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('rt_cd') == '0' and data.get('output'):
-                    outputs = data['output'] if isinstance(data['output'], list) else [data['output']]
-                    
-                    for item in outputs:
-                        if item.get('pdno') == symbol:
-                            stock_name = item.get('prdt_abrv_name', '').strip()
-                            if stock_name and stock_name != symbol:
-                                self.logger.info(f"✅ 종목검색 API에서 종목명 조회 성공: {symbol} -> {stock_name}")
-                                return stock_name
-                                
-        except Exception as e:
-            self.logger.error(f"종목검색 API 오류 ({symbol}): {e}")
-        
-        # 방법 3: 하드코딩된 종목명 사전 (주요 종목들)
-        stock_dict = {
-            '005930': '삼성전자',
-            '035720': '카카오', 
-            '000660': 'SK하이닉스',
-            '051910': 'LG화학',
-            '006400': '삼성SDI',
-            '035420': 'NAVER',
-            '028260': '삼성물산',
-            '042660': 'DAEWOO_SB',
-            '161580': 'ARIRANG_SB',
-            '062040': 'KODEX_SB',
-            '014620': 'SB_SB',
-            '062040': '산일전기',
-            '278470': '에이피알',
-            '014620': '성광밴드',
-            '161580': '필옵틱스',
-            '042660': '한화오션'
-        }
-        
-        if symbol in stock_dict:
-            self.logger.info(f"✅ 하드코딩 사전에서 종목명 조회: {symbol} -> {stock_dict[symbol]}")
-            return stock_dict[symbol]
-        
-        # 모든 방법 실패
-        self.logger.warning(f"❌ 모든 방법으로 종목명 조회 실패: {symbol}")
-        return symbol  # 종목코드 반환
-    
+        return symbol
     
     def update_all_stock_names(self):
-        """모든 거래 종목의 이름을 업데이트 (없는 것만)"""
+        """안전한 종목명 업데이트 - 오류 방지"""
         self.logger.info("🔄 종목명 업데이트 시작...")
+        
+        # 필수 속성들이 없으면 초기화
+        if not hasattr(self, 'skip_stock_name_api'):
+            self.skip_stock_name_api = False
+        if not hasattr(self, 'api_error_count'):
+            self.api_error_count = 0
         
         updated_count = 0
         for symbol in self.symbols:
-            if symbol not in self.stock_names or not self.stock_names[symbol] or self.stock_names[symbol] == symbol:
-                self.logger.info(f"📝 {symbol} 종목명 업데이트 중...")
-                name = self.get_stock_name(symbol)  # 자동으로 캐시됨
-                if name != symbol:
-                    updated_count += 1
-                time.sleep(0.5)  # API 호출 간격 (0.5초)
+            try:
+                if symbol not in self.stock_names or not self.stock_names[symbol] or self.stock_names[symbol] == symbol:
+                    self.logger.info(f"📝 {symbol} 종목명 업데이트 중...")
+                    name = self.get_stock_name_safe(symbol)  # 안전한 버전 사용
+                    if name != symbol:
+                        updated_count += 1
+                    time.sleep(0.5)  # API 호출 간격
+            except Exception as e:
+                self.logger.warning(f"⚠️ {symbol} 종목명 업데이트 실패: {e}")
+                # 실패해도 계속 진행
+                self.stock_names[symbol] = symbol
         
         if updated_count > 0:
             self.logger.info(f"✅ {updated_count}개 종목명 업데이트 완료")
@@ -3198,7 +3157,7 @@ class KISAutoTrader:
                 'account_no': 'YOUR_ACCOUNT_NO'
             },
             'trading': {
-                'max_symbols': 4,
+                'max_symbols': 5,
                 'max_position_ratio': 0.1,
                 'daily_loss_limit': 0.02,
                 'stop_loss_pct': 0.05,
@@ -3863,7 +3822,7 @@ class KISAutoTrader:
     def calculate_signals_by_strategy(self, symbol: str, df: pd.DataFrame, strategy: str) -> Dict:
         """전략별 신호 계산"""
         if strategy == 'momentum':
-            return self.calculate_momentum_signals(df)
+            return self.calculate_enhanced_momentum_signals(df)
         elif strategy == 'mean_reversion':
             return self.calculate_mean_reversion_signals(df)
         elif strategy == 'breakout':
@@ -3919,7 +3878,7 @@ class KISAutoTrader:
                 'account_no': 'YOUR_ACCOUNT_NO'
             },
             'trading': {
-                'max_symbols': 4,
+                'max_symbols': 5,
                 'max_position_ratio': 0.1,
                 'daily_loss_limit': 0.02,
                 'stop_loss_pct': 0.05,
@@ -5110,6 +5069,1365 @@ class KISAutoTrader:
         self.logger.debug(f"   ✅ 매수 가능")
         return True, "매수 가능"
     
+
+    def calculate_macd(self, df: pd.DataFrame, price_col: str = 'stck_prpr') -> pd.DataFrame:
+        """MACD 지표 계산"""
+        if len(df) < self.macd_slow + self.macd_signal:
+            return df
+        
+        try:
+            # 종가 데이터
+            close = df[price_col].astype(float)
+            
+            # EMA 계산
+            ema_fast = close.ewm(span=self.macd_fast).mean()
+            ema_slow = close.ewm(span=self.macd_slow).mean()
+            
+            # MACD Line = 빠른EMA - 느린EMA
+            df['macd_line'] = ema_fast - ema_slow
+            
+            # Signal Line = MACD Line의 9일 EMA
+            df['macd_signal'] = df['macd_line'].ewm(span=self.macd_signal).mean()
+            
+            # Histogram = MACD Line - Signal Line
+            df['macd_histogram'] = df['macd_line'] - df['macd_signal']
+            
+            # 골든크로스/데드크로스 감지
+            df['macd_cross'] = 0
+            for i in range(1, len(df)):
+                # 골든크로스: MACD Line이 Signal Line을 위로 돌파
+                if (df['macd_line'].iloc[i] > df['macd_signal'].iloc[i] and 
+                    df['macd_line'].iloc[i-1] <= df['macd_signal'].iloc[i-1]):
+                    df.loc[df.index[i], 'macd_cross'] = 1  # 골든크로스
+                
+                # 데드크로스: MACD Line이 Signal Line을 아래로 돌파
+                elif (df['macd_line'].iloc[i] < df['macd_signal'].iloc[i] and 
+                      df['macd_line'].iloc[i-1] >= df['macd_signal'].iloc[i-1]):
+                    df.loc[df.index[i], 'macd_cross'] = -1  # 데드크로스
+            
+            self.logger.debug(f"MACD 계산 완료: {len(df)}개 봉")
+            
+            return df
+            
+        except Exception as e:
+            self.logger.error(f"MACD 계산 실패: {e}")
+            return df
+    
+    def detect_macd_golden_cross(self, df: pd.DataFrame) -> Dict:
+        """MACD 골든크로스 감지 및 신호 강도 계산"""
+        
+        if 'macd_cross' not in df.columns or len(df) < 10:
+            return {
+                'golden_cross': False,
+                'cross_strength': 0,
+                'trend_strength': 0,
+                'histogram_trend': 'neutral',
+                'signal_age': 999
+            }
+        
+        try:
+            # 최근 몇 봉에서 골든크로스 발생했는지 확인
+            recent_crosses = df['macd_cross'].tail(self.macd_cross_lookback)
+            golden_cross_occurred = any(recent_crosses == 1)
+            
+            # 골든크로스 발생 시점 찾기
+            signal_age = 999
+            if golden_cross_occurred:
+                cross_indices = df[df['macd_cross'] == 1].index
+                if len(cross_indices) > 0:
+                    last_cross_idx = cross_indices[-1]
+                    signal_age = len(df) - df.index.get_loc(last_cross_idx) - 1
+            
+            # MACD 신호 강도 계산
+            latest = df.iloc[-1]
+            
+            # 1. MACD Line과 Signal Line 간격 (클수록 강한 신호)
+            macd_gap = abs(latest['macd_line'] - latest['macd_signal'])
+            
+            # 2. 히스토그램 추세 (연속 상승 중인지)
+            histogram_trend = 'neutral'
+            if len(df) >= 3:
+                recent_hist = df['macd_histogram'].tail(3).tolist()
+                if all(recent_hist[i] < recent_hist[i+1] for i in range(len(recent_hist)-1)):
+                    histogram_trend = 'rising'
+                elif all(recent_hist[i] > recent_hist[i+1] for i in range(len(recent_hist)-1)):
+                    histogram_trend = 'falling'
+            
+            # 3. MACD Line의 위치 (0선 위에 있으면 더 강함)
+            macd_above_zero = latest['macd_line'] > 0
+            
+            # 4. 추세 지속성 확인
+            if len(df) >= self.macd_trend_confirmation:
+                trend_data = df['macd_line'].tail(self.macd_trend_confirmation)
+                trend_strength = 1 if trend_data.iloc[-1] > trend_data.iloc[0] else 0
+            else:
+                trend_strength = 0
+            
+            # 신호 강도 종합 계산 (0~5점)
+            cross_strength = 0
+            if golden_cross_occurred:
+                cross_strength = 2.0  # 기본 골든크로스 점수
+                
+                # 보너스 점수
+                if macd_above_zero:
+                    cross_strength += 0.5
+                if histogram_trend == 'rising':
+                    cross_strength += 0.5
+                if signal_age <= 2:  # 최근 2봉 이내 발생
+                    cross_strength += 0.5
+                if macd_gap > df['macd_line'].std() * 0.5:  # 충분한 간격
+                    cross_strength += 0.5
+                if trend_strength > 0:
+                    cross_strength += 0.5
+            
+            result = {
+                'golden_cross': golden_cross_occurred,
+                'cross_strength': min(cross_strength, 5.0),
+                'trend_strength': trend_strength,
+                'histogram_trend': histogram_trend,
+                'signal_age': signal_age,
+                'macd_line': latest['macd_line'],
+                'macd_signal': latest['macd_signal'],
+                'macd_histogram': latest['macd_histogram'],
+                'macd_above_zero': macd_above_zero
+            }
+            
+            self.logger.debug(f"MACD 골든크로스 분석: {result}")
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"MACD 골든크로스 감지 실패: {e}")
+            return {
+                'golden_cross': False,
+                'cross_strength': 0,
+                'trend_strength': 0,
+                'histogram_trend': 'neutral',
+                'signal_age': 999
+            }
+    
+    def calculate_enhanced_momentum_signals(self, df: pd.DataFrame) -> Dict:
+        """MACD 골든크로스가 포함된 강화된 모멘텀 신호"""
+        if len(df) < max(self.ma_long, self.momentum_period, self.macd_slow + self.macd_signal):
+            return {'signal': 'HOLD', 'strength': 0, 'current_price': 0}
+        
+        try:
+            # 기존 모멘텀 지표들
+            df['ma_short'] = df['stck_prpr'].rolling(self.ma_short).mean()
+            df['ma_long'] = df['stck_prpr'].rolling(self.ma_long).mean()
+            
+            # MACD 계산
+            df = self.calculate_macd(df)
+            
+            # 모멘텀 계산
+            current_price = float(df['stck_prpr'].iloc[-1])
+            past_price = float(df['stck_prpr'].iloc[-(self.momentum_period+1)])
+            momentum = (current_price - past_price) / past_price
+            
+            # 거래량 증가율
+            avg_volume = df['cntg_vol'].rolling(20).mean().iloc[-2]
+            current_volume = df['cntg_vol'].iloc[-1]
+            volume_ratio = float(current_volume / avg_volume) if avg_volume > 0 else 1
+            
+            # MACD 골든크로스 분석
+            macd_analysis = self.detect_macd_golden_cross(df)
+            
+            # 신호 생성 로직
+            signal = 'HOLD'
+            strength = 0
+            signal_components = []
+            
+            latest = df.iloc[-1]
+            
+            # 매수 신호 조건들
+            ma_bullish = latest['ma_short'] > latest['ma_long']
+            momentum_bullish = momentum > self.momentum_threshold
+            volume_bullish = volume_ratio > self.volume_threshold
+            macd_bullish = macd_analysis['golden_cross']
+            
+            # 매도 신호 조건들
+            ma_bearish = latest['ma_short'] < latest['ma_long']
+            momentum_bearish = momentum < -self.momentum_threshold/2
+            macd_bearish = macd_analysis['histogram_trend'] == 'falling'
+            
+            # 매수 신호 강도 계산
+            if ma_bullish or momentum_bullish or macd_bullish:
+                buy_score = 0
+                
+                # 각 지표별 점수 (최대 5점)
+                if ma_bullish:
+                    buy_score += 1.0
+                    signal_components.append("MA상승")
+                
+                if momentum_bullish:
+                    momentum_score = min((momentum / self.momentum_threshold), 2.0)
+                    buy_score += momentum_score
+                    signal_components.append(f"모멘텀{momentum:.1%}")
+                
+                if volume_bullish:
+                    volume_score = min((volume_ratio / self.volume_threshold), 1.5)
+                    buy_score += volume_score
+                    signal_components.append(f"거래량{volume_ratio:.1f}배")
+                
+                if macd_bullish:
+                    buy_score += macd_analysis['cross_strength']
+                    signal_components.append(f"MACD골든크로스({macd_analysis['signal_age']}봉전)")
+                
+                # MACD 추가 보너스
+                if macd_analysis['macd_above_zero']:
+                    buy_score += 0.3
+                    signal_components.append("MACD>0")
+                
+                if macd_analysis['histogram_trend'] == 'rising':
+                    buy_score += 0.2
+                    signal_components.append("히스토그램상승")
+                
+                # 매수 신호 임계값 확인
+                if buy_score >= 1.5:  # 최소 1.5점 이상
+                    signal = 'BUY'
+                    strength = min(buy_score, 5.0)
+            
+            # 매도 신호 강도 계산
+            elif ma_bearish or momentum_bearish or macd_bearish:
+                sell_score = 0
+                
+                if ma_bearish:
+                    sell_score += 1.5
+                    signal_components.append("MA하락")
+                
+                if momentum_bearish:
+                    sell_score += abs(momentum) / self.momentum_threshold * 2
+                    signal_components.append(f"모멘텀{momentum:.1%}")
+                
+                if macd_bearish:
+                    sell_score += 1.0
+                    signal_components.append("MACD약화")
+                
+                # 데드크로스 추가 확인
+                recent_crosses = df['macd_cross'].tail(3)
+                if any(recent_crosses == -1):
+                    sell_score += 1.5
+                    signal_components.append("MACD데드크로스")
+                
+                if sell_score >= 1.0:
+                    signal = 'SELL'
+                    strength = min(sell_score, 5.0)
+            
+            # 결과 반환
+            result = {
+                'signal': signal,
+                'strength': strength,
+                'momentum': momentum,
+                'volume_ratio': volume_ratio,
+                'ma_short': float(latest['ma_short']),
+                'ma_long': float(latest['ma_long']),
+                'current_price': current_price,
+                'macd_analysis': macd_analysis,
+                'signal_components': signal_components
+            }
+            
+            # 상세 로깅
+            if signal != 'HOLD':
+                components_str = ', '.join(signal_components)
+                self.logger.info(f"📊 {signal} 신호 감지! 강도: {strength:.2f}")
+                self.logger.info(f"   구성요소: {components_str}")
+                if macd_bullish:
+                    self.logger.info(f"   🌟 MACD 골든크로스: {macd_analysis['signal_age']}봉 전 발생")
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"강화된 모멘텀 신호 계산 실패: {e}")
+            return {'signal': 'HOLD', 'strength': 0, 'current_price': float(df['stck_prpr'].iloc[-1])}
+    
+    def calculate_macd_strategy_signals(self, df: pd.DataFrame) -> Dict:
+        """MACD 전용 전략 신호"""
+        if len(df) < self.macd_slow + self.macd_signal + 5:
+            return {'signal': 'HOLD', 'strength': 0, 'current_price': 0}
+        
+        try:
+            # MACD 계산
+            df = self.calculate_macd(df)
+            
+            # MACD 골든크로스 분석
+            macd_analysis = self.detect_macd_golden_cross(df)
+            
+            current_price = float(df['stck_prpr'].iloc[-1])
+            latest = df.iloc[-1]
+            
+            signal = 'HOLD'
+            strength = 0
+            
+            # MACD 기반 신호 생성
+            if macd_analysis['golden_cross']:
+                # 골든크로스 발생 → 매수 신호
+                signal = 'BUY'
+                strength = macd_analysis['cross_strength']
+                
+                # 추가 확인 조건들
+                if macd_analysis['macd_above_zero']:
+                    strength += 0.5
+                if macd_analysis['histogram_trend'] == 'rising':
+                    strength += 0.5
+                if macd_analysis['signal_age'] <= 1:  # 매우 최근 발생
+                    strength += 0.5
+                
+                strength = min(strength, 5.0)
+                
+            elif latest['macd_line'] < latest['macd_signal'] and latest['macd_histogram'] < 0:
+                # MACD Line이 Signal Line 아래 + 히스토그램 음수
+                recent_crosses = df['macd_cross'].tail(3)
+                if any(recent_crosses == -1):  # 최근 데드크로스 발생
+                    signal = 'SELL'
+                    strength = 2.0
+                    
+                    # 추가 약세 조건
+                    if latest['macd_line'] < 0:  # MACD가 0선 아래
+                        strength += 0.5
+                    if macd_analysis['histogram_trend'] == 'falling':
+                        strength += 0.5
+                    
+                    strength = min(strength, 5.0)
+            
+            return {
+                'signal': signal,
+                'strength': strength,
+                'current_price': current_price,
+                'macd_line': float(latest['macd_line']),
+                'macd_signal': float(latest['macd_signal']),
+                'macd_histogram': float(latest['macd_histogram']),
+                'golden_cross': macd_analysis['golden_cross'],
+                'signal_age': macd_analysis['signal_age']
+            }
+            
+        except Exception as e:
+            self.logger.error(f"MACD 전략 신호 계산 실패: {e}")
+            return {'signal': 'HOLD', 'strength': 0, 'current_price': float(df['stck_prpr'].iloc[-1])}
+    
+    def calculate_signals_by_strategy_enhanced(self, symbol: str, df: pd.DataFrame, strategy: str) -> Dict:
+        """MACD가 강화된 전략별 신호 계산"""
+        
+        if strategy == 'momentum':
+            return self.calculate_enhanced_momentum_signals(df)
+        elif strategy == 'macd':
+            return self.calculate_macd_strategy_signals(df)
+        elif strategy == 'momentum_macd':
+            # 모멘텀 + MACD 조합 전략
+            momentum_signals = self.calculate_enhanced_momentum_signals(df)
+            macd_signals = self.calculate_macd_strategy_signals(df)
+            
+            # 두 신호의 조합
+            if momentum_signals['signal'] == 'BUY' and macd_signals['signal'] == 'BUY':
+                strength = (momentum_signals['strength'] + macd_signals['strength']) * 0.7  # 조금 보수적으로
+                return {
+                    'signal': 'BUY',
+                    'strength': min(strength, 5.0),
+                    'current_price': momentum_signals['current_price'],
+                    'strategy_components': ['momentum', 'macd']
+                }
+            elif momentum_signals['signal'] == 'SELL' or macd_signals['signal'] == 'SELL':
+                strength = max(momentum_signals['strength'], macd_signals['strength'])
+                return {
+                    'signal': 'SELL',
+                    'strength': strength,
+                    'current_price': momentum_signals['current_price'],
+                    'strategy_components': ['momentum', 'macd']
+                }
+            else:
+                return {
+                    'signal': 'HOLD',
+                    'strength': 0,
+                    'current_price': momentum_signals['current_price']
+                }
+        
+        elif strategy == 'mean_reversion':
+            return self.calculate_mean_reversion_signals(df)
+        elif strategy == 'breakout':
+            return self.calculate_breakout_signals(df)
+        elif strategy == 'scalping':
+            return self.calculate_scalping_signals(df)
+        else:
+            # 기본값으로 강화된 모멘텀 사용
+            return self.calculate_enhanced_momentum_signals(df)
+    
+    def notify_macd_signal(self, symbol: str, macd_analysis: Dict, signal: str):
+        """MACD 신호 전용 알림"""
+        if not self.notify_on_trade:
+            return
+        
+        stock_name = self.get_stock_name(symbol)
+        
+        if macd_analysis['golden_cross']:
+            title = "🌟 MACD 골든크로스 감지!"
+            color = 0x00ff00
+        else:
+            title = "📊 MACD 신호"
+            color = 0xffaa00
+        
+        message = f"""
+**종목**: {symbol} ({stock_name})
+**신호**: {signal}
+**MACD Line**: {macd_analysis.get('macd_line', 0):.4f}
+**Signal Line**: {macd_analysis.get('macd_signal', 0):.4f}
+**히스토그램**: {macd_analysis.get('macd_histogram', 0):.4f}
+**골든크로스**: {'예' if macd_analysis['golden_cross'] else '아니오'}
+**신호 발생**: {macd_analysis['signal_age']}봉 전
+**추세**: {macd_analysis['histogram_trend']}
+**시간**: {datetime.now().strftime('%H:%M:%S')}
+        """
+        
+        self.send_discord_notification(title, message, color)
+    
+    # config.yaml에 추가할 MACD 설정
+    def create_config_with_macd(self, config_path: str):
+        """MACD 설정이 포함된 설정 파일 생성"""
+        sample_config = {
+            'kis': {
+                'app_key': 'YOUR_APP_KEY',
+                'app_secret': 'YOUR_APP_SECRET',
+                'base_url': 'https://openapi.koreainvestment.com:9443',
+                'account_no': 'YOUR_ACCOUNT_NO'
+            },
+            'trading': {
+                'max_symbols': 5,
+                'max_position_ratio': 0.3,  # MACD 신호를 위해 30%로 증가
+                'daily_loss_limit': 0.02,
+                'stop_loss_pct': 0.05,
+                'take_profit_pct': 0.15
+            },
+            'momentum': {
+                'period': 20,
+                'threshold': 0.02,
+                'volume_threshold': 1.5,
+                'ma_short': 5,
+                'ma_long': 20
+            },
+            'macd': {  # MACD 설정 추가
+                'fast_period': 12,     # 빠른 EMA
+                'slow_period': 26,     # 느린 EMA
+                'signal_period': 9,    # 신호선 EMA
+                'cross_lookback': 3,   # 크로스 감지 기간
+                'trend_confirmation': 5, # 추세 확인 기간
+                'enable_notifications': True  # MACD 알림 활성화
+            },
+            'strategies': {  # 전략별 설정
+                'momentum': {
+                    'include_macd': True,    # 모멘텀 전략에 MACD 포함
+                    'macd_weight': 0.3       # MACD 가중치
+                },
+                'macd_only': {
+                    'enabled': True,         # MACD 전용 전략 활성화
+                    'min_strength': 2.0      # 최소 신호 강도
+                }
+            },
+            'backtest': {
+                'results_file': 'backtest_results.json',
+                'min_return_threshold': 5.0,
+                'performance_tracking': True
+            },
+            'notification': {
+                'discord_webhook': '',
+                'notify_on_trade': True,
+                'notify_on_error': True,
+                'notify_on_daily_summary': True,
+                'notify_on_macd_signals': True  # MACD 신호 알림
+            }
+        }
+        
+        with open(config_path, 'w', encoding='utf-8') as f:
+            yaml.dump(sample_config, f, default_flow_style=False, allow_unicode=True)
+
+    def debug_macd_calculation(self, symbol: str, df: pd.DataFrame):
+        """MACD 계산 과정 상세 디버깅"""
+        print(f"\n🔍 {symbol} MACD 계산 디버깅")
+        print("="*60)
+        
+        if df.empty:
+            print("❌ 데이터프레임이 비어있습니다")
+            return
+        
+        print(f"📊 데이터 정보:")
+        print(f"  - 데이터 길이: {len(df)}개 봉")
+        print(f"  - 필요한 최소 길이: {self.macd_slow + self.macd_signal} ({self.macd_slow}+{self.macd_signal})")
+        print(f"  - 현재가: {df['stck_prpr'].iloc[-1]:,}원")
+        print(f"  - 가격 범위: {df['stck_prpr'].min():,} ~ {df['stck_prpr'].max():,}")
+        
+        if len(df) < self.macd_slow + self.macd_signal:
+            print(f"❌ 데이터 부족: {len(df)} < {self.macd_slow + self.macd_signal}")
+            return
+        
+        try:
+            # MACD 계산
+            close = df['stck_prpr'].astype(float)
+            
+            # EMA 계산
+            ema_fast = close.ewm(span=self.macd_fast).mean()
+            ema_slow = close.ewm(span=self.macd_slow).mean()
+            
+            # MACD Line
+            macd_line = ema_fast - ema_slow
+            
+            # Signal Line
+            macd_signal = macd_line.ewm(span=self.macd_signal).mean()
+            
+            # Histogram
+            macd_histogram = macd_line - macd_signal
+            
+            print(f"\n📈 최근 5개 봉 MACD 데이터:")
+            print("시간\t\t가격\t\tMACD\t\tSignal\t\tHist\t\tCross")
+            print("-" * 80)
+            
+            for i in range(max(0, len(df)-5), len(df)):
+                time_str = f"봉{i}"
+                price = close.iloc[i]
+                macd_val = macd_line.iloc[i]
+                signal_val = macd_signal.iloc[i]
+                hist_val = macd_histogram.iloc[i]
+                
+                # 크로스 확인
+                cross_type = ""
+                if i > 0:
+                    prev_macd = macd_line.iloc[i-1]
+                    prev_signal = macd_signal.iloc[i-1]
+                    
+                    if macd_val > signal_val and prev_macd <= prev_signal:
+                        cross_type = "🌟GOLDEN"
+                    elif macd_val < signal_val and prev_macd >= prev_signal:
+                        cross_type = "💀DEAD"
+                
+                print(f"{time_str}\t\t{price:,.0f}\t\t{macd_val:.4f}\t\t{signal_val:.4f}\t\t{hist_val:.4f}\t\t{cross_type}")
+            
+            # 최근 크로스 확인
+            print(f"\n🔍 최근 {self.macd_cross_lookback}봉 크로스 확인:")
+            recent_crosses = []
+            for i in range(max(1, len(df)-self.macd_cross_lookback), len(df)):
+                prev_macd = macd_line.iloc[i-1]
+                prev_signal = macd_signal.iloc[i-1]
+                curr_macd = macd_line.iloc[i]
+                curr_signal = macd_signal.iloc[i]
+                
+                if curr_macd > curr_signal and prev_macd <= prev_signal:
+                    recent_crosses.append(f"봉{i}: 골든크로스")
+                elif curr_macd < curr_signal and prev_macd >= prev_signal:
+                    recent_crosses.append(f"봉{i}: 데드크로스")
+            
+            if recent_crosses:
+                for cross in recent_crosses:
+                    print(f"  🔥 {cross}")
+            else:
+                print("  ⚪ 최근 크로스 없음")
+            
+            # 현재 상태 분석
+            latest_macd = macd_line.iloc[-1]
+            latest_signal = macd_signal.iloc[-1]
+            latest_hist = macd_histogram.iloc[-1]
+            
+            print(f"\n📊 현재 MACD 상태:")
+            print(f"  - MACD Line: {latest_macd:.6f}")
+            print(f"  - Signal Line: {latest_signal:.6f}")
+            print(f"  - Histogram: {latest_hist:.6f}")
+            print(f"  - MACD > Signal: {'예' if latest_macd > latest_signal else '아니오'}")
+            print(f"  - MACD > 0: {'예' if latest_macd > 0 else '아니오'}")
+            
+            # 히스토그램 추세 확인
+            if len(df) >= 3:
+                hist_trend = []
+                for i in range(len(df)-3, len(df)):
+                    hist_trend.append(macd_histogram.iloc[i])
+                
+                if all(hist_trend[i] < hist_trend[i+1] for i in range(len(hist_trend)-1)):
+                    trend = "상승"
+                elif all(hist_trend[i] > hist_trend[i+1] for i in range(len(hist_trend)-1)):
+                    trend = "하락"
+                else:
+                    trend = "횡보"
+                
+                print(f"  - 히스토그램 추세: {trend}")
+                print(f"  - 최근 3봉 히스토그램: {[f'{h:.4f}' for h in hist_trend]}")
+            
+        except Exception as e:
+            print(f"❌ MACD 계산 오류: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def test_macd_signals_verbose(self):
+        """상세한 MACD 신호 테스트"""
+        print("🧪 상세한 MACD 골든크로스 신호 테스트")
+        print("="*60)
+        
+        for symbol in self.symbols:
+            stock_name = self.get_stock_name(symbol)
+            print(f"\n📊 {symbol}({stock_name}) 상세 분석:")
+            
+            # 더 많은 분봉 데이터 조회 (MACD 계산을 위해)
+            df = self.get_minute_data(symbol, minutes=200)  # 200분봉 (충분한 데이터)
+            
+            if df.empty:
+                print("❌ 분봉 데이터를 가져올 수 없습니다")
+                continue
+            
+            # MACD 계산 디버깅
+            self.debug_macd_calculation(symbol, df)
+            
+            # 실제 신호 계산
+            try:
+                signals = self.calculate_enhanced_momentum_signals(df)
+                
+                print(f"\n🎯 종합 신호 결과:")
+                print(f"  신호: {signals['signal']}")
+                print(f"  강도: {signals['strength']:.2f}")
+                print(f"  구성요소: {signals.get('signal_components', [])}")
+                
+                if 'macd_analysis' in signals:
+                    macd = signals['macd_analysis']
+                    print(f"\n🌟 MACD 분석 상세:")
+                    print(f"  - 골든크로스: {macd['golden_cross']}")
+                    print(f"  - 크로스 강도: {macd['cross_strength']:.2f}")
+                    print(f"  - 신호 나이: {macd['signal_age']}봉")
+                    print(f"  - 추세 강도: {macd['trend_strength']}")
+                    print(f"  - 히스토그램 추세: {macd['histogram_trend']}")
+                    print(f"  - MACD > 0: {macd.get('macd_above_zero', False)}")
+            
+            except Exception as e:
+                print(f"❌ 신호 계산 오류: {e}")
+                import traceback
+                traceback.print_exc()
+    
+    def create_sample_macd_data(self):
+        """MACD 테스트용 샘플 데이터 생성"""
+        print("🧪 MACD 테스트용 샘플 데이터 생성")
+        
+        import numpy as np
+        
+        # 가상의 가격 데이터 생성 (골든크로스 패턴 포함)
+        np.random.seed(42)
+        
+        # 기본 추세 + 노이즈
+        base_price = 100000  # 10만원 기준
+        trend = np.linspace(0, 0.1, 100)  # 10% 상승 추세
+        noise = np.random.normal(0, 0.02, 100)  # 2% 노이즈
+        
+        # 가격 데이터 생성
+        prices = base_price * (1 + trend + noise)
+        
+        # 중간에 강한 상승 구간 추가 (골든크로스 유발)
+        prices[70:80] *= 1.05  # 5% 급등
+        
+        # DataFrame 생성
+        df = pd.DataFrame({
+            'stck_prpr': prices,
+            'stck_oprc': prices * 0.998,
+            'stck_hgpr': prices * 1.01,
+            'stck_lwpr': prices * 0.99,
+            'cntg_vol': np.random.randint(1000, 10000, 100)
+        })
+        
+        # MACD 계산
+        df = self.calculate_macd(df)
+        
+        print(f"📊 샘플 데이터 정보:")
+        print(f"  - 데이터 길이: {len(df)}")
+        print(f"  - 가격 범위: {df['stck_prpr'].min():.0f} ~ {df['stck_prpr'].max():.0f}")
+        
+        # 골든크로스 확인
+        golden_crosses = []
+        for i in range(1, len(df)):
+            if (df['macd_line'].iloc[i] > df['macd_signal'].iloc[i] and 
+                df['macd_line'].iloc[i-1] <= df['macd_signal'].iloc[i-1]):
+                golden_crosses.append(i)
+        
+        print(f"  - 골든크로스 발생: {len(golden_crosses)}회")
+        for idx in golden_crosses:
+            print(f"    🌟 {idx}번째 봉에서 골든크로스")
+        
+        # MACD 신호 테스트
+        macd_analysis = self.detect_macd_golden_cross(df)
+        print(f"\n🎯 MACD 분석 결과:")
+        for key, value in macd_analysis.items():
+            print(f"  - {key}: {value}")
+        
+        return df
+    
+    def fix_macd_integration(self):
+        """MACD 통합 문제 수정"""
+        print("🔧 MACD 통합 수정 중...")
+        
+        # 1. MACD 설정 확인
+        if not hasattr(self, 'macd_fast'):
+            self.macd_fast = 12
+            self.macd_slow = 26
+            self.macd_signal = 9
+            self.macd_cross_lookback = 3
+            self.macd_trend_confirmation = 5
+            print("✅ MACD 설정 초기화 완료")
+        
+        # 2. 함수 바인딩 확인
+        if not hasattr(self, 'calculate_macd'):
+            print("❌ calculate_macd 함수가 없습니다")
+            return False
+        
+        if not hasattr(self, 'detect_macd_golden_cross'):
+            print("❌ detect_macd_golden_cross 함수가 없습니다")
+            return False
+        
+        if not hasattr(self, 'calculate_enhanced_momentum_signals'):
+            print("❌ calculate_enhanced_momentum_signals 함수가 없습니다")
+            return False
+        
+        # 3. 기존 함수 교체
+        original_func = getattr(self, 'calculate_signals_by_strategy', None)
+        if original_func:
+            self.calculate_signals_by_strategy_original = original_func
+            self.calculate_signals_by_strategy = self.calculate_signals_by_strategy_enhanced
+            print("✅ 신호 계산 함수 업그레이드 완료")
+        
+        print("✅ MACD 통합 수정 완료")
+        return True
+    
+    
+    # 일봉 데이터 컬럼명 수정 및 MACD 완전 구현
+    def get_daily_data(self, symbol: str, days: int = 100) -> pd.DataFrame:
+        """수정된 일봉 데이터 조회"""
+        url = f"{self.base_url}/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice"
+        headers = {
+            "content-type": "application/json",
+            "authorization": f"Bearer {self.get_access_token()}",
+            "appkey": self.app_key,
+            "appsecret": self.app_secret,
+            "tr_id": "FHKST03010100"
+        }
+    
+        end_date = datetime.now().strftime("%Y%m%d")
+        start_date = (datetime.now() - timedelta(days=days)).strftime("%Y%m%d")
+    
+        params = {
+            "fid_cond_mrkt_div_code": "J",
+            "fid_input_iscd": symbol,
+            "fid_input_date_1": start_date,
+            "fid_input_date_2": end_date,
+            "fid_period_div_code": "D",
+            "fid_org_adj_prc": "0"
+        }
+    
+        try:
+            self.logger.info(f"📅 {symbol} 일봉 데이터 조회: {days}일간")
+            response = requests.get(url, headers=headers, params=params, timeout=30)
+            response.raise_for_status()
+            data = response.json()
+    
+            if data.get('output2'):
+                df = pd.DataFrame(data['output2'])
+                
+                # 일봉 데이터 컬럼명 확인 및 출력
+                self.logger.debug(f"일봉 데이터 컬럼: {df.columns.tolist()}")
+                
+                # 날짜 순으로 정렬
+                if 'stck_bsop_date' in df.columns:
+                    df = df.sort_values('stck_bsop_date').reset_index(drop=True)
+                
+                # 컬럼명 매핑 (일봉 → 분봉 형식으로 통일)
+                column_mapping = {
+                    'stck_clpr': 'stck_prpr',    # 종가 → 현재가
+                    'stck_oprc': 'stck_oprc',    # 시가 (동일)
+                    'stck_hgpr': 'stck_hgpr',    # 고가 (동일)
+                    'stck_lwpr': 'stck_lwpr',    # 저가 (동일)
+                    'acml_vol': 'cntg_vol',      # 누적거래량 → 거래량
+                    'acml_tr_pbmn': 'acml_tr_pbmn'  # 누적거래대금
+                }
+                
+                # 컬럼명 변경
+                for old_col, new_col in column_mapping.items():
+                    if old_col in df.columns:
+                        df[new_col] = df[old_col]
+                
+                # 숫자형 변환
+                numeric_cols = ['stck_prpr', 'stck_oprc', 'stck_hgpr', 'stck_lwpr', 'cntg_vol']
+                for col in numeric_cols:
+                    if col in df.columns:
+                        df[col] = pd.to_numeric(df[col], errors='coerce')
+                
+                # NaN 제거
+                df = df.dropna(subset=['stck_prpr'])
+                
+                self.logger.info(f"✅ {symbol} 일봉 데이터 {len(df)}개 조회 완료")
+                self.logger.debug(f"가격 범위: {df['stck_prpr'].min():,} ~ {df['stck_prpr'].max():,}")
+                
+                return df
+            else:
+                self.logger.warning(f"❌ {symbol} 일봉 데이터 없음")
+                
+        except Exception as e:
+            self.logger.error(f"일봉 데이터 조회 실패 ({symbol}): {e}")
+    
+        return pd.DataFrame()
+    
+    def debug_daily_data_columns(self, symbol: str):
+        """일봉 데이터 컬럼 구조 확인"""
+        print(f"🔍 {symbol} 일봉 데이터 구조 분석")
+        
+        try:
+            url = f"{self.base_url}/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice"
+            headers = {
+                "content-type": "application/json",
+                "authorization": f"Bearer {self.get_access_token()}",
+                "appkey": self.app_key,
+                "appsecret": self.app_secret,
+                "tr_id": "FHKST03010100"
+            }
+    
+            end_date = datetime.now().strftime("%Y%m%d")
+            start_date = (datetime.now() - timedelta(days=30)).strftime("%Y%m%d")
+    
+            params = {
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": symbol,
+                "fid_input_date_1": start_date,
+                "fid_input_date_2": end_date,
+                "fid_period_div_code": "D",
+                "fid_org_adj_prc": "0"
+            }
+    
+            response = requests.get(url, headers=headers, params=params, timeout=15)
+            data = response.json()
+    
+            print(f"📊 API 응답 구조:")
+            print(f"  - rt_cd: {data.get('rt_cd')}")
+            print(f"  - msg1: {data.get('msg1', 'N/A')}")
+            
+            if data.get('output2'):
+                df = pd.DataFrame(data['output2'])
+                print(f"  - 데이터 개수: {len(df)}개")
+                print(f"  - 컬럼 목록: {df.columns.tolist()}")
+                
+                if len(df) > 0:
+                    print(f"\n📈 첫 번째 행 데이터:")
+                    first_row = df.iloc[0]
+                    for col in df.columns:
+                        print(f"  {col}: {first_row[col]}")
+                    
+                    # 가격 관련 컬럼 찾기
+                    price_cols = [col for col in df.columns if 'pr' in col.lower() or 'prc' in col.lower()]
+                    print(f"\n💰 가격 관련 컬럼: {price_cols}")
+                    
+                    volume_cols = [col for col in df.columns if 'vol' in col.lower()]
+                    print(f"📊 거래량 관련 컬럼: {volume_cols}")
+            else:
+                print("❌ output2 데이터 없음")
+                
+        except Exception as e:
+            print(f"❌ 디버깅 실패: {e}")
+    
+    def test_macd_with_fixed_daily_data(self):
+        """수정된 일봉 데이터로 MACD 테스트"""
+        print("🧪 수정된 일봉 데이터로 MACD 테스트")
+        print("="*60)
+        
+        for symbol in self.symbols:
+            stock_name = self.get_stock_name(symbol)
+            print(f"\n📊 {symbol}({stock_name}) 분석:")
+            
+            # 1. 컬럼 구조 먼저 확인
+            print("🔍 컬럼 구조 확인:")
+            self.debug_daily_data_columns(symbol)
+            
+            # 2. 수정된 일봉 데이터 조회
+            print("\n📅 수정된 일봉 데이터 조회:")
+            df = self.get_daily_data(symbol, days=100)
+            
+            if df.empty:
+                print("❌ 일봉 데이터를 가져올 수 없습니다")
+                continue
+            
+            print(f"✅ 일봉 데이터: {len(df)}일")
+            print(f"가격 범위: {df['stck_prpr'].min():,} ~ {df['stck_prpr'].max():,}")
+            print(f"최근 가격: {df['stck_prpr'].iloc[-1]:,}원")
+            print(f"고유가격 수: {df['stck_prpr'].nunique()}개")
+            
+            if len(df) >= 35:
+                # 3. MACD 계산
+                print("\n📈 MACD 계산:")
+                try:
+                    df_with_macd = self.calculate_macd(df)
+                    
+                    # MACD 데이터 확인
+                    if 'macd_line' in df_with_macd.columns:
+                        print(f"✅ MACD 계산 성공")
+                        
+                        # 최근 5일 데이터 출력
+                        print(f"\n📊 최근 5일 MACD 데이터:")
+                        recent = df_with_macd.tail(5)
+                        for i, row in recent.iterrows():
+                            date = row.get('stck_bsop_date', f'Day{i}')
+                            price = row['stck_prpr']
+                            macd_line = row.get('macd_line', 0)
+                            macd_signal = row.get('macd_signal', 0)
+                            macd_hist = row.get('macd_histogram', 0)
+                            cross = row.get('macd_cross', 0)
+                            
+                            cross_icon = ""
+                            if cross == 1:
+                                cross_icon = "🌟골든"
+                            elif cross == -1:
+                                cross_icon = "💀데드"
+                            
+                            print(f"  {date}: {price:,}원, MACD={macd_line:.4f}, Signal={macd_signal:.4f}, Hist={macd_hist:.4f} {cross_icon}")
+                        
+                        # 4. 골든크로스 분석
+                        print(f"\n🎯 골든크로스 분석:")
+                        macd_analysis = self.detect_macd_golden_cross(df_with_macd)
+                        
+                        for key, value in macd_analysis.items():
+                            print(f"  {key}: {value}")
+                        
+                        # 5. 종합 신호 (만약 함수가 있다면)
+                        if hasattr(self, 'calculate_enhanced_momentum_signals'):
+                            print(f"\n🎯 종합 신호:")
+                            try:
+                                signals = self.calculate_enhanced_momentum_signals(df_with_macd)
+                                print(f"  신호: {signals['signal']}")
+                                print(f"  강도: {signals['strength']:.2f}")
+                                if 'signal_components' in signals:
+                                    print(f"  구성요소: {signals['signal_components']}")
+                            except Exception as e:
+                                print(f"  ❌ 종합 신호 계산 실패: {e}")
+                    else:
+                        print(f"❌ MACD 계산 실패 - macd_line 컬럼 없음")
+                        
+                except Exception as e:
+                    print(f"❌ MACD 계산 오류: {e}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print(f"❌ 데이터 부족: {len(df)} < 35일")
+    
+    def simple_macd_implementation(self, df: pd.DataFrame, price_col: str = 'stck_prpr') -> pd.DataFrame:
+        """간단하고 안전한 MACD 구현"""
+        try:
+            if len(df) < 35 or price_col not in df.columns:
+                return df
+            
+            # 가격 데이터 정리
+            prices = df[price_col].astype(float).ffill()
+            
+            # EMA 계산
+            ema12 = prices.ewm(span=12, adjust=False).mean()
+            ema26 = prices.ewm(span=26, adjust=False).mean()
+            
+            # MACD 지표 계산
+            df['macd_line'] = ema12 - ema26
+            df['macd_signal'] = df['macd_line'].ewm(span=9, adjust=False).mean()
+            df['macd_histogram'] = df['macd_line'] - df['macd_signal']
+            
+            # 골든크로스/데드크로스 감지
+            df['macd_cross'] = 0
+            for i in range(1, len(df)):
+                current_macd = df['macd_line'].iloc[i]
+                current_signal = df['macd_signal'].iloc[i]
+                prev_macd = df['macd_line'].iloc[i-1]
+                prev_signal = df['macd_signal'].iloc[i-1]
+                
+                if current_macd > current_signal and prev_macd <= prev_signal:
+                    df.iloc[i, df.columns.get_loc('macd_cross')] = 1  # 골든크로스
+                elif current_macd < current_signal and prev_macd >= prev_signal:
+                    df.iloc[i, df.columns.get_loc('macd_cross')] = -1  # 데드크로스
+            
+            print(f"✅ MACD 계산 완료: {len(df)}개 데이터")
+            return df
+            
+        except Exception as e:
+            print(f"❌ MACD 계산 실패: {e}")
+            return df
+    
+    def analyze_macd_signals_simple(self, df: pd.DataFrame) -> Dict:
+        """간단한 MACD 신호 분석"""
+        try:
+            if 'macd_cross' not in df.columns or len(df) < 10:
+                return {
+                    'golden_cross': False,
+                    'signal_strength': 0,
+                    'current_trend': 'neutral'
+                }
+            
+            # 최근 5일 내 골든크로스 확인
+            recent_crosses = df['macd_cross'].tail(5)
+            golden_cross = any(recent_crosses == 1)
+            dead_cross = any(recent_crosses == -1)
+            
+            # 현재 상태
+            latest = df.iloc[-1]
+            macd_above_signal = latest['macd_line'] > latest['macd_signal']
+            macd_above_zero = latest['macd_line'] > 0
+            
+            # 신호 강도 계산
+            signal_strength = 0
+            current_trend = 'neutral'
+            
+            if golden_cross:
+                signal_strength = 2.0
+                current_trend = 'bullish'
+                
+                if macd_above_zero:
+                    signal_strength += 1.0
+                
+                # 골든크로스 발생 시점 확인
+                cross_age = 999
+                for i in range(len(df)-1, max(0, len(df)-6), -1):
+                    if df['macd_cross'].iloc[i] == 1:
+                        cross_age = len(df) - i - 1
+                        break
+                
+                if cross_age <= 2:  # 최근 2일 내
+                    signal_strength += 0.5
+                    
+            elif dead_cross:
+                current_trend = 'bearish'
+                signal_strength = -1.0
+            elif macd_above_signal and macd_above_zero:
+                current_trend = 'bullish'
+                signal_strength = 1.0
+            elif not macd_above_signal and not macd_above_zero:
+                current_trend = 'bearish'
+                signal_strength = -0.5
+            
+            return {
+                'golden_cross': golden_cross,
+                'signal_strength': signal_strength,
+                'current_trend': current_trend,
+                'macd_above_zero': macd_above_zero,
+                'macd_above_signal': macd_above_signal,
+                'recent_cross_age': cross_age if golden_cross else 999
+            }
+            
+        except Exception as e:
+            print(f"❌ MACD 신호 분석 실패: {e}")
+            return {
+                'golden_cross': False,
+                'signal_strength': 0,
+                'current_trend': 'neutral'
+            }
+    
+    def complete_macd_test(self):
+        """완전한 MACD 테스트"""
+        print("🚀 완전한 MACD 시스템 테스트")
+        print("="*60)
+        
+        for symbol in self.symbols:
+            stock_name = self.get_stock_name(symbol)
+            print(f"\n📊 {symbol}({stock_name}) 완전 분석:")
+            
+            # 1. 일봉 데이터 조회
+            df = self.get_daily_data(symbol, days=100)
+            
+            if df.empty:
+                print("❌ 데이터 조회 실패")
+                continue
+            
+            print(f"📅 데이터: {len(df)}일, 가격 범위: {df['stck_prpr'].min():,}~{df['stck_prpr'].max():,}")
+            
+            if len(df) < 35:
+                print(f"❌ 데이터 부족: {len(df)} < 35")
+                continue
+            
+            # 2. MACD 계산
+            df_with_macd = self.simple_macd_implementation(df)
+            
+            # 3. 신호 분석
+            signals = self.analyze_macd_signals_simple(df_with_macd)
+            
+            print(f"🎯 MACD 분석 결과:")
+            print(f"  골든크로스: {signals['golden_cross']}")
+            print(f"  신호 강도: {signals['signal_strength']:.1f}")
+            print(f"  현재 추세: {signals['current_trend']}")
+            print(f"  MACD > 0: {signals['macd_above_zero']}")
+            print(f"  MACD > Signal: {signals['macd_above_signal']}")
+            
+            if signals['golden_cross']:
+                print(f"  🌟 골든크로스 {signals['recent_cross_age']}일 전 발생!")
+            
+            # 4. 투자 권고
+            if signals['signal_strength'] >= 2.0:
+                print(f"  💰 투자 권고: 강한 매수 신호")
+            elif signals['signal_strength'] >= 1.0:
+                print(f"  📈 투자 권고: 약한 매수 신호")
+            elif signals['signal_strength'] <= -1.0:
+                print(f"  📉 투자 권고: 매도 신호")
+            else:
+                print(f"  ⏸️ 투자 권고: 관망")
+    
+    def get_extended_minute_data(self, symbol: str, days: int = 5) -> pd.DataFrame:
+        """확장된 분봉 데이터 조회 - 여러 일자 조합"""
+        all_data = []
+        
+        for i in range(days):
+            date = datetime.now() - timedelta(days=i)
+            
+            # 주말 건너뛰기
+            if date.weekday() >= 5:
+                continue
+                
+            daily_minute_data = self.get_minute_data_for_date(symbol, date)
+            if not daily_minute_data.empty:
+                all_data.append(daily_minute_data)
+        
+        if all_data:
+            combined_df = pd.concat(all_data, ignore_index=True)
+            # 시간순 정렬
+            combined_df = combined_df.sort_values('stck_cntg_hour').reset_index(drop=True)
+            
+            self.logger.info(f"📊 {symbol} 확장 분봉 데이터: {len(combined_df)}개 봉")
+            return combined_df
+        
+        return pd.DataFrame()
+    
+    def get_minute_data_for_date(self, symbol: str, date: datetime) -> pd.DataFrame:
+        """특정 날짜의 분봉 데이터 조회"""
+        url = f"{self.base_url}/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice"
+        headers = {
+            "content-type": "application/json",
+            "authorization": f"Bearer {self.get_access_token()}",
+            "appkey": self.app_key,
+            "appsecret": self.app_secret,
+            "tr_id": "FHKST03010200"
+        }
+    
+        # 해당 날짜의 장마감 시간으로 설정
+        end_time = "153000"  # 15:30:00
+        target_date = date.strftime("%Y%m%d")
+    
+        params = {
+            "fid_etc_cls_code": "",
+            "fid_cond_mrkt_div_code": "J",
+            "fid_input_iscd": symbol,
+            "fid_input_hour_1": end_time,
+            "fid_pw_data_incu_yn": "Y",
+            "fid_input_date_1": target_date  # 날짜 지정
+        }
+    
+        try:
+            response = requests.get(url, headers=headers, params=params, timeout=15)
+            response.raise_for_status()
+            data = response.json()
+    
+            if data.get('output2'):
+                df = pd.DataFrame(data['output2'])
+                if not df.empty:
+                    # 시간 컬럼 추가
+                    df['stck_cntg_hour'] = pd.to_datetime(
+                        target_date + df['stck_cntg_hour'], 
+                        format='%Y%m%d%H%M%S',
+                        errors='coerce'
+                    )
+                    
+                    numeric_cols = ['stck_prpr', 'stck_oprc', 'stck_hgpr', 'stck_lwpr', 'cntg_vol']
+                    for col in numeric_cols:
+                        if col in df.columns:
+                            df[col] = pd.to_numeric(df[col], errors='coerce')
+                    
+                    return df
+    
+        except Exception as e:
+            self.logger.debug(f"분봉 데이터 조회 실패 ({symbol}, {target_date}): {e}")
+    
+        return pd.DataFrame()
+    
+    def test_macd_with_daily_data(self):
+        """일봉 데이터로 MACD 테스트"""
+        print("🧪 일봉 데이터로 MACD 테스트")
+        print("="*60)
+        
+        for symbol in self.symbols:
+            stock_name = self.get_stock_name(symbol)
+            print(f"\n📊 {symbol}({stock_name}) 일봉 MACD 분석:")
+            
+            # 일봉 데이터 조회 (100일)
+            df = self.get_daily_data(symbol, days=100)
+            
+            if df.empty:
+                print("❌ 일봉 데이터를 가져올 수 없습니다")
+                continue
+            
+            print(f"📅 일봉 데이터: {len(df)}일")
+            print(f"가격 범위: {df['stck_prpr'].min():,} ~ {df['stck_prpr'].max():,}")
+            print(f"최근 가격: {df['stck_prpr'].iloc[-1]:,}원")
+            
+            if len(df) >= 35:
+                # MACD 계산 (일봉 기준)
+                try:
+                    df_with_macd = self.calculate_macd(df)
+                    macd_analysis = self.detect_macd_golden_cross(df_with_macd)
+                    
+                    print(f"🎯 일봉 MACD 분석:")
+                    print(f"  - 골든크로스: {macd_analysis['golden_cross']}")
+                    print(f"  - 크로스 강도: {macd_analysis['cross_strength']:.2f}")
+                    print(f"  - 신호 나이: {macd_analysis['signal_age']}일")
+                    print(f"  - MACD > 0: {macd_analysis.get('macd_above_zero', False)}")
+                    print(f"  - 히스토그램 추세: {macd_analysis['histogram_trend']}")
+                    
+                    # 최근 5일 MACD 상태
+                    if 'macd_line' in df_with_macd.columns:
+                        print(f"\n📈 최근 5일 MACD 상태:")
+                        recent_data = df_with_macd.tail(5)
+                        for i, row in recent_data.iterrows():
+                            date = row.get('stck_bsop_date', f'Day{i}')
+                            macd_val = row.get('macd_line', 0)
+                            signal_val = row.get('macd_signal', 0)
+                            hist_val = row.get('macd_histogram', 0)
+                            cross_val = row.get('macd_cross', 0)
+                            
+                            cross_symbol = ""
+                            if cross_val == 1:
+                                cross_symbol = "🌟"
+                            elif cross_val == -1:
+                                cross_symbol = "💀"
+                            
+                            print(f"  {date}: MACD={macd_val:.4f}, Signal={signal_val:.4f}, Hist={hist_val:.4f} {cross_symbol}")
+                    
+                    # 종합 신호 계산
+                    if hasattr(self, 'calculate_enhanced_momentum_signals'):
+                        signals = self.calculate_enhanced_momentum_signals(df_with_macd)
+                        print(f"\n🎯 종합 신호 (일봉 기준):")
+                        print(f"  신호: {signals['signal']}")
+                        print(f"  강도: {signals['strength']:.2f}")
+                        print(f"  구성요소: {signals.get('signal_components', [])}")
+                    
+                except Exception as e:
+                    print(f"❌ MACD 계산 오류: {e}")
+            else:
+                print(f"❌ 데이터 부족: {len(df)} < 35일")
+    
+    def fix_minute_data_issue(self):
+        """분봉 데이터 문제 해결"""
+        print("🔧 분봉 데이터 문제 해결 중...")
+        
+        # 현재 분봉 데이터 조회 함수 상태 확인
+        test_symbol = self.symbols[0] if self.symbols else "005930"
+        
+        print(f"🧪 {test_symbol} 분봉 데이터 테스트:")
+        
+        # 1. 기본 분봉 조회
+        df1 = self.get_minute_data(test_symbol, minutes=60)
+        print(f"  기본 60분봉: {len(df1)}개")
+        
+        # 2. 더 많은 분봉 조회 시도
+        df2 = self.get_minute_data(test_symbol, minutes=200)
+        print(f"  확장 200분봉: {len(df2)}개")
+        
+        # 3. 일봉 조회
+        df3 = self.get_daily_data(test_symbol, days=50)
+        print(f"  일봉 50일: {len(df3)}개")
+        
+        # 4. 데이터 내용 확인
+        if not df1.empty:
+            unique_prices = df1['stck_prpr'].nunique()
+            print(f"  분봉 고유가격 수: {unique_prices}개")
+            if unique_prices == 1:
+                print("  ⚠️ 모든 분봉이 동일한 가격 (장마감 후 상태)")
+        
+        if not df3.empty:
+            unique_prices = df3['stck_prpr'].nunique()
+            print(f"  일봉 고유가격 수: {unique_prices}개")
+            price_range = df3['stck_prpr'].max() - df3['stck_prpr'].min()
+            print(f"  일봉 가격 변동폭: {price_range:,}원")
+        
+        # 권장사항
+        print(f"\n💡 권장사항:")
+        if df3.empty or len(df3) < 35:
+            print("  ❌ 일봉 데이터도 부족합니다")
+            print("  📞 KIS API 문제이거나 계좌 권한 문제일 수 있습니다")
+        else:
+            print("  ✅ 일봉 데이터 사용을 권장합니다")
+            print("  📊 MACD는 일봉에서 더 안정적으로 작동합니다")
+    
+    def create_hybrid_macd_strategy(self):
+        """일봉/분봉 하이브리드 MACD 전략"""
+        print("🚀 하이브리드 MACD 전략 생성")
+        
+        # 일봉으로 중장기 추세 파악, 분봉으로 진입 타이밍 결정
+        def hybrid_macd_signals(symbol: str) -> Dict:
+            """하이브리드 MACD 신호"""
+            
+            # 1. 일봉으로 중장기 추세 파악
+            daily_df = self.get_daily_data(symbol, days=100)
+            daily_trend = 'neutral'
+            
+            if not daily_df.empty and len(daily_df) >= 35:
+                daily_df = self.calculate_macd(daily_df)
+                daily_macd = self.detect_macd_golden_cross(daily_df)
+                
+                if daily_macd['golden_cross'] and daily_macd['signal_age'] <= 5:
+                    daily_trend = 'bullish'
+                elif daily_macd.get('macd_above_zero', False):
+                    daily_trend = 'bullish'
+                elif not daily_macd.get('macd_above_zero', True):
+                    daily_trend = 'bearish'
+            
+            # 2. 분봉으로 단기 신호 (가능한 경우만)
+            minute_df = self.get_minute_data(symbol, minutes=100)
+            minute_signal = 'HOLD'
+            minute_strength = 0
+            
+            if not minute_df.empty and len(minute_df) >= 35:
+                try:
+                    signals = self.calculate_enhanced_momentum_signals(minute_df)
+                    minute_signal = signals['signal']
+                    minute_strength = signals['strength']
+                except:
+                    pass
+            
+            # 3. 하이브리드 판단
+            final_signal = 'HOLD'
+            final_strength = 0
+            
+            if daily_trend == 'bullish':
+                if minute_signal == 'BUY':
+                    final_signal = 'BUY'
+                    final_strength = minute_strength + 1.0  # 일봉 추세 보너스
+                elif minute_signal == 'HOLD':
+                    final_signal = 'BUY'
+                    final_strength = 2.0  # 일봉 추세만으로 약한 매수
+            elif daily_trend == 'bearish' and minute_signal == 'SELL':
+                final_signal = 'SELL'
+                final_strength = minute_strength + 0.5
+            
+            return {
+                'signal': final_signal,
+                'strength': min(final_strength, 5.0),
+                'daily_trend': daily_trend,
+                'minute_signal': minute_signal,
+                'strategy': 'hybrid_macd'
+            }
+        
+        # 함수 바인딩
+        self.hybrid_macd_signals = hybrid_macd_signals
+        print("✅ 하이브리드 MACD 전략 생성 완료")
+    
+    def ensure_required_attributes(self):
+        """필수 속성들이 있는지 확인하고 없으면 초기화"""
+        
+        # MACD 관련 속성들
+        if not hasattr(self, 'macd_fast'):
+            self.macd_fast = 12
+        if not hasattr(self, 'macd_slow'):
+            self.macd_slow = 26
+        if not hasattr(self, 'macd_signal'):
+            self.macd_signal = 9
+        if not hasattr(self, 'macd_cross_lookback'):
+            self.macd_cross_lookback = 3
+        if not hasattr(self, 'macd_trend_confirmation'):
+            self.macd_trend_confirmation = 5
+        
+        # API 오류 관련 속성들
+        if not hasattr(self, 'skip_stock_name_api'):
+            self.skip_stock_name_api = False
+        if not hasattr(self, 'api_error_count'):
+            self.api_error_count = 0
+        
+        # 포지션 관리 관련
+        if not hasattr(self, 'all_positions'):
+            self.all_positions = {}
+        if not hasattr(self, 'use_improved_logic'):
+            self.use_improved_logic = True
+        
+        self.logger.debug("✅ 필수 속성 확인 완료")
     #END----------------------
 
 # 포지션 관리 디버깅용 명령어들
@@ -5242,6 +6560,130 @@ def main():
         print(f"상세 오류:\n{traceback.format_exc()}")
 
 
+
+def standalone_macd_test():
+    """독립적인 MACD 테스트 - 초기화 문제 회피"""
+    print("🧪 독립적 MACD 테스트 (초기화 문제 회피)")
+    print("="*60)
+    
+    # 직접 API 호출로 데이터 가져오기
+    import yaml
+    
+    try:
+        # config 로드
+        with open('config.yaml', 'r', encoding='utf-8') as f:
+            config = yaml.safe_load(f)
+        
+        app_key = config['kis']['app_key']
+        app_secret = config['kis']['app_secret']
+        base_url = config['kis']['base_url']
+        
+        # 토큰 로드
+        try:
+            with open('token.json', 'r', encoding='utf-8') as f:
+                token_data = json.load(f)
+            access_token = token_data.get('access_token')
+        except:
+            print("❌ 토큰 파일을 찾을 수 없습니다")
+            return
+        
+        # 테스트 종목
+        test_symbols = ['042660', '062040', '272210', '161580', '348210']
+        
+        for symbol in test_symbols:
+            print(f"\n📊 {symbol} 독립 MACD 테스트:")
+            
+            # 일봉 데이터 직접 조회
+            url = f"{base_url}/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice"
+            headers = {
+                "content-type": "application/json",
+                "authorization": f"Bearer {access_token}",
+                "appkey": app_key,
+                "appsecret": app_secret,
+                "tr_id": "FHKST03010100"
+            }
+            
+            end_date = datetime.now().strftime("%Y%m%d")
+            start_date = (datetime.now() - timedelta(days=100)).strftime("%Y%m%d")
+            
+            params = {
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": symbol,
+                "fid_input_date_1": start_date,
+                "fid_input_date_2": end_date,
+                "fid_period_div_code": "D",
+                "fid_org_adj_prc": "0"
+            }
+            
+            try:
+                response = requests.get(url, headers=headers, params=params, timeout=15)
+                data = response.json()
+                
+                if data.get('output2'):
+                    df = pd.DataFrame(data['output2'])
+                    df = df.sort_values('stck_bsop_date').reset_index(drop=True)
+                    
+                    # 컬럼명 매핑
+                    if 'stck_clpr' in df.columns:
+                        df['stck_prpr'] = pd.to_numeric(df['stck_clpr'], errors='coerce')
+                    
+                    if len(df) >= 35 and 'stck_prpr' in df.columns:
+                        # 간단한 MACD 계산
+                        prices = df['stck_prpr'].dropna()
+                        ema12 = prices.ewm(span=12).mean()
+                        ema26 = prices.ewm(span=26).mean()
+                        macd_line = ema12 - ema26
+                        signal_line = macd_line.ewm(span=9).mean()
+                        
+                        # 골든크로스 찾기
+                        golden_crosses = []
+                        for i in range(1, len(macd_line)):
+                            if (macd_line.iloc[i] > signal_line.iloc[i] and 
+                                macd_line.iloc[i-1] <= signal_line.iloc[i-1]):
+                                golden_crosses.append(i)
+                        
+                        print(f"  📅 데이터: {len(df)}일")
+                        print(f"  💰 가격: {prices.iloc[-1]:,}원")
+                        print(f"  📈 MACD: {macd_line.iloc[-1]:.4f}")
+                        print(f"  📊 Signal: {signal_line.iloc[-1]:.4f}")
+                        print(f"  🌟 골든크로스: {len(golden_crosses)}회")
+                        
+                        if golden_crosses:
+                            last_cross = golden_crosses[-1]
+                            days_ago = len(df) - last_cross - 1
+                            print(f"  🎯 최근 골든크로스: {days_ago}일 전")
+                            
+                            if days_ago <= 5:
+                                print(f"  💰 투자 권고: 매수 고려")
+                    else:
+                        print(f"  ❌ 데이터 부족 또는 컬럼 없음")
+                else:
+                    print(f"  ❌ API 데이터 없음")
+                    
+            except Exception as e:
+                print(f"  ❌ API 호출 실패: {e}")
+    
+    except Exception as e:
+        print(f"❌ 독립 테스트 실패: {e}")
+
+
+
+# 메인 테스트 함수 업데이트
+def main_macd_test():
+    print("🚀 완전한 MACD 시스템 테스트")
+    print("="*60)
+    
+    try:
+        trader = KISAutoTrader()
+        
+        # 완전한 MACD 테스트 실행
+        trader.complete_macd_test()
+        
+    except Exception as e:
+        print(f"❌ 테스트 실패: {e}")
+        import traceback
+        traceback.print_exc()
+
 # 메인 실행 함수
 if __name__ == "__main__":
     # 테스트 함수들 실행
@@ -5275,4 +6717,7 @@ if __name__ == "__main__":
         sys.exit(0)
 
     # 메인 프로그램 실행
-    main()
+    if '--test-macd' in sys.argv:
+        main_macd_test()
+    else:
+        main()

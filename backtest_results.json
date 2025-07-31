@@ -1,78 +1,67 @@
 {
-  "generated_at": "2025-07-31 11:07:57",
-  "backtest_period": "36 days",
+  "generated_at": "2025-07-31 21:20:24",
+  "backtest_period": "30 days",
   "verified_symbols": [
     {
       "symbol": "062040",
       "strategy": "momentum",
-      "return": 25.57,
+      "return": 27.51,
       "win_rate": 0.857,
-      "sharpe_ratio": 4.803,
+      "sharpe_ratio": 5.142,
       "max_drawdown": -0.018,
       "total_trades": 7,
       "priority": 2,
-      "last_updated": "2025-07-31 11:07:57"
+      "last_updated": "2025-07-31 21:20:24"
     },
     {
       "symbol": "278470",
       "strategy": "momentum",
-      "return": 7.06,
+      "return": 8.06,
       "win_rate": 0.556,
-      "sharpe_ratio": 1.751,
+      "sharpe_ratio": 1.934,
       "max_drawdown": -0.066,
       "total_trades": 9,
-      "priority": 5,
-      "last_updated": "2025-07-31 11:07:57"
-    },
-    {
-      "symbol": "014620",
-      "strategy": "scalping",
-      "return": 0.39,
-      "win_rate": 0.571,
-      "sharpe_ratio": 0.085,
-      "max_drawdown": -0.15,
-      "total_trades": 28,
-      "priority": 6,
-      "last_updated": "2025-07-31 11:07:57"
-    },
-    {
-      "symbol": "161580",
-      "strategy": "scalping",
-      "return": 13.25,
-      "win_rate": 0.63,
-      "sharpe_ratio": 3.899,
-      "max_drawdown": -0.04,
-      "total_trades": 27,
       "priority": 4,
-      "last_updated": "2025-07-31 11:07:57"
+      "last_updated": "2025-07-31 21:20:24"
     },
     {
       "symbol": "042660",
       "strategy": "scalping",
-      "return": 56.57,
+      "return": 56.99,
       "win_rate": 0.577,
-      "sharpe_ratio": 8.28,
+      "sharpe_ratio": 8.262,
       "max_drawdown": -0.086,
       "total_trades": 26,
       "priority": 1,
-      "last_updated": "2025-07-31 11:07:57"
+      "last_updated": "2025-07-31 21:20:24"
+    },
+    {
+      "symbol": "348210",
+      "strategy": "scalping",
+      "return": 4.19,
+      "win_rate": 0.536,
+      "sharpe_ratio": 1.296,
+      "max_drawdown": -0.04,
+      "total_trades": 28,
+      "priority": 5,
+      "last_updated": "2025-07-31 21:20:24"
     },
     {
       "symbol": "272210",
       "strategy": "scalping",
-      "return": 24.72,
+      "return": 22.05,
       "win_rate": 0.615,
-      "sharpe_ratio": 4.353,
+      "sharpe_ratio": 4.191,
       "max_drawdown": -0.079,
       "total_trades": 26,
       "priority": 3,
-      "last_updated": "2025-07-31 11:07:57"
+      "last_updated": "2025-07-31 21:20:24"
     }
   ],
   "summary": {
-    "total_symbols": 6,
-    "avg_return": 21.26,
+    "total_symbols": 5,
+    "avg_return": 23.76,
     "best_symbol": "042660",
-    "best_return": 56.57
+    "best_return": 56.99
   }
 }

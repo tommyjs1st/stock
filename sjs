@@ -1,250 +1,370 @@
-    def process_buy_for_symbol_fixed(self, symbol: str):
-        """개선된 개별 종목 매수 처리"""
-        stock_name = self.get_stock_name(symbol)
+    # 일봉 데이터 컬럼명 수정 및 MACD 완전 구현
+    
+    def get_daily_data_fixed(self, symbol: str, days: int = 100) -> pd.DataFrame:
+        """수정된 일봉 데이터 조회"""
+        url = f"{self.base_url}/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice"
+        headers = {
+            "content-type": "application/json",
+            "authorization": f"Bearer {self.get_access_token()}",
+            "appkey": self.app_key,
+            "appsecret": self.app_secret,
+            "tr_id": "FHKST03010100"
+        }
+    
+        end_date = datetime.now().strftime("%Y%m%d")
+        start_date = (datetime.now() - timedelta(days=days)).strftime("%Y%m%d")
+    
+        params = {
+            "fid_cond_mrkt_div_code": "J",
+            "fid_input_iscd": symbol,
+            "fid_input_date_1": start_date,
+            "fid_input_date_2": end_date,
+            "fid_period_div_code": "D",
+            "fid_org_adj_prc": "0"
+        }
+    
+        try:
+            self.logger.info(f"📅 {symbol} 일봉 데이터 조회: {days}일간")
+            response = requests.get(url, headers=headers, params=params, timeout=30)
+            response.raise_for_status()
+            data = response.json()
+    
+            if data.get('output2'):
+                df = pd.DataFrame(data['output2'])
+                
+                # 일봉 데이터 컬럼명 확인 및 출력
+                self.logger.debug(f"일봉 데이터 컬럼: {df.columns.tolist()}")
+                
+                # 날짜 순으로 정렬
+                if 'stck_bsop_date' in df.columns:
+                    df = df.sort_values('stck_bsop_date').reset_index(drop=True)
+                
+                # 컬럼명 매핑 (일봉 → 분봉 형식으로 통일)
+                column_mapping = {
+                    'stck_clpr': 'stck_prpr',    # 종가 → 현재가
+                    'stck_oprc': 'stck_oprc',    # 시가 (동일)
+                    'stck_hgpr': 'stck_hgpr',    # 고가 (동일)
+                    'stck_lwpr': 'stck_lwpr',    # 저가 (동일)
+                    'acml_vol': 'cntg_vol',      # 누적거래량 → 거래량
+                    'acml_tr_pbmn': 'acml_tr_pbmn'  # 누적거래대금
+                }
+                
+                # 컬럼명 변경
+                for old_col, new_col in column_mapping.items():
+                    if old_col in df.columns:
+                        df[new_col] = df[old_col]
+                
+                # 숫자형 변환
+                numeric_cols = ['stck_prpr', 'stck_oprc', 'stck_hgpr', 'stck_lwpr', 'cntg_vol']
+                for col in numeric_cols:
+                    if col in df.columns:
+                        df[col] = pd.to_numeric(df[col], errors='coerce')
+                
+                # NaN 제거
+                df = df.dropna(subset=['stck_prpr'])
+                
+                self.logger.info(f"✅ {symbol} 일봉 데이터 {len(df)}개 조회 완료")
+                self.logger.debug(f"가격 범위: {df['stck_prpr'].min():,} ~ {df['stck_prpr'].max():,}")
+                
+                return df
+            else:
+                self.logger.warning(f"❌ {symbol} 일봉 데이터 없음")
+                
+        except Exception as e:
+            self.logger.error(f"일봉 데이터 조회 실패 ({symbol}): {e}")
+    
+        return pd.DataFrame()
+    
+    def debug_daily_data_columns(self, symbol: str):
+        """일봉 데이터 컬럼 구조 확인"""
+        print(f"🔍 {symbol} 일봉 데이터 구조 분석")
         
-        # 현재 보유 여부 확인
-        current_position = self.positions.get(symbol, {})
-        has_position = current_position.get('quantity', 0) > 0
-        
-        self.logger.info(f"🔍 {symbol}({stock_name}) 매수 분석 시작")
-        
-        # 매수 가능 여부 확인 (보유 중이어도 추가 매수 가능한지 체크)
-        can_buy, buy_reason = self.can_purchase_symbol(symbol)
-        
-        if not can_buy:
-            self.logger.info(f"🚫 {symbol} - {buy_reason}")
-            return
-        
-        if has_position:
-            self.logger.info(f"📌 {symbol} - 이미 보유 중이지만 추가 매수 검토")
-        
-        # 분봉 데이터 조회
-        df = self.get_minute_data(symbol)
-        if df.empty:
-            self.logger.warning(f"{symbol}({stock_name}) - 데이터 없음")
-            return
-        
-        # 전략에 따른 신호 계산
-        optimal_strategy = self.strategy_map.get(symbol, 'momentum')
-        signals = self.calculate_signals_by_strategy(symbol, df, optimal_strategy)
-        
-        current_price = signals['current_price']
-        
-        self.logger.info(f"📊 {symbol}({stock_name}) 매수 분석 결과:")
-        self.logger.info(f"  - 전략: {optimal_strategy}")
-        self.logger.info(f"  - 신호: {signals['signal']}")
-        self.logger.info(f"  - 강도: {signals['strength']:.2f}")
-        self.logger.info(f"  - 현재가: {current_price:,}원")
-        self.logger.info(f"  - 보유 여부: {'예' if has_position else '아니오'}")
-        
-        # 매수 신호 처리
-        if signals['signal'] == 'BUY':
-            quantity = self.calculate_position_size(symbol, current_price, signals['strength'])
+        try:
+            url = f"{self.base_url}/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice"
+            headers = {
+                "content-type": "application/json",
+                "authorization": f"Bearer {self.get_access_token()}",
+                "appkey": self.app_key,
+                "appsecret": self.app_secret,
+                "tr_id": "FHKST03010100"
+            }
+    
+            end_date = datetime.now().strftime("%Y%m%d")
+            start_date = (datetime.now() - timedelta(days=30)).strftime("%Y%m%d")
+    
+            params = {
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": symbol,
+                "fid_input_date_1": start_date,
+                "fid_input_date_2": end_date,
+                "fid_period_div_code": "D",
+                "fid_org_adj_prc": "0"
+            }
+    
+            response = requests.get(url, headers=headers, params=params, timeout=15)
+            data = response.json()
+    
+            print(f"📊 API 응답 구조:")
+            print(f"  - rt_cd: {data.get('rt_cd')}")
+            print(f"  - msg1: {data.get('msg1', 'N/A')}")
             
-            if quantity > 0:
-                order_strategy = self.determine_order_strategy(signals['strength'], 'BUY')
+            if data.get('output2'):
+                df = pd.DataFrame(data['output2'])
+                print(f"  - 데이터 개수: {len(df)}개")
+                print(f"  - 컬럼 목록: {df.columns.tolist()}")
                 
-                action_type = "추가 매수" if has_position else "신규 매수"
-                self.logger.info(f"💰 {symbol} {action_type} 실행: {quantity}주 ({order_strategy})")
-                
-                result = self.place_order_with_strategy(symbol, 'BUY', quantity, order_strategy)
-                
-                if result['success']:
-                    executed_price = result.get('limit_price', current_price)
-                    self.position_manager.record_purchase(
-                        symbol, quantity, executed_price, optimal_strategy
-                    )
-                    self.logger.info(f"✅ {symbol} {action_type} 완료: {quantity}주 @ {executed_price:,}원")
+                if len(df) > 0:
+                    print(f"\n📈 첫 번째 행 데이터:")
+                    first_row = df.iloc[0]
+                    for col in df.columns:
+                        print(f"  {col}: {first_row[col]}")
                     
-                    # 포지션 업데이트
-                    if has_position:
-                        # 기존 보유량에 추가
-                        old_quantity = current_position['quantity']
-                        old_avg_price = current_position['avg_price']
-                        new_total_quantity = old_quantity + quantity
-                        new_avg_price = ((old_avg_price * old_quantity) + (executed_price * quantity)) / new_total_quantity
-                        
-                        self.positions[symbol]['quantity'] = new_total_quantity
-                        self.positions[symbol]['avg_price'] = new_avg_price
-                    else:
-                        # 신규 포지션 생성
-                        self.positions[symbol] = {
-                            'quantity': quantity,
-                            'avg_price': executed_price,
-                            'current_price': current_price,
-                            'profit_loss': 0
-                        }
+                    # 가격 관련 컬럼 찾기
+                    price_cols = [col for col in df.columns if 'pr' in col.lower() or 'prc' in col.lower()]
+                    print(f"\n💰 가격 관련 컬럼: {price_cols}")
+                    
+                    volume_cols = [col for col in df.columns if 'vol' in col.lower()]
+                    print(f"📊 거래량 관련 컬럼: {volume_cols}")
             else:
-                self.logger.warning(f"⚠️ {symbol} - 매수 수량이 0입니다.")
-        else:
-            self.logger.info(f"📉 {symbol} - 매수 신호 없음 ({signals['signal']})")
-    
-    # 문제 2: process_buy_signals에서 로깅 부족
-    def process_buy_signals_verbose(self):
-        """상세 로깅이 포함된 매수 신호 처리"""
-        self.logger.info("🛒 매수 신호 처리 시작")
-        self.logger.info(f"📋 분석 대상 종목: {self.symbols}")
-        
-        if not self.symbols:
-            self.logger.warning("❌ 분석할 종목이 없습니다")
-            return
-        
-        for i, symbol in enumerate(self.symbols, 1):
-            try:
-                self.logger.info(f"🔍 [{i}/{len(self.symbols)}] {symbol} 매수 분석 중...")
-                self.process_buy_for_symbol_fixed(symbol)
-                time.sleep(0.5)  # API 호출 간격
-            except Exception as e:
-                self.logger.error(f"❌ {symbol} 매수 처리 오류: {e}")
-        
-        self.logger.info("✅ 매수 신호 처리 완료")
-    
-    # 문제 3: 거래 사이클에서 매수 처리가 제대로 호출되지 않을 수 있음
-    def run_trading_cycle_improved_debug(self):
-        """디버깅이 강화된 거래 사이클"""
-        if not self.check_risk_management():
-            self.logger.warning("리스크 관리 조건 위반 - 거래 중단")
-            return
-    
-        self.logger.info("🔄 개선된 거래 사이클 시작")
-        
-        try:
-            # 1. 모든 포지션 업데이트 (매도용)
-            self.logger.info("1️⃣ 포지션 업데이트 중...")
-            self.update_all_positions()
-            
-            # 2. 매도 처리 우선 (모든 보유 종목)
-            self.logger.info("2️⃣ 매도 신호 처리 중...")
-            if hasattr(self, 'all_positions') and self.all_positions:
-                self.logger.info(f"   매도 분석 대상: {len(self.all_positions)}개 종목")
-                self.process_sell_signals()
-            else:
-                self.logger.info("   보유 종목 없음 - 매도 처리 건너뛰기")
-            
-            # 3. 매수 처리 (백테스트 선정 종목) - 강화된 로깅
-            self.logger.info("3️⃣ 매수 신호 처리 중...")
-            self.logger.info(f"   매수 분석 대상: {self.symbols}")
-            
-            # 현재 상황 체크
-            available_cash = self.get_available_cash()
-            self.logger.info(f"   💵 현재 가용 자금: {available_cash:,}원")
-            
-            if available_cash <= 0:
-                self.logger.warning("   ⚠️ 가용 자금 부족 - 매수 건너뛰기")
-            else:
-                self.process_buy_signals_verbose()
-            
-            # 4. 성과 데이터 저장
-            self.logger.info("4️⃣ 성과 데이터 저장 중...")
-            self.save_performance_data()
-            
-            self.logger.info("✅ 거래 사이클 완료")
-            
+                print("❌ output2 데이터 없음")
+                
         except Exception as e:
-            self.logger.error(f"거래 사이클 실행 중 오류: {e}")
-            import traceback
-            self.logger.error(f"상세 오류:\n{traceback.format_exc()}")
+            print(f"❌ 디버깅 실패: {e}")
     
-    # 가용 자금 확인 함수 추가
-    def get_available_cash(self) -> float:
-        """가용 자금 조회"""
-        try:
-            account_data = self.get_account_balance()
-            if account_data and account_data.get('output'):
-                available_cash = float(account_data['output'].get('ord_psbl_cash', 0))
-                return available_cash
-        except Exception as e:
-            self.logger.error(f"가용 자금 조회 실패: {e}")
-        return 0
-    
-    # 문제 4: can_purchase_symbol 함수가 너무 엄격할 수 있음
-    def can_purchase_symbol_debug(self, symbol: str) -> tuple[bool, str]:
-        """디버깅이 강화된 종목 매수 가능 여부 확인"""
-        
-        self.logger.debug(f"🔍 {symbol} 매수 가능 여부 확인 중...")
-        
-        # 1. 현재 보유 수량 확인
-        current_position = self.positions.get(symbol, {})
-        current_quantity = current_position.get('quantity', 0)
-        
-        self.logger.debug(f"   현재 보유: {current_quantity}주 / 최대: {self.max_quantity_per_symbol}주")
-        
-        if current_quantity >= self.max_quantity_per_symbol:
-            reason = f"최대 보유 수량 초과 ({current_quantity}/{self.max_quantity_per_symbol}주)"
-            self.logger.debug(f"   ❌ {reason}")
-            return False, reason
-        
-        # 2. 매수 횟수 제한 확인
-        history = self.position_manager.position_history.get(symbol, {})
-        purchase_count = history.get('purchase_count', 0)
-        
-        self.logger.debug(f"   매수 횟수: {purchase_count}회 / 최대: {self.max_purchases_per_symbol}회")
-        
-        if purchase_count >= self.max_purchases_per_symbol:
-            reason = f"최대 매수 횟수 초과 ({purchase_count}/{self.max_purchases_per_symbol}회)"
-            self.logger.debug(f"   ❌ {reason}")
-            return False, reason
-        
-        # 3. 재매수 금지 기간 확인
-        last_purchase_time = history.get('last_purchase_time')
-        if last_purchase_time:
-            last_time = datetime.fromisoformat(last_purchase_time)
-            time_since_last = datetime.now() - last_time
-            hours_since_last = time_since_last.total_seconds() / 3600
-            
-            self.logger.debug(f"   마지막 매수: {hours_since_last:.1f}시간 전 / 금지기간: {self.purchase_cooldown_hours}시간")
-            
-            if time_since_last < timedelta(hours=self.purchase_cooldown_hours):
-                remaining_hours = self.purchase_cooldown_hours - hours_since_last
-                reason = f"재매수 금지 기간 중 (남은 시간: {remaining_hours:.1f}시간)"
-                self.logger.debug(f"   ❌ {reason}")
-                return False, reason
-        
-        self.logger.debug(f"   ✅ 매수 가능")
-        return True, "매수 가능"
-    
-    # 임시 테스트 함수
-    def test_buy_analysis(self):
-        """매수 분석 테스트"""
-        self.logger.info("🧪 매수 분석 테스트 시작")
+    def test_macd_with_fixed_daily_data(self):
+        """수정된 일봉 데이터로 MACD 테스트"""
+        print("🧪 수정된 일봉 데이터로 MACD 테스트")
+        print("="*60)
         
         for symbol in self.symbols:
-            self.logger.info(f"\n{'='*50}")
-            self.logger.info(f"🔍 {symbol} 테스트")
-            self.logger.info(f"{'='*50}")
+            stock_name = self.get_stock_name(symbol)
+            print(f"\n📊 {symbol}({stock_name}) 분석:")
             
-            # 1. 매수 가능 여부 확인
-            can_buy, reason = self.can_purchase_symbol_debug(symbol)
-            self.logger.info(f"매수 가능: {can_buy} - {reason}")
+            # 1. 컬럼 구조 먼저 확인
+            print("🔍 컬럼 구조 확인:")
+            self.debug_daily_data_columns(symbol)
             
-            # 2. 현재 포지션 확인
-            position = self.positions.get(symbol, {})
-            self.logger.info(f"현재 포지션: {position}")
+            # 2. 수정된 일봉 데이터 조회
+            print("\n📅 수정된 일봉 데이터 조회:")
+            df = self.get_daily_data_fixed(symbol, days=100)
             
-            # 3. 분봉 데이터 확인
-            df = self.get_minute_data(symbol)
-            self.logger.info(f"분봉 데이터: {len(df)}개 봉")
+            if df.empty:
+                print("❌ 일봉 데이터를 가져올 수 없습니다")
+                continue
             
-            if not df.empty:
-                # 4. 신호 계산
-                strategy = self.strategy_map.get(symbol, 'momentum')
-                signals = self.calculate_signals_by_strategy(symbol, df, strategy)
-                self.logger.info(f"신호: {signals}")
-                
-                # 5. 매수 시뮬레이션
-                if signals['signal'] == 'BUY':
-                    quantity = self.calculate_position_size(symbol, signals['current_price'], signals['strength'])
-                    self.logger.info(f"계산된 매수 수량: {quantity}주")
+            print(f"✅ 일봉 데이터: {len(df)}일")
+            print(f"가격 범위: {df['stck_prpr'].min():,} ~ {df['stck_prpr'].max():,}")
+            print(f"최근 가격: {df['stck_prpr'].iloc[-1]:,}원")
+            print(f"고유가격 수: {df['stck_prpr'].nunique()}개")
+            
+            if len(df) >= 35:
+                # 3. MACD 계산
+                print("\n📈 MACD 계산:")
+                try:
+                    df_with_macd = self.calculate_macd(df)
+                    
+                    # MACD 데이터 확인
+                    if 'macd_line' in df_with_macd.columns:
+                        print(f"✅ MACD 계산 성공")
+                        
+                        # 최근 5일 데이터 출력
+                        print(f"\n📊 최근 5일 MACD 데이터:")
+                        recent = df_with_macd.tail(5)
+                        for i, row in recent.iterrows():
+                            date = row.get('stck_bsop_date', f'Day{i}')
+                            price = row['stck_prpr']
+                            macd_line = row.get('macd_line', 0)
+                            macd_signal = row.get('macd_signal', 0)
+                            macd_hist = row.get('macd_histogram', 0)
+                            cross = row.get('macd_cross', 0)
+                            
+                            cross_icon = ""
+                            if cross == 1:
+                                cross_icon = "🌟골든"
+                            elif cross == -1:
+                                cross_icon = "💀데드"
+                            
+                            print(f"  {date}: {price:,}원, MACD={macd_line:.4f}, Signal={macd_signal:.4f}, Hist={macd_hist:.4f} {cross_icon}")
+                        
+                        # 4. 골든크로스 분석
+                        print(f"\n🎯 골든크로스 분석:")
+                        macd_analysis = self.detect_macd_golden_cross(df_with_macd)
+                        
+                        for key, value in macd_analysis.items():
+                            print(f"  {key}: {value}")
+                        
+                        # 5. 종합 신호 (만약 함수가 있다면)
+                        if hasattr(self, 'calculate_enhanced_momentum_signals'):
+                            print(f"\n🎯 종합 신호:")
+                            try:
+                                signals = self.calculate_enhanced_momentum_signals(df_with_macd)
+                                print(f"  신호: {signals['signal']}")
+                                print(f"  강도: {signals['strength']:.2f}")
+                                if 'signal_components' in signals:
+                                    print(f"  구성요소: {signals['signal_components']}")
+                            except Exception as e:
+                                print(f"  ❌ 종합 신호 계산 실패: {e}")
+                    else:
+                        print(f"❌ MACD 계산 실패 - macd_line 컬럼 없음")
+                        
+                except Exception as e:
+                    print(f"❌ MACD 계산 오류: {e}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print(f"❌ 데이터 부족: {len(df)} < 35일")
     
-    # 실제 적용을 위한 함수 교체
-    def apply_buy_analysis_fix(self):
-        """매수 분석 수정사항 적용"""
+    def simple_macd_implementation(self, df: pd.DataFrame, price_col: str = 'stck_prpr') -> pd.DataFrame:
+        """간단하고 안전한 MACD 구현"""
+        try:
+            if len(df) < 35 or price_col not in df.columns:
+                return df
+            
+            # 가격 데이터 정리
+            prices = df[price_col].astype(float).fillna(method='ffill')
+            
+            # EMA 계산
+            ema12 = prices.ewm(span=12, adjust=False).mean()
+            ema26 = prices.ewm(span=26, adjust=False).mean()
+            
+            # MACD 지표 계산
+            df['macd_line'] = ema12 - ema26
+            df['macd_signal'] = df['macd_line'].ewm(span=9, adjust=False).mean()
+            df['macd_histogram'] = df['macd_line'] - df['macd_signal']
+            
+            # 골든크로스/데드크로스 감지
+            df['macd_cross'] = 0
+            for i in range(1, len(df)):
+                current_macd = df['macd_line'].iloc[i]
+                current_signal = df['macd_signal'].iloc[i]
+                prev_macd = df['macd_line'].iloc[i-1]
+                prev_signal = df['macd_signal'].iloc[i-1]
+                
+                if current_macd > current_signal and prev_macd <= prev_signal:
+                    df.iloc[i, df.columns.get_loc('macd_cross')] = 1  # 골든크로스
+                elif current_macd < current_signal and prev_macd >= prev_signal:
+                    df.iloc[i, df.columns.get_loc('macd_cross')] = -1  # 데드크로스
+            
+            print(f"✅ MACD 계산 완료: {len(df)}개 데이터")
+            return df
+            
+        except Exception as e:
+            print(f"❌ MACD 계산 실패: {e}")
+            return df
+    
+    def analyze_macd_signals_simple(self, df: pd.DataFrame) -> Dict:
+        """간단한 MACD 신호 분석"""
+        try:
+            if 'macd_cross' not in df.columns or len(df) < 10:
+                return {
+                    'golden_cross': False,
+                    'signal_strength': 0,
+                    'current_trend': 'neutral'
+                }
+            
+            # 최근 5일 내 골든크로스 확인
+            recent_crosses = df['macd_cross'].tail(5)
+            golden_cross = any(recent_crosses == 1)
+            dead_cross = any(recent_crosses == -1)
+            
+            # 현재 상태
+            latest = df.iloc[-1]
+            macd_above_signal = latest['macd_line'] > latest['macd_signal']
+            macd_above_zero = latest['macd_line'] > 0
+            
+            # 신호 강도 계산
+            signal_strength = 0
+            current_trend = 'neutral'
+            
+            if golden_cross:
+                signal_strength = 2.0
+                current_trend = 'bullish'
+                
+                if macd_above_zero:
+                    signal_strength += 1.0
+                
+                # 골든크로스 발생 시점 확인
+                cross_age = 999
+                for i in range(len(df)-1, max(0, len(df)-6), -1):
+                    if df['macd_cross'].iloc[i] == 1:
+                        cross_age = len(df) - i - 1
+                        break
+                
+                if cross_age <= 2:  # 최근 2일 내
+                    signal_strength += 0.5
+                    
+            elif dead_cross:
+                current_trend = 'bearish'
+                signal_strength = -1.0
+            elif macd_above_signal and macd_above_zero:
+                current_trend = 'bullish'
+                signal_strength = 1.0
+            elif not macd_above_signal and not macd_above_zero:
+                current_trend = 'bearish'
+                signal_strength = -0.5
+            
+            return {
+                'golden_cross': golden_cross,
+                'signal_strength': signal_strength,
+                'current_trend': current_trend,
+                'macd_above_zero': macd_above_zero,
+                'macd_above_signal': macd_above_signal,
+                'recent_cross_age': cross_age if golden_cross else 999
+            }
+            
+        except Exception as e:
+            print(f"❌ MACD 신호 분석 실패: {e}")
+            return {
+                'golden_cross': False,
+                'signal_strength': 0,
+                'current_trend': 'neutral'
+            }
+    
+    def complete_macd_test(self):
+        """완전한 MACD 테스트"""
+        print("🚀 완전한 MACD 시스템 테스트")
+        print("="*60)
         
-        # 기존 함수들을 수정된 버전으로 교체
-        self.process_buy_for_symbol = self.process_buy_for_symbol_fixed
-        self.process_buy_signals = self.process_buy_signals_verbose
-        self.can_purchase_symbol = self.can_purchase_symbol_debug
-        self.run_trading_cycle_improved = self.run_trading_cycle_improved_debug
-        
-        self.logger.info("✅ 매수 분석 수정사항 적용 완료")
+        for symbol in self.symbols:
+            stock_name = self.get_stock_name(symbol)
+            print(f"\n📊 {symbol}({stock_name}) 완전 분석:")
+            
+            # 1. 일봉 데이터 조회
+            df = self.get_daily_data_fixed(symbol, days=100)
+            
+            if df.empty:
+                print("❌ 데이터 조회 실패")
+                continue
+            
+            print(f"📅 데이터: {len(df)}일, 가격 범위: {df['stck_prpr'].min():,}~{df['stck_prpr'].max():,}")
+            
+            if len(df) < 35:
+                print(f"❌ 데이터 부족: {len(df)} < 35")
+                continue
+            
+            # 2. MACD 계산
+            df_with_macd = self.simple_macd_implementation(df)
+            
+            # 3. 신호 분석
+            signals = self.analyze_macd_signals_simple(df_with_macd)
+            
+            print(f"🎯 MACD 분석 결과:")
+            print(f"  골든크로스: {signals['golden_cross']}")
+            print(f"  신호 강도: {signals['signal_strength']:.1f}")
+            print(f"  현재 추세: {signals['current_trend']}")
+            print(f"  MACD > 0: {signals['macd_above_zero']}")
+            print(f"  MACD > Signal: {signals['macd_above_signal']}")
+            
+            if signals['golden_cross']:
+                print(f"  🌟 골든크로스 {signals['recent_cross_age']}일 전 발생!")
+            
+            # 4. 투자 권고
+            if signals['signal_strength'] >= 2.0:
+                print(f"  💰 투자 권고: 강한 매수 신호")
+            elif signals['signal_strength'] >= 1.0:
+                print(f"  📈 투자 권고: 약한 매수 신호")
+            elif signals['signal_strength'] <= -1.0:
+                print(f"  📉 투자 권고: 매도 신호")
+            else:
+                print(f"  ⏸️ 투자 권고: 관망")
     

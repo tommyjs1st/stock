@@ -64,6 +64,134 @@ def get_institution_netbuy_trend_kis(stock_code, app_key, app_secret, access_tok
         print(f"❌ KIS API 기관 추세 분석 오류: {e}")
         return [], "unknown"
 
+def is_macd_golden_cross(df):
+    """
+    MACD 골든크로스 신호 감지 (30일 기간)
+    """
+    if len(df) < 30:
+        return False
+   
+    try:
+        close_prices = df['stck_clpr'].copy()
+    
+        if close_prices.isnull().any():
+            return False
+    
+        # EMA 계산
+        ema_12 = close_prices.ewm(span=12, adjust=False).mean()
+        ema_26 = close_prices.ewm(span=26, adjust=False).mean()
+    
+        # MACD Line 계산
+        macd_line = ema_12 - ema_26
+    
+        # Signal Line 계산
+        signal_line = macd_line.ewm(span=9, adjust=False).mean()
+    
+        if len(macd_line) < 5:
+            return False
+    
+        # 현재 MACD가 Signal보다 위에 있음
+        current_above = macd_line.iloc[-1] > signal_line.iloc[-1]
+    
+        # 최근 30일 내 골든크로스 발생
+        recent_cross = False
+        for i in range(1, min(31, len(macd_line))):
+            if (macd_line.iloc[-i-1] <= signal_line.iloc[-i-1] and
+                macd_line.iloc[-i] > signal_line.iloc[-i]):
+                recent_cross = True
+                break
+
+        return current_above and recent_cross
+
+    except Exception as e:
+        return False
+
+
+def get_current_price(access_token, app_key, app_secret, stock_code):
+    """
+    실시간 현재가 조회
+    """
+    url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-price"
+    headers = {
+        "Content-Type": "application/json",
+        "authorization": f"Bearer {access_token}",
+        "appKey": app_key,
+        "appSecret": app_secret,
+        "tr_id": "FHKST01010100"
+    }
+    params = {
+        "fid_cond_mrkt_div_code": "J",
+        "fid_input_iscd": stock_code
+    }
+    
+    try:
+        response = requests.get(url, headers=headers, params=params)
+        data = response.json().get("output", {})
+        
+        current_price = float(data.get("stck_prpr", 0))
+        current_volume = int(data.get("acml_vol", 0))
+        
+        return current_price, current_volume
+    except Exception as e:
+        print(f"현재가 조회 오류: {e}")
+        return None, None
+
+
+def get_daily_price_data_with_realtime(access_token, app_key, app_secret, stock_code):
+    """
+    일봉 데이터 + 실시간 현재가 결합
+    """
+    # 기존 일봉 데이터 조회
+    url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-price"
+    headers = {
+        "Content-Type": "application/json",
+        "authorization": f"Bearer {access_token}",
+        "appKey": app_key,
+        "appSecret": app_secret,
+        "tr_id": "FHKST01010400"
+    }
+    params = {
+        "fid_cond_mrkt_div_code": "J",
+        "fid_input_iscd": stock_code,
+        "fid_period_div_code": "D",
+        "fid_org_adj_prc": "0"
+    }
+    
+    response = requests.get(url, headers=headers, params=params)
+    data = response.json().get("output", [])
+    df = pd.DataFrame(data)
+    
+    # 데이터 타입 변환
+    df["stck_clpr"] = pd.to_numeric(df["stck_clpr"], errors="coerce")
+    df["stck_hgpr"] = pd.to_numeric(df["stck_hgpr"], errors="coerce")
+    df["stck_lwpr"] = pd.to_numeric(df["stck_lwpr"], errors="coerce")
+    df["acml_vol"] = pd.to_numeric(df["acml_vol"], errors="coerce")
+    df = df.dropna(subset=["stck_clpr", "stck_hgpr", "stck_lwpr", "acml_vol"])
+    df = df.sort_values(by="stck_bsop_date").reset_index(drop=True)
+    
+    # 실시간 현재가 조회
+    current_price, current_volume = get_current_price(access_token, app_key, app_secret, stock_code)
+    
+    if current_price and current_volume:
+        today = datetime.now().strftime("%Y%m%d")
+        
+        # 최신 데이터가 오늘 데이터인지 확인
+        if len(df) > 0 and df.iloc[-1]["stck_bsop_date"] == today:
+            # 오늘 데이터를 실시간 가격으로 업데이트
+            df.loc[df.index[-1], "stck_clpr"] = current_price
+            df.loc[df.index[-1], "acml_vol"] = current_volume
+        else:
+            # 오늘 데이터 새로 추가
+            new_row = {
+                "stck_bsop_date": today,
+                "stck_clpr": current_price,
+                "stck_hgpr": current_price,
+                "stck_lwpr": current_price,
+                "acml_vol": current_volume
+            }
+            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+    
+    return df
 
 
 def is_institution_consecutive_buying(stock_code, app_key, app_secret, access_token, days=3):
@@ -276,7 +404,6 @@ def load_token():
 def get_top_200_stocks():
     stocks = {}
     exclude_keywords = ["KODEX","TIGER", "PLUS", "ACE", "ETF", "ETN", "리츠", "우", "스팩"]
-    cnt = 0
 
     for page in range(1, 11):
         url = f"https://finance.naver.com/sise/sise_market_sum.nhn?sosok=0&page={page}"
@@ -295,11 +422,7 @@ def get_top_200_stocks():
                 if any(keyword in name for keyword in exclude_keywords):
                     continue
                 
-                cnt += 1
-                if (cnt > 50):
-                    stocks[name] = code
-                else:
-                    logger.info(f"{name}: 시가총액 상위 종목 제외({cnt})")
+                stocks[name] = code
 
     return stocks
 
@@ -536,6 +659,7 @@ def calculate_buy_signal_score(df, name, code, foreign_trend=None):
         "이중바닥": is_double_bottom_pattern(df),
         "일목균형표": is_ichimoku_bullish_signal(df),
         "컵앤핸들": is_cup_handle_pattern(df),
+        "MACD골든크로스": is_macd_golden_cross(df),
         "외국인매수추세": foreign_trend == "steady_buying",
         "기관연속매수": is_institution_consecutive_buying(code, app_key, app_secret, access_token) if app_key else False 
     }
@@ -632,6 +756,7 @@ if __name__ == "__main__":
         "이중바닥": [],
         "일목균형표": [],
         "컵앤핸들": [],
+        "MACD골든크로스": [],
         "외국인매수추세": [] ,
         "기관연속매수": []   
     }
@@ -673,8 +798,10 @@ if __name__ == "__main__":
                 logger.info(f"❌ {name}: 외국인 매수 추세 아님:{netbuy_list}:{trend}")
                 continue
 
-
-            df = get_daily_price_data(access_token, app_key, app_secret, code)
+            # 실시간 데이터 포함한 분석
+            netbuy_list, trend = get_foreign_netbuy_trend_kis(code, app_key, app_secret, access_token)
+                
+            df = get_daily_price_data_with_realtime(access_token, app_key, app_secret, code)
             if df is None or df.empty:
                 continue
 
@@ -706,6 +833,8 @@ if __name__ == "__main__":
                 signal_lists["일목균형표"].append(f"- {name} ({code})")
             if is_cup_handle_pattern(df):
                 signal_lists["컵앤핸들"].append(f"- {name} ({code})")
+            if is_macd_golden_cross(df):
+                signal_lists["MACD골든크로스"].append(f"- {name} ({code})")
             if trend == "steady_buying":
                 signal_lists["외국인매수추세"].append(f"- {name} ({code})")
             if is_institution_consecutive_buying(code, app_key, app_secret, access_token):
@@ -805,7 +934,7 @@ if __name__ == "__main__":
                     "골든크로스": "🟡", "볼린저밴드복귀": "🔵", "MACD상향돌파": "🟢",
                     "RSI과매도회복": "🟠", "스토캐스틱회복": "🟣", "거래량급증": "🔴",
                     "Williams%R회복": "🟤", "이중바닥": "⚫", "일목균형표": "🔘", "컵앤핸들": "🎯",
-                    "기관연속매수": "🏛️" 
+                    "MACD골든크로스": "⚡", "기관연속매수": "🏛️" 
                 }
                 icon = icons.get(signal_type, "📊")
                 msg = f"{icon} **[{signal_type} 발생 종목]**\n" + "\n".join(signal_list)
