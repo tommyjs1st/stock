@@ -1,0 +1,180 @@
+# KIS API 자동매매 시스템 설정 파일
+# 한국투자증권 OpenAPI 정보: https://apiportal.koreainvestment.com
+
+# =============================================================================
+# KIS API 인증 정보 (필수 입력)
+# =============================================================================
+kis:
+  # 앱키 (KIS Developers에서 발급받은 App Key)
+  app_key: "PSObFpwCFGJ8wi3hFaQYOiAKqg52aRL2WDR2"
+  
+  # 앱 시크릿 (KIS Developers에서 발급받은 App Secret)  
+  app_secret: "vC5UkRa2hBN/PDxIYPUSAdWHMmwZHJJydtliMfTP9nwqQzQXIIZtV/5cFyigrlmxNw+tBPa1OGgt7R90wyJaNyLIArVTxXgRyvk+I1588OWew/a2EhoYFsuu4KwQJ3wJM2ThnCvlLkNBGcJwox6ShsFvmJib7knU1wnma9FuE7wE+X6KCrw="
+  
+  # API 서버 URL
+  # 실전투자: https://openapi.koreainvestment.com:9443
+  # 모의투자: https://openapivts.koreainvestment.com:29443
+  base_url: "https://openapi.koreainvestment.com:9443"    # 실전투자!!!
+  
+  # 계좌번호 (종합계좌번호-상품코드, 예: 50123456-01)
+  account_no: "68152676-01"
+
+# =============================================================================
+# 백테스트 검증 종목 설정 (새로 추가)
+# =============================================================================
+backtest:
+  # 백테스트 검증된 종목들 (우선 선택)
+  verified_symbols:
+    - symbol: "062040"          # 산일전기
+      strategy: "momentum"      # 적용 전략
+      return: 23.00            # 백테스트 수익률(%)
+      priority: 1              # 우선순위
+    
+    - symbol: "278470"          # 에이피알
+      strategy: "breakout"      # 적용 전략
+      return: 0.00             # 백테스트 수익률(%)
+      priority: 3              # 우선순위 (낮은 수익률)
+  
+  # 백테스트 결과 파일 경로
+  results_file: "backtest_results.json"
+  
+  # 실전 vs 백테스트 성과 비교
+  performance_tracking: true
+  
+  # 최소 수익률 기준 (이 이상만 우선 선택)
+  min_return_threshold: 5.0    # 5% 이상만 우선 선택
+
+# =============================================================================
+# 종목 선별 설정 (수정됨)
+# =============================================================================
+selection:
+  # 하이브리드 모드 설정
+  mode: "hybrid"               # hybrid, backtest_only, selection_only
+  
+  # 선별 대상 지수
+  universe: ['KOSPI200', 'KOSDAQ150']
+  
+  # 필터링 조건
+  min_market_cap: 1000      # 최소 시가총액 1000억원
+  min_volume: 100000        # 최소 일평균 거래량
+  max_price_ratio: 0.20     # 최대 주가 비율 (가용자금의 20% 이하)
+  
+  # 선별 기준 (점수 계산)
+  criteria:
+    - 'momentum'            # 모멘텀 점수 (20일 수익률)
+    - 'volume'              # 거래량 증가 점수
+    - 'volatility'          # 변동성 점수
+    - 'technical'           # 기술적 지표 점수
+    - 'accessibility'       # 가격 접근성 점수 (소액투자자용)
+
+# =============================================================================
+# 거래 설정 (수정됨)
+# =============================================================================
+trading:
+  # 동적 종목 선별 설정
+  max_symbols: 4            # 동시 거래 최대 종목 수 (매일 선별)
+  
+  # 리스크 관리 설정
+  max_position_ratio: 0.2   # 종목당 최대 투자 비율 (20%)
+  daily_loss_limit: 0.02    # 일일 최대 손실 한도 (2%)
+  stop_loss_pct: 0.05       # 개별 종목 손절선 (5%)
+  take_profit_pct: 0.15     # 개별 종목 익절선 (15%)
+  
+  # 거래 제한
+  max_daily_trades: 50      # 일일 최대 거래 횟수
+  min_order_amount: 100000  # 최소 주문 금액 (10만원)
+
+# =============================================================================
+# 모멘텀 전략 설정
+# =============================================================================
+momentum:
+  # 모멘텀 계산 설정
+  period: 20                 # 모멘텀 계산 기간 (20개 봉)
+  threshold: 0.02            # 모멘텀 임계값 (2% 이상 상승)
+  volume_threshold: 1.5      # 거래량 증가 배수 (평균의 1.5배)
+  
+  # 이동평균선 설정
+  ma_short: 5                # 단기 이동평균 (5개 봉)
+  ma_long: 20                # 장기 이동평균 (20개 봉)
+  
+  # 신호 강도 조정
+  min_signal_strength: 1.0   # 최소 신호 강도
+  max_signal_strength: 5.0   # 최대 신호 강도
+
+# =============================================================================
+# 시간 설정
+# =============================================================================
+schedule:
+  # 거래 실행 간격 (분)
+  trading_interval: 5        # 5분마다 신호 체크
+  
+  # 장 시간 설정 (한국 표준시)
+  market_open: "09:00"       # 장 시작
+  market_close: "15:30"      # 장 마감
+  
+  # 점심시간 거래 여부
+  lunch_trading: true        # 점심시간(12:00-13:00) 거래 허용
+
+# =============================================================================
+# 로깅 및 알림 설정
+# =============================================================================
+logging:
+  # 로그 레벨 (DEBUG, INFO, WARNING, ERROR)
+  level: "INFO"
+  
+  # 로그 파일 설정
+  file_name: "autotrader.log"
+  max_file_size: "10MB"      # 최대 파일 크기
+  backup_count: 5            # 백업 파일 개수
+  
+  # 콘솔 출력 여부
+  console_output: true
+
+# =============================================================================
+# 알림 설정 (선택사항)
+# =============================================================================
+notification:
+  # Discord 웹훅 (올바른 전체 URL 입력)
+  discord_webhook: "https://discord.com/api/webhooks/1392715031149285420/cnDqqfbTc_dRrKSY2ZSlpznjXGVQLMBLn4cJ6CfriiGdkvX1Ly7WsjXLlPJJUdkcy1En"
+  
+  # 이메일 알림 (선택)
+  email:
+    enabled: false
+    smtp_server: "smtp.gmail.com"
+    smtp_port: 587
+    username: "your_email@gmail.com"
+    password: "your_app_password"
+    recipient: "your_email@gmail.com"
+  
+  # 알림 조건
+  notify_on_trade: true      # 매매 시 알림
+  notify_on_error: true      # 오류 시 알림
+  notify_on_daily_summary: true  # 일일 요약 알림
+  notify_on_selection: true  # 종목 선별 알림 (새로 추가)
+
+# =============================================================================
+# 백테스트 연동 설정
+# =============================================================================
+backtest:
+  # 백테스트 결과 파일 경로
+  results_file: "backtest_results.json"
+  
+  # 실전 vs 백테스트 성과 비교
+  performance_tracking: true
+  
+  # 전략 자동 조정
+  auto_adjustment: false     # 실전 성과에 따른 자동 파라미터 조정
+
+# =============================================================================
+# 고급 설정
+# =============================================================================
+advanced:
+  # API 호출 제한
+  api_call_delay: 0.2        # API 호출 간 지연시간 (초)
+  max_retries: 3             # 최대 재시도 횟수
+  
+  # 슬리피지 관리
+  slippage_tolerance: 0.005  # 슬리피지 허용 범위 (0.5%)
+  
+  # 메모리 관리
+  max_data_points: 1000      # 최대 데이터 보관 개수

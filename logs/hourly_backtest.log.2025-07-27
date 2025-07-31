@@ -1,0 +1,143 @@
+2025-07-27 23:15:51,650 [INFO] 🚀 005930 백테스트 시작 - 전략: ['momentum', 'breakout']
+2025-07-27 23:15:51,694 [ERROR] ❌ 005930 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:16:59,044 [INFO] 🚀 005930 백테스트 시작 - 전략: ['momentum']
+2025-07-27 23:16:59,074 [ERROR] ❌ 005930 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:16:59,074 [INFO] 🚀 005930 백테스트 시작 - 전략: ['mean_reversion']
+2025-07-27 23:16:59,099 [ERROR] ❌ 005930 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:16:59,099 [INFO] 🚀 005930 백테스트 시작 - 전략: ['breakout']
+2025-07-27 23:16:59,123 [ERROR] ❌ 005930 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:16:59,123 [INFO] 🚀 005930 백테스트 시작 - 전략: ['scalping']
+2025-07-27 23:16:59,146 [ERROR] ❌ 005930 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:16:59,147 [INFO] 🚀 005930 백테스트 시작 - 전략: ['momentum', 'breakout']
+2025-07-27 23:16:59,170 [ERROR] ❌ 005930 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:16:59,170 [INFO] 🚀 005930 백테스트 시작 - 전략: ['mean_reversion', 'scalping']
+2025-07-27 23:16:59,194 [ERROR] ❌ 005930 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:16:59,194 [INFO] 🚀 000660 백테스트 시작 - 전략: ['momentum']
+2025-07-27 23:16:59,218 [ERROR] ❌ 000660 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:16:59,218 [INFO] 🚀 000660 백테스트 시작 - 전략: ['mean_reversion']
+2025-07-27 23:16:59,243 [ERROR] ❌ 000660 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:16:59,244 [INFO] 🚀 000660 백테스트 시작 - 전략: ['breakout']
+2025-07-27 23:16:59,267 [ERROR] ❌ 000660 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:16:59,267 [INFO] 🚀 000660 백테스트 시작 - 전략: ['scalping']
+2025-07-27 23:16:59,291 [ERROR] ❌ 000660 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:16:59,292 [INFO] 🚀 000660 백테스트 시작 - 전략: ['momentum', 'breakout']
+2025-07-27 23:16:59,317 [ERROR] ❌ 000660 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:16:59,318 [INFO] 🚀 000660 백테스트 시작 - 전략: ['mean_reversion', 'scalping']
+2025-07-27 23:16:59,342 [ERROR] ❌ 000660 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:16:59,343 [INFO] 🚀 035420 백테스트 시작 - 전략: ['momentum']
+2025-07-27 23:16:59,367 [ERROR] ❌ 035420 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:16:59,367 [INFO] 🚀 035420 백테스트 시작 - 전략: ['mean_reversion']
+2025-07-27 23:16:59,391 [ERROR] ❌ 035420 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:16:59,392 [INFO] 🚀 035420 백테스트 시작 - 전략: ['breakout']
+2025-07-27 23:16:59,417 [ERROR] ❌ 035420 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:16:59,418 [INFO] 🚀 035420 백테스트 시작 - 전략: ['scalping']
+2025-07-27 23:16:59,445 [ERROR] ❌ 035420 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:16:59,446 [INFO] 🚀 035420 백테스트 시작 - 전략: ['momentum', 'breakout']
+2025-07-27 23:16:59,481 [ERROR] ❌ 035420 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:16:59,481 [INFO] 🚀 035420 백테스트 시작 - 전략: ['mean_reversion', 'scalping']
+2025-07-27 23:16:59,506 [ERROR] ❌ 035420 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:16:59,507 [INFO] 🚀 051910 백테스트 시작 - 전략: ['momentum']
+2025-07-27 23:16:59,533 [ERROR] ❌ 051910 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:16:59,533 [INFO] 🚀 051910 백테스트 시작 - 전략: ['mean_reversion']
+2025-07-27 23:16:59,561 [ERROR] ❌ 051910 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:16:59,562 [INFO] 🚀 051910 백테스트 시작 - 전략: ['breakout']
+2025-07-27 23:16:59,605 [ERROR] ❌ 051910 시간봉 데이터 조회 오류: 500 Server Error: Internal Server Error for url: https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice?fid_etc_cls_code=&fid_cond_mrkt_div_code=J&fid_input_iscd=051910&fid_input_hour_1=20250627&fid_input_hour_2=20250727&fid_pw_data_incu_yn=Y
+2025-07-27 23:16:59,606 [INFO] 🚀 051910 백테스트 시작 - 전략: ['scalping']
+2025-07-27 23:16:59,626 [ERROR] ❌ 051910 시간봉 데이터 조회 오류: 500 Server Error: Internal Server Error for url: https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice?fid_etc_cls_code=&fid_cond_mrkt_div_code=J&fid_input_iscd=051910&fid_input_hour_1=20250627&fid_input_hour_2=20250727&fid_pw_data_incu_yn=Y
+2025-07-27 23:16:59,627 [INFO] 🚀 051910 백테스트 시작 - 전략: ['momentum', 'breakout']
+2025-07-27 23:16:59,648 [ERROR] ❌ 051910 시간봉 데이터 조회 오류: 500 Server Error: Internal Server Error for url: https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice?fid_etc_cls_code=&fid_cond_mrkt_div_code=J&fid_input_iscd=051910&fid_input_hour_1=20250627&fid_input_hour_2=20250727&fid_pw_data_incu_yn=Y
+2025-07-27 23:16:59,649 [INFO] 🚀 051910 백테스트 시작 - 전략: ['mean_reversion', 'scalping']
+2025-07-27 23:16:59,669 [ERROR] ❌ 051910 시간봉 데이터 조회 오류: 500 Server Error: Internal Server Error for url: https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice?fid_etc_cls_code=&fid_cond_mrkt_div_code=J&fid_input_iscd=051910&fid_input_hour_1=20250627&fid_input_hour_2=20250727&fid_pw_data_incu_yn=Y
+2025-07-27 23:16:59,669 [INFO] 🚀 006400 백테스트 시작 - 전략: ['momentum']
+2025-07-27 23:16:59,689 [ERROR] ❌ 006400 시간봉 데이터 조회 오류: 500 Server Error: Internal Server Error for url: https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice?fid_etc_cls_code=&fid_cond_mrkt_div_code=J&fid_input_iscd=006400&fid_input_hour_1=20250627&fid_input_hour_2=20250727&fid_pw_data_incu_yn=Y
+2025-07-27 23:16:59,690 [INFO] 🚀 006400 백테스트 시작 - 전략: ['mean_reversion']
+2025-07-27 23:16:59,707 [ERROR] ❌ 006400 시간봉 데이터 조회 오류: 500 Server Error: Internal Server Error for url: https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice?fid_etc_cls_code=&fid_cond_mrkt_div_code=J&fid_input_iscd=006400&fid_input_hour_1=20250627&fid_input_hour_2=20250727&fid_pw_data_incu_yn=Y
+2025-07-27 23:16:59,708 [INFO] 🚀 006400 백테스트 시작 - 전략: ['breakout']
+2025-07-27 23:16:59,727 [ERROR] ❌ 006400 시간봉 데이터 조회 오류: 500 Server Error: Internal Server Error for url: https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice?fid_etc_cls_code=&fid_cond_mrkt_div_code=J&fid_input_iscd=006400&fid_input_hour_1=20250627&fid_input_hour_2=20250727&fid_pw_data_incu_yn=Y
+2025-07-27 23:16:59,728 [INFO] 🚀 006400 백테스트 시작 - 전략: ['scalping']
+2025-07-27 23:16:59,747 [ERROR] ❌ 006400 시간봉 데이터 조회 오류: 500 Server Error: Internal Server Error for url: https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice?fid_etc_cls_code=&fid_cond_mrkt_div_code=J&fid_input_iscd=006400&fid_input_hour_1=20250627&fid_input_hour_2=20250727&fid_pw_data_incu_yn=Y
+2025-07-27 23:16:59,747 [INFO] 🚀 006400 백테스트 시작 - 전략: ['momentum', 'breakout']
+2025-07-27 23:16:59,768 [ERROR] ❌ 006400 시간봉 데이터 조회 오류: 500 Server Error: Internal Server Error for url: https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice?fid_etc_cls_code=&fid_cond_mrkt_div_code=J&fid_input_iscd=006400&fid_input_hour_1=20250627&fid_input_hour_2=20250727&fid_pw_data_incu_yn=Y
+2025-07-27 23:16:59,769 [INFO] 🚀 006400 백테스트 시작 - 전략: ['mean_reversion', 'scalping']
+2025-07-27 23:16:59,787 [ERROR] ❌ 006400 시간봉 데이터 조회 오류: 500 Server Error: Internal Server Error for url: https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice?fid_etc_cls_code=&fid_cond_mrkt_div_code=J&fid_input_iscd=006400&fid_input_hour_1=20250627&fid_input_hour_2=20250727&fid_pw_data_incu_yn=Y
+2025-07-27 23:19:56,300 [INFO] 📡 005930 API 응답: 0
+2025-07-27 23:19:56,301 [INFO] 📊 005930 원시 데이터 컬럼: ['stck_bsop_date', 'stck_cntg_hour', 'stck_prpr', 'stck_oprc', 'stck_hgpr', 'stck_lwpr', 'cntg_vol', 'acml_tr_pbmn']
+2025-07-27 23:19:56,305 [ERROR] ❌ 005930 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:19:56,305 [WARNING] ⚠️ 005930: 시간봉 데이터 실패, 일봉 데이터로 대체
+2025-07-27 23:19:56,333 [INFO] ✅ 005930: 5개 일봉 데이터를 시간봉 대용으로 로드
+2025-07-27 23:20:08,436 [INFO] 🚀 005930 백테스트 시작 - 전략: ['momentum']
+2025-07-27 23:20:08,461 [INFO] 📡 005930 API 응답: 0
+2025-07-27 23:20:08,462 [INFO] 📊 005930 원시 데이터 컬럼: ['stck_bsop_date', 'stck_cntg_hour', 'stck_prpr', 'stck_oprc', 'stck_hgpr', 'stck_lwpr', 'cntg_vol', 'acml_tr_pbmn']
+2025-07-27 23:20:08,466 [ERROR] ❌ 005930 시간봉 데이터 조회 오류: unconverted data remains when parsing with format "%Y%m%d%H%M%S": "00", at position 0. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-07-27 23:20:08,466 [WARNING] ⚠️ 005930: 시간봉 데이터 실패, 일봉 데이터로 대체
+2025-07-27 23:20:08,493 [INFO] ✅ 005930: 30개 일봉 데이터를 시간봉 대용으로 로드
+2025-07-27 23:20:08,493 [ERROR] 백테스트 실행 오류: 'ma5'
