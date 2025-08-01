@@ -5,3 +5,5 @@ token.json
 
 # 특정 디렉토리 전체 제외
 logs/
+venv311/
+backup/
