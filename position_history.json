@@ -36,5 +36,42 @@
     "last_purchase_time": "2025-07-30T11:59:54.478960",
     "first_purchase_time": "2025-07-30T11:59:54.478960",
     "position_closed_time": "2025-07-31T14:17:47.291149"
+  },
+  "272210": {
+    "total_quantity": 2,
+    "purchase_count": 2,
+    "purchases": [
+      {
+        "timestamp": "2025-08-01T10:03:44.177117",
+        "quantity": 1,
+        "price": 57800,
+        "strategy": "scalping",
+        "order_type": "BUY"
+      },
+      {
+        "timestamp": "2025-08-01T15:00:34.069268",
+        "quantity": 1,
+        "price": 60300,
+        "strategy": "scalping",
+        "order_type": "BUY"
+      }
+    ],
+    "last_purchase_time": "2025-08-01T15:00:34.069268",
+    "first_purchase_time": "2025-08-01T10:03:44.177117"
+  },
+  "348210": {
+    "total_quantity": 2,
+    "purchase_count": 1,
+    "purchases": [
+      {
+        "timestamp": "2025-08-01T10:03:45.270813",
+        "quantity": 2,
+        "price": 45900,
+        "strategy": "scalping",
+        "order_type": "BUY"
+      }
+    ],
+    "last_purchase_time": "2025-08-01T10:03:45.270813",
+    "first_purchase_time": "2025-08-01T10:03:45.270813"
   }
 }

@@ -8,14 +8,14 @@ import os
 from datetime import datetime
 from dotenv import load_dotenv
 from typing import Dict, List, Tuple
+import logging
 import warnings
 warnings.filterwarnings('ignore')
 
 load_dotenv()
-TOKEN_FILE = "token.json"
 
 class KISBacktester:
-    def __init__(self, app_key: str, app_secret: str, mock: bool = False):
+    def __init__(self, app_key: str, app_secret: str):
         """
         KIS API 백테스터 초기화
 
@@ -26,10 +26,10 @@ class KISBacktester:
         """
         self.app_key = app_key
         self.app_secret = app_secret
-        self.mock = mock
-        self.base_url = "https://openapivts.koreainvestment.com:29443" if mock else "https://openapi.koreainvestment.com:9443"
+        self.base_url = "https://openapi.koreainvestment.com:9443"
+        self.token_file = "token.json" 
         self.access_token = None
-        self.load_token()
+        self.setup_logging()
 
     def load_keys(self):
         app_key = os.getenv("KIS_APP_KEY")
@@ -38,49 +38,134 @@ class KISBacktester:
             raise ValueError("환경변수 KIS_APP_KEY 또는 KIS_APP_SECRET이 설정되지 않았습니다.")
         return app_key, app_secret
 
-    def request_new_token(self):
+    def load_saved_token(self):
+        """저장된 토큰 파일에서 토큰 로드 (기존 프로그램과 호환)"""
+        try:
+            if os.path.exists(self.token_file):
+                with open(self.token_file, 'r', encoding='utf-8') as f:
+                    token_data = json.load(f)
+
+                # 기존 형식의 만료시간 파싱
+                expire_time_str = token_data.get('access_token_token_expired', '')
+                if expire_time_str:
+                    expire_time = datetime.strptime(expire_time_str, '%Y-%m-%d %H:%M:%S')
+
+                    # 토큰이 아직 유효한지 확인 (10분 여유 둠)
+                    if datetime.now() < expire_time - timedelta(minutes=10):
+                        self.access_token = token_data.get('access_token')
+                        self.last_token_time = datetime.fromtimestamp(token_data.get('requested_at', 0))
+                        self.logger.info(f"기존 토큰을 재사용합니다. (만료: {expire_time_str})")
+                        return True
+                    else:
+                        self.logger.info(f"저장된 토큰이 만료되었습니다. (만료: {expire_time_str})")
+
+        except Exception as e:
+            self.logger.warning(f"토큰 파일 로드 실패: {e}")
+
+        return False
+
+    def save_token(self, token_response: dict):
+        """토큰을 기존 프로그램과 호환되는 형식으로 저장"""
+        try:
+            current_time = int(time.time())
+            expires_in = token_response.get('expires_in', 86400)
+            expire_datetime = datetime.fromtimestamp(current_time + expires_in)
+
+            token_data = {
+                'access_token': token_response.get('access_token'),
+                'access_token_token_expired': expire_datetime.strftime('%Y-%m-%d %H:%M:%S'),
+                'token_type': token_response.get('token_type', 'Bearer'),
+                'expires_in': expires_in,
+                'requested_at': current_time
+            }
+
+            with open(self.token_file, 'w', encoding='utf-8') as f:
+                json.dump(token_data, f, ensure_ascii=False, indent=2)
+
+            self.logger.info(f"토큰이 저장되었습니다. (만료: {token_data['access_token_token_expired']})")
+
+        except Exception as e:
+            self.logger.error(f"토큰 저장 실패: {e}")
+
+
+    def get_access_token(self) -> str:
+        """KIS API 액세스 토큰 발급 또는 재사용 (기존 프로그램과 호환)"""
+        # 메모리에 유효한 토큰이 있는지 확인
+        if self.access_token and self.last_token_time:
+            # 23시간 이내면 메모리 토큰 재사용
+            if datetime.now() - self.last_token_time < timedelta(hours=23):
+                return self.access_token
+    
+        # 저장된 토큰 재확인
+        if self.load_saved_token():
+            return self.access_token
+    
+        # 새 토큰 발급
+        self.logger.info("새로운 액세스 토큰을 발급받습니다...")
+    
         url = f"{self.base_url}/oauth2/tokenP"
-        headers = {"Content-Type": "application/json"}
+        headers = {"content-type": "application/json"}
         data = {
             "grant_type": "client_credentials",
             "appkey": self.app_key,
             "appsecret": self.app_secret
         }
-        res = requests.post(url, headers=headers, data=json.dumps(data))
-        
-        if res.status_code != 200:
-            raise Exception(f"토큰 발급 실패: {res.status_code} - {res.text}")
+    
+        try:
+            response = requests.post(url, headers=headers, data=json.dumps(data))
+            response.raise_for_status()
+    
+            token_response = response.json()
             
-        token_data = res.json()
-        
-        if token_data.get("rt_cd") != "0":
-            raise Exception(f"토큰 발급 실패: {token_data.get('msg1', 'Unknown error')}")
+            # 응답 구조 상세 로깅
+            #self.logger.debug(f"토큰 API 응답: {token_response}")
             
-        token_data["requested_at"] = int(time.time())
-        self.access_token = token_data["access_token"]
-        print("✅ 액세스 토큰 발급 완료")
-
-        with open(TOKEN_FILE, "w") as f:
-            json.dump(token_data, f)
-
-        return self.access_token
-
-    def load_token(self):
-        if not os.path.exists(TOKEN_FILE):
-            return self.request_new_token()
-
-        with open(TOKEN_FILE, "r") as f:
-            token_data = json.load(f)
-
-        now = int(time.time())
-        issued_at = token_data.get("requested_at", 0)
-        expires_in = int(token_data.get("expires_in", 0))
-
-        if now - issued_at >= expires_in - 3600:
-            self.access_token = self.request_new_token()
-        else:
-            self.access_token = token_data["access_token"]
-        return
+            # 성공 조건 개선: access_token이 있으면 성공으로 판단
+            access_token = token_response.get("access_token")
+            
+            if access_token:
+                # 토큰이 있으면 성공
+                self.access_token = access_token
+                self.last_token_time = datetime.now()
+    
+                # 토큰을 기존 형식으로 파일에 저장
+                self.save_token(token_response)
+    
+                self.logger.info("✅ 새로운 액세스 토큰 발급 완료")
+                return self.access_token
+            
+            else:
+                # 토큰이 없으면 실패 - rt_cd 기반 오류 처리
+                rt_cd = token_response.get("rt_cd")
+                
+                if rt_cd and rt_cd != "0":
+                    # rt_cd가 있고 실패인 경우
+                    error_msg = token_response.get('msg1', 
+                               token_response.get('message', 
+                               token_response.get('error_description', 'Unknown error')))
+                    error_code = token_response.get('msg_cd', token_response.get('error_code', 'Unknown'))
+                    
+                    self.logger.error(f"토큰 발급 실패 상세:")
+                    self.logger.error(f"  - rt_cd: {rt_cd}")
+                    self.logger.error(f"  - error_code: {error_code}")
+                    self.logger.error(f"  - error_msg: {error_msg}")
+                    
+                    raise Exception(f"토큰 발급 실패 [{error_code}]: {error_msg}")
+                else:
+                    # access_token도 없고 rt_cd도 없는 경우
+                    self.logger.error(f"예상치 못한 응답 형식: {token_response}")
+                    raise Exception("토큰 응답에 access_token이 포함되지 않았습니다")
+    
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"❌ 토큰 발급 네트워크 오류: {e}")
+            raise
+        except json.JSONDecodeError as e:
+            self.logger.error(f"❌ 토큰 응답 JSON 파싱 오류: {e}")
+            self.logger.error(f"응답 내용: {response.text if 'response' in locals() else 'N/A'}")
+            raise
+        except Exception as e:
+            self.logger.error(f"❌ 토큰 발급 실패: {e}")
+            raise
 
     def get_stock_data(self, stock_code: str, period: str = "D", count: int = 100) -> pd.DataFrame:
         """
@@ -95,7 +180,7 @@ class KISBacktester:
 
         headers = {
             "content-type": "application/json; charset=utf-8",
-            "authorization": f"Bearer {self.access_token}",
+            "authorization": f"Bearer {self.get_access_token()}",
             "appkey": self.app_key,
             "appsecret": self.app_secret,
             "tr_id": "FHKST03010100"
@@ -497,6 +582,20 @@ class KISBacktester:
             print("❌ 백테스트 결과가 없습니다.")
             return pd.DataFrame()
 
+    def setup_logging(self):
+        """로깅 설정 - 디버그 모드"""
+        # 로그 레벨을 DEBUG로 변경
+        logging.basicConfig(
+            level=logging.INFO,  # INFO -> DEBUG로 변경
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler('logs/backtest.log', encoding='utf-8'),
+                logging.StreamHandler()
+            ]
+        )
+        self.logger = logging.getLogger(__name__)
+
+
 # 실행 코드
 if __name__ == "__main__":
     APP_KEY = os.getenv("KIS_APP_KEY")
@@ -504,14 +603,13 @@ if __name__ == "__main__":
     webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
 
     # 백테스터 초기화 (모의투자 환경)
-    backtester = KISBacktester(APP_KEY, APP_SECRET, mock=True)
+    backtester = KISBacktester(APP_KEY, APP_SECRET)
 
     # 분석할 종목 리스트
     stock_codes = [
         "062040",  # 산일전기
         "278470",  # 에이피알
         "042660",  # 한화오션
-        "348210",  # 넥스틴
         "272210",  # 한화시스템
     ]
 

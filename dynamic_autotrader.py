@@ -430,7 +430,7 @@ class KISAutoTrader:
             level=logging.INFO,  # INFO -> DEBUG로 변경
             format='%(asctime)s - %(levelname)s - %(message)s',
             handlers=[
-                logging.FileHandler('autotrader.log', encoding='utf-8'),
+                logging.FileHandler('logs/autotrader.log', encoding='utf-8'),
                 logging.StreamHandler()
             ]
         )
@@ -2116,13 +2116,12 @@ class KISAutoTrader:
             
             # 추가 후보 종목 (config에서 읽거나 하드코딩)
             additional_candidates = [
-                "281820",  # 케이씨텍
-                "272210",  # 한화시스템
-                "348210",  # 넥스틴
+                "352820",  # 하이브
             ]
             
             # 중복 제거
             all_stocks = list(set(stock_codes + additional_candidates))
+            print(f"{all_stocks}")
             
             # 백테스트 실행
             results = backtester.run_comprehensive_backtest(all_stocks, days=100)
@@ -2261,7 +2260,7 @@ class KISAutoTrader:
         
         # 4. API 호출 (타임아웃 처리)
         try:
-            name = self.fetch_stock_name_from_api_safe(code)
+            name = self.fetch_stock_name_from_api(code)
             if name and name != code:
                 self.stock_names[code] = name
                 self.save_stock_names()
@@ -2331,7 +2330,7 @@ class KISAutoTrader:
             try:
                 if symbol not in self.stock_names or not self.stock_names[symbol] or self.stock_names[symbol] == symbol:
                     self.logger.info(f"📝 {symbol} 종목명 업데이트 중...")
-                    name = self.get_stock_name_safe(symbol)  # 안전한 버전 사용
+                    name = self.get_stock_name(symbol)  # 안전한 버전 사용
                     if name != symbol:
                         updated_count += 1
                     time.sleep(0.5)  # API 호출 간격
@@ -4227,13 +4226,13 @@ class KISAutoTrader:
         
         elif strategy == "adaptive":
             # 적응형 주문
-            return self.place_adaptive_order_safe(symbol, side, quantity)
+            return self.place_adaptive_order(symbol, side, quantity)
         
         else:
             self.logger.warning(f"알 수 없는 주문 전략: {strategy}, 시장가 사용")
             return self.place_order(symbol, side, quantity, price=0)
     
-    def place_adaptive_order_safe(self, symbol: str, side: str, quantity: int) -> Dict:
+    def place_adaptive_order(self, symbol: str, side: str, quantity: int) -> Dict:
         """안전한 적응형 주문"""
         
         # 현재가 정보 확인
@@ -4872,7 +4871,7 @@ class KISAutoTrader:
         current_position = self.positions.get(symbol, {})
         has_position = current_position.get('quantity', 0) > 0
         
-        self.logger.info(f"🔍 {symbol}({stock_name}) 매수 분석 시작")
+        self.logger.debug(f"🔍 {symbol}({stock_name}) 매수 분석 시작")
         
         # 매수 가능 여부 확인 (보유 중이어도 추가 매수 가능한지 체크)
         can_buy, buy_reason = self.can_purchase_symbol(symbol)
@@ -6588,7 +6587,7 @@ def standalone_macd_test():
             return
         
         # 테스트 종목
-        test_symbols = ['042660', '062040', '272210', '161580', '348210']
+        test_symbols = ['042660', '062040', '272210', '161580']
         
         for symbol in test_symbols:
             print(f"\n📊 {symbol} 독립 MACD 테스트:")
