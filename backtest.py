@@ -14,6 +14,222 @@ warnings.filterwarnings('ignore')
 
 load_dotenv()
 
+
+def log_api_response_detailed(response, api_name, stock_code=None, save_to_file=True):
+    """
+    KIS API 응답을 상세히 로깅하는 함수 (백테스트용)
+    
+    Args:
+        response: requests.Response 객체
+        api_name: API 이름 (예: "stock_data", "token")
+        stock_code: 종목코드 (선택사항)
+        save_to_file: 파일로 저장할지 여부
+    """
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    print("🔍" + "="*70)
+    print(f"📡 KIS API 응답 상세 분석 - {api_name}")
+    print(f"🕐 시간: {timestamp}")
+    if stock_code:
+        print(f"📈 종목코드: {stock_code}")
+    print("="*70)
+    
+    # 1. 기본 응답 정보
+    print("📊 [기본 응답 정보]")
+    print(f"  ✅ 상태코드: {response.status_code}")
+    print(f"  🌐 요청 URL: {response.url}")
+    print(f"  ⏱️ 응답시간: {response.elapsed.total_seconds():.3f}초")
+    print(f"  📦 응답크기: {len(response.content):,} bytes")
+    print(f"  🔤 인코딩: {response.encoding}")
+    
+    # 2. 요청 헤더 정보
+    print("\n📋 [요청 헤더 정보]")
+    request_headers = response.request.headers
+    for key, value in request_headers.items():
+        # 민감한 정보는 마스킹
+        if key.lower() in ['authorization', 'appkey', 'appsecret']:
+            masked_value = value[:10] + "***" if len(value) > 10 else "***"
+            print(f"  {key}: {masked_value}")
+        else:
+            print(f"  {key}: {value}")
+    
+    # 3. 응답 헤더 정보
+    print("\n📨 [응답 헤더 정보]")
+    for key, value in response.headers.items():
+        print(f"  {key}: {value}")
+    
+    # 4. Raw 응답 본문
+    print("\n📄 [Raw 응답 본문]")
+    print("-" * 50)
+    try:
+        raw_text = response.text
+        print(f"응답 길이: {len(raw_text)}자")
+        
+        # 처음 1000자만 표시
+        if len(raw_text) <= 1000:
+            print(raw_text)
+        else:
+            print(raw_text[:1000])
+            print(f"\n... (총 {len(raw_text)}자 중 1000자만 표시됨)")
+            
+        # 한글이 포함되어 있는지 확인
+        korean_chars = sum(1 for c in raw_text if ord(c) >= 0xAC00 and ord(c) <= 0xD7A3)
+        if korean_chars > 0:
+            print(f"📝 한글 문자 {korean_chars}개 포함됨")
+            
+    except Exception as e:
+        print(f"❌ Raw 텍스트 읽기 오류: {e}")
+    
+    # 5. JSON 파싱 및 분석
+    print("\n🔍 [JSON 파싱 결과]")
+    print("-" * 50)
+    try:
+        json_data = response.json()
+        
+        # JSON 기본 구조
+        print(f"📊 JSON 타입: {type(json_data)}")
+        
+        if isinstance(json_data, dict):
+            print(f"📋 최상위 키들: {list(json_data.keys())}")
+            
+            # 각 키별 상세 정보
+            for key, value in json_data.items():
+                print(f"\n🔑 키: '{key}'")
+                print(f"   타입: {type(value)}")
+                
+                if isinstance(value, list):
+                    print(f"   리스트 길이: {len(value)}")
+                    if value and isinstance(value[0], dict):
+                        print(f"   첫 번째 항목 키들: {list(value[0].keys())}")
+                elif isinstance(value, dict):
+                    print(f"   딕셔너리 키들: {list(value.keys())}")
+                else:
+                    # 문자열이나 숫자인 경우 값 표시
+                    str_value = str(value)
+                    if len(str_value) <= 100:
+                        print(f"   값: {value}")
+                    else:
+                        print(f"   값: {str_value[:100]}... (길이: {len(str_value)})")
+        
+        # 예쁘게 포맷된 JSON 출력
+        print(f"\n📝 [포맷된 JSON 출력]")
+        print("-" * 50)
+        formatted_json = json.dumps(json_data, indent=2, ensure_ascii=False)
+        
+        if len(formatted_json) <= 2000:
+            print(formatted_json)
+        else:
+            print(formatted_json[:2000])
+            print(f"\n... (총 {len(formatted_json)}자 중 2000자만 표시됨)")
+        
+        # KIS API 특화 분석
+        print(f"\n🎯 [KIS API 특화 분석]")
+        print("-" * 50)
+        
+        # rt_cd 확인 (응답 코드)
+        if 'rt_cd' in json_data:
+            rt_cd = json_data['rt_cd']
+            print(f"📊 응답코드(rt_cd): {rt_cd}")
+            if rt_cd == "0":
+                print("   ✅ 성공")
+            else:
+                print("   ❌ 실패")
+        
+        # 메시지 확인
+        message_fields = ['msg1', 'msg_cd', 'message', 'error_description']
+        for field in message_fields:
+            if field in json_data:
+                print(f"📝 {field}: {json_data[field]}")
+        
+        # output 데이터 분석
+        if 'output' in json_data:
+            output = json_data['output']
+            print(f"📈 output 타입: {type(output)}")
+            
+            if isinstance(output, list):
+                print(f"📊 output 리스트 길이: {len(output)}")
+                if output:
+                    print(f"📋 첫 번째 항목: {json.dumps(output[0], indent=2, ensure_ascii=False)}")
+            elif isinstance(output, dict):
+                print(f"📋 output 키들: {list(output.keys())}")
+                print(f"📋 output 내용: {json.dumps(output, indent=2, ensure_ascii=False)}")
+        
+        # output2 데이터 분석 (차트 데이터용)
+        if 'output2' in json_data:
+            output2 = json_data['output2']
+            print(f"📈 output2 타입: {type(output2)}")
+            
+            if isinstance(output2, list):
+                print(f"📊 output2 리스트 길이: {len(output2)}")
+                if output2:
+                    print(f"📋 첫 번째 차트 데이터: {json.dumps(output2[0], indent=2, ensure_ascii=False)}")
+    
+    except json.JSONDecodeError as e:
+        print(f"❌ JSON 파싱 실패: {e}")
+        print("📄 응답이 JSON 형식이 아닙니다.")
+        
+        # HTML 응답인지 확인
+        if response.text.strip().startswith('<'):
+            print("🌐 HTML 응답으로 보입니다.")
+            print("처음 500자:")
+            print(response.text[:500])
+    
+    except Exception as e:
+        print(f"❌ JSON 분석 중 오류: {e}")
+    
+    # 6. 파일 저장
+    if save_to_file:
+        try:
+            log_dir = "api_debug_logs"
+            os.makedirs(log_dir, exist_ok=True)
+            
+            if stock_code:
+                filename = f"debug_{api_name}_{stock_code}_{timestamp}.json"
+            else:
+                filename = f"debug_{api_name}_{timestamp}.json"
+            
+            filepath = os.path.join(log_dir, filename)
+            
+            # 디버그 데이터 구성
+            debug_data = {
+                "timestamp": timestamp,
+                "api_name": api_name,
+                "stock_code": stock_code,
+                "request": {
+                    "method": response.request.method,
+                    "url": str(response.request.url),
+                    "headers": dict(response.request.headers),
+                    "body": response.request.body
+                },
+                "response": {
+                    "status_code": response.status_code,
+                    "headers": dict(response.headers),
+                    "response_time_seconds": response.elapsed.total_seconds(),
+                    "content_length": len(response.content),
+                    "encoding": response.encoding,
+                    "raw_text": response.text
+                }
+            }
+            
+            # JSON 파싱 가능한 경우 추가
+            try:
+                debug_data["response"]["parsed_json"] = response.json()
+            except:
+                debug_data["response"]["parsed_json"] = None
+            
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(debug_data, f, indent=2, ensure_ascii=False)
+            
+            print(f"\n💾 [파일 저장 완료]")
+            print(f"   📁 경로: {filepath}")
+            print(f"   📦 크기: {os.path.getsize(filepath):,} bytes")
+            
+        except Exception as e:
+            print(f"❌ 파일 저장 실패: {e}")
+    
+    print("="*70)
+    print()
+
 class KISBacktester:
     def __init__(self, app_key: str, app_secret: str):
         """
@@ -236,6 +452,131 @@ class KISBacktester:
         except Exception as e:
             print(f"❌ 데이터 조회 중 오류: {e}")
             return pd.DataFrame()
+
+    
+    def get_stock_data_with_debug(self, stock_code: str, period: str = "D", count: int = 100) -> pd.DataFrame:
+        """
+        디버깅이 포함된 주식 데이터 조회 메서드
+        """
+        print(f"🚀 주식 데이터 조회 시작 - 종목: {stock_code}")
+        
+        url = f"{self.base_url}/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice"
+    
+        headers = {
+            "content-type": "application/json; charset=utf-8",
+            "authorization": f"Bearer {self.get_access_token()}",
+            "appkey": self.app_key,
+            "appsecret": self.app_secret,
+            "tr_id": "FHKST03010100"
+        }
+    
+        params = {
+            "fid_cond_mrkt_div_code": "J",
+            "fid_input_iscd": stock_code,
+            "fid_input_date_1": "",
+            "fid_input_date_2": "",
+            "fid_period_div_code": period,
+            "fid_org_adj_prc": "0"
+        }
+    
+        print(f"📡 요청 정보:")
+        print(f"  URL: {url}")
+        print(f"  Headers: {json.dumps(headers, indent=2, ensure_ascii=False)}")
+        print(f"  Params: {json.dumps(params, indent=2, ensure_ascii=False)}")
+    
+        try:
+            print(f"📞 API 호출 중...")
+            response = requests.get(url, headers=headers, params=params)
+            
+            # 모든 응답 정보 로깅
+            log_api_response_detailed(response, "stock_data", stock_code)
+            
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                    
+                    print(f"✅ API 호출 성공!")
+                    print(f"📊 응답 데이터 키들: {list(data.keys()) if isinstance(data, dict) else '딕셔너리가 아님'}")
+                    
+                    if 'output2' in data and data['output2']:
+                        print(f"📈 차트 데이터 개수: {len(data['output2'])}")
+                        
+                        df = pd.DataFrame(data['output2'])
+                        print(f"📋 DataFrame 생성 완료 - 크기: {df.shape}")
+                        print(f"📋 컬럼들: {list(df.columns)}")
+                        
+                        # 데이터 처리 과정 상세 로깅
+                        print(f"🔄 데이터 처리 시작...")
+                        
+                        # 컬럼명 변경 및 데이터 타입 변환
+                        df = df.rename(columns={
+                            'stck_bsop_date': 'date',
+                            'stck_oprc': 'open',
+                            'stck_hgpr': 'high',
+                            'stck_lwpr': 'low',
+                            'stck_clpr': 'close',
+                            'acml_vol': 'volume'
+                        })
+                        print(f"✅ 컬럼명 변경 완료")
+    
+                        # 필요한 컬럼만 선택
+                        required_columns = ['date', 'open', 'high', 'low', 'close', 'volume']
+                        missing_columns = [col for col in required_columns if col not in df.columns]
+                        
+                        if missing_columns:
+                            print(f"❌ 필수 컬럼 누락: {missing_columns}")
+                            print(f"📋 현재 컬럼들: {list(df.columns)}")
+                            return pd.DataFrame()
+                        
+                        df = df[required_columns].copy()
+                        print(f"✅ 필수 컬럼 선택 완료")
+    
+                        # 데이터 타입 변환
+                        print(f"🔄 데이터 타입 변환 중...")
+                        for col in ['open', 'high', 'low', 'close', 'volume']:
+                            before_type = df[col].dtype
+                            df[col] = pd.to_numeric(df[col], errors='coerce')
+                            after_type = df[col].dtype
+                            print(f"  {col}: {before_type} → {after_type}")
+    
+                        df['date'] = pd.to_datetime(df['date'])
+                        df = df.sort_values('date').reset_index(drop=True)
+    
+                        # 최근 count개만 선택
+                        original_length = len(df)
+                        df = df.tail(count).reset_index(drop=True)
+                        final_length = len(df)
+                        
+                        print(f"✅ 데이터 처리 완료!")
+                        print(f"📊 처리 결과: {original_length}개 → {final_length}개")
+                        print(f"📅 데이터 기간: {df['date'].min()} ~ {df['date'].max()}")
+                        
+                        # 샘플 데이터 출력
+                        print(f"📋 최근 3일 데이터:")
+                        print(df.tail(3).to_string())
+    
+                        return df
+                    else:
+                        print(f"❌ output2 데이터가 없거나 비어있음")
+                        if 'output2' in data:
+                            print(f"📊 output2 타입: {type(data['output2'])}")
+                            print(f"📊 output2 길이: {len(data['output2']) if isinstance(data['output2'], list) else 'N/A'}")
+                        return pd.DataFrame()
+                        
+                except json.JSONDecodeError as e:
+                    print(f"❌ JSON 파싱 오류: {e}")
+                    return pd.DataFrame()
+                except Exception as e:
+                    print(f"❌ 데이터 처리 오류: {e}")
+                    return pd.DataFrame()
+            else:
+                print(f"❌ API 호출 실패 - 상태코드: {response.status_code}")
+                return pd.DataFrame()
+    
+        except Exception as e:
+            print(f"❌ 전체 프로세스 오류: {e}")
+            return pd.DataFrame()
+
 
     def calculate_technical_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
         """기술적 지표 계산"""
@@ -492,6 +833,7 @@ class KISBacktester:
             print(f"📊 {stock_code} 종목 분석 중...")
 
             # 데이터 조회
+            #df = self.get_stock_data_with_debug(stock_code, count=days)
             df = self.get_stock_data(stock_code, count=days)
             if df.empty:
                 print(f"❌ {stock_code} - 데이터 조회 실패")
@@ -611,6 +953,8 @@ if __name__ == "__main__":
         "278470",  # 에이피알
         "042660",  # 한화오션
         "272210",  # 한화시스템
+        "181710",  # NHN
+        "001440",  # 대한전선
     ]
 
     # 백테스트 실행

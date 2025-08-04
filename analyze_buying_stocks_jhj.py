@@ -11,7 +11,6 @@ from datetime import datetime
 from dotenv import load_dotenv
 import numpy as np
 
-
 load_dotenv()
 TOKEN_FILE = "token.json"
 
@@ -87,9 +86,11 @@ def is_macd_golden_cross(df):
         # EMA 계산
         ema_12 = close_prices.ewm(span=12, adjust=False).mean()
         ema_26 = close_prices.ewm(span=26, adjust=False).mean()
+        ema_05 = close_prices.ewm(span=5, adjust=False).mean()
         
         # MACD Line 계산
-        macd_line = ema_12 - ema_26
+        #macd_line = ema_12 - ema_26
+        macd_line = ema_12 - ema_05
         
         # Signal Line 계산
         signal_line = macd_line.ewm(span=9, adjust=False).mean()
@@ -301,14 +302,14 @@ def get_daily_price_data_with_realtime(access_token, app_key, app_secret, stock_
 
 def get_foreign_netbuy_trend_kis(stock_code, app_key, app_secret, access_token, days=3, max_retries=3):
     """
-    최근 N일 외국인 순매수량 리스트와 추세 판단 결과 반환 (재시도 로직 포함)
+    최근 N일 외국인 순매수량 리스트와 추세 판단 결과 반환 (개선된 버전)
     """
     url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-investor"
     headers = {
         "Content-Type": "application/json",
         "authorization": f"Bearer {access_token}",
-        "appkey": app_key,
-        "appsecret": app_secret,
+        "appkey": app_key,        # 일관성 있게 소문자 사용
+        "appsecret": app_secret,  # 일관성 있게 소문자 사용
         "tr_id": "FHKST01010900"
     }
     params = {
@@ -318,25 +319,67 @@ def get_foreign_netbuy_trend_kis(stock_code, app_key, app_secret, access_token, 
 
     for attempt in range(max_retries):
         try:
-            time.sleep(0.2)  # API 호출 간격 조절
-            res = requests.get(url, headers=headers, params=params, timeout=10)
+            # API 호출 간격을 더 길게 조정
+            time.sleep(0.5 + (attempt * 0.2))  # 0.5초, 0.7초, 0.9초
+            
+            res = requests.get(url, headers=headers, params=params, timeout=15)
+            
+            # 상태 코드별 세분화된 처리
+            if res.status_code == 429:
+                print(f"⚠️ Rate limit exceeded (시도 {attempt + 1}/{max_retries})")
+                time.sleep(5)  # Rate limit의 경우 더 오래 대기
+                continue
+            elif res.status_code == 500:
+                print(f"⚠️ Server error 500 (시도 {attempt + 1}/{max_retries})")
+                time.sleep(2)  # 서버 오류의 경우 2초 대기
+                continue
+            elif res.status_code == 503:
+                print(f"⚠️ Service unavailable (시도 {attempt + 1}/{max_retries})")
+                time.sleep(3)  # 서비스 불가의 경우 3초 대기
+                continue
+            
             res.raise_for_status()
-            data = res.json().get("output", [])
+            
+            # 응답 데이터 검증
+            response_data = res.json()
+            if 'output' not in response_data:
+                print(f"⚠️ Invalid response format (시도 {attempt + 1}/{max_retries})")
+                if attempt < max_retries - 1:
+                    time.sleep(1)
+                    continue
+                else:
+                    return [], "unknown"
+            
+            data = response_data.get("output", [])
+            
+            # 데이터가 비어있는 경우 처리
+            if not data:
+                print(f"⚠️ Empty data received for {stock_code}")
+                return [], "no_data"
 
             netbuy_list = []
             for row in data[:days]:
                 qty = row.get("frgn_ntby_qty", "").replace(",", "").strip()
-                if qty != "":
-                    netbuy_list.append(int(qty))
+                if qty and qty != "0":  # 빈 문자열과 0 모두 체크
+                    try:
+                        netbuy_list.append(int(qty))
+                    except ValueError:
+                        print(f"⚠️ Invalid quantity format: {qty}")
+                        continue
 
+            # 추세 분석
             trend = "neutral"
-            if len(netbuy_list) >= 3:
+            if len(netbuy_list) >= days:
                 pos_days = sum(1 for x in netbuy_list if x > 0)
-                if pos_days == days:
+                total_volume = sum(abs(x) for x in netbuy_list)
+                avg_volume = total_volume / len(netbuy_list) if netbuy_list else 0
+                
+                # 더 정교한 추세 분석
+                if pos_days == days and avg_volume > 10000:  # 모든 날 양수이고 평균 거래량이 충분
                     trend = "steady_buying"
-                elif pos_days >= days * 0.6:
+                elif pos_days >= days * 0.7 and avg_volume > 5000:
                     trend = "accumulating"
-                elif pos_days <= days * 0.2:
+                elif pos_days <= days * 0.3:
                     trend = "distributing"
                 else:
                     trend = "mixed"
@@ -351,10 +394,20 @@ def get_foreign_netbuy_trend_kis(stock_code, app_key, app_secret, access_token, 
         except requests.exceptions.Timeout as e:
             print(f"❌ 타임아웃 오류 (시도 {attempt + 1}/{max_retries}): {e}")
             if attempt < max_retries - 1:
+                time.sleep(1.5)
+            continue
+        except requests.exceptions.HTTPError as e:
+            print(f"❌ HTTP 오류 (시도 {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                time.sleep(1.5)
+            continue
+        except json.JSONDecodeError as e:
+            print(f"❌ JSON 파싱 오류 (시도 {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
                 time.sleep(1)
             continue
         except Exception as e:
-            print(f"❌ KIS API 외국인 추세 분석 오류 (시도 {attempt + 1}/{max_retries}): {e}")
+            print(f"❌ 예상치 못한 오류 (시도 {attempt + 1}/{max_retries}): {e}")
             if attempt < max_retries - 1:
                 time.sleep(1)
             continue
@@ -363,16 +416,17 @@ def get_foreign_netbuy_trend_kis(stock_code, app_key, app_secret, access_token, 
     return [], "unknown"
 
 
+
 def get_institution_netbuy_trend_kis(stock_code, app_key, app_secret, access_token, days=3, max_retries=3):
     """
-    최근 N일 기관 순매수량 리스트와 추세 판단 결과 반환 (재시도 로직 포함)
+    최근 N일 기관 순매수량 리스트와 추세 판단 결과 반환 (개선된 버전)
     """
     url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-investor"
     headers = {
         "Content-Type": "application/json",
         "authorization": f"Bearer {access_token}",
-        "appkey": app_key,
-        "appsecret": app_secret,
+        "appkey": app_key,        # 일관성 있게 소문자 사용
+        "appsecret": app_secret,  # 일관성 있게 소문자 사용
         "tr_id": "FHKST01010900"
     }
     params = {
@@ -382,25 +436,65 @@ def get_institution_netbuy_trend_kis(stock_code, app_key, app_secret, access_tok
 
     for attempt in range(max_retries):
         try:
-            time.sleep(0.2)  # API 호출 간격 조절
-            res = requests.get(url, headers=headers, params=params, timeout=10)
+            # API 호출 간격 조정
+            time.sleep(0.5 + (attempt * 0.2))
+            
+            res = requests.get(url, headers=headers, params=params, timeout=15)
+            
+            # 상태 코드별 처리
+            if res.status_code == 429:
+                print(f"⚠️ Rate limit exceeded (시도 {attempt + 1}/{max_retries})")
+                time.sleep(5)
+                continue
+            elif res.status_code == 500:
+                print(f"⚠️ Server error 500 (시도 {attempt + 1}/{max_retries})")
+                time.sleep(2)
+                continue
+            elif res.status_code == 503:
+                print(f"⚠️ Service unavailable (시도 {attempt + 1}/{max_retries})")
+                time.sleep(3)
+                continue
+            
             res.raise_for_status()
-            data = res.json().get("output", [])
+            
+            # 응답 데이터 검증
+            response_data = res.json()
+            if 'output' not in response_data:
+                print(f"⚠️ Invalid response format (시도 {attempt + 1}/{max_retries})")
+                if attempt < max_retries - 1:
+                    time.sleep(1)
+                    continue
+                else:
+                    return [], "unknown"
+            
+            data = response_data.get("output", [])
+            
+            if not data:
+                print(f"⚠️ Empty data received for {stock_code}")
+                return [], "no_data"
 
             netbuy_list = []
             for row in data[:days]:
                 qty = row.get("orgn_ntby_qty", "").replace(",", "").strip()
-                if qty != "":
-                    netbuy_list.append(int(qty))
+                if qty and qty != "0":
+                    try:
+                        netbuy_list.append(int(qty))
+                    except ValueError:
+                        print(f"⚠️ Invalid quantity format: {qty}")
+                        continue
 
+            # 추세 분석 (외국인과 동일한 로직)
             trend = "neutral"
-            if len(netbuy_list) >= 3:
+            if len(netbuy_list) >= days:
                 pos_days = sum(1 for x in netbuy_list if x > 0)
-                if pos_days == days:
+                total_volume = sum(abs(x) for x in netbuy_list)
+                avg_volume = total_volume / len(netbuy_list) if netbuy_list else 0
+                
+                if pos_days == days and avg_volume > 10000:
                     trend = "steady_buying"
-                elif pos_days >= days * 0.6:
+                elif pos_days >= days * 0.7 and avg_volume > 5000:
                     trend = "accumulating"
-                elif pos_days <= days * 0.2:
+                elif pos_days <= days * 0.3:
                     trend = "distributing"
                 else:
                     trend = "mixed"
@@ -415,10 +509,20 @@ def get_institution_netbuy_trend_kis(stock_code, app_key, app_secret, access_tok
         except requests.exceptions.Timeout as e:
             print(f"❌ 타임아웃 오류 (시도 {attempt + 1}/{max_retries}): {e}")
             if attempt < max_retries - 1:
+                time.sleep(1.5)
+            continue
+        except requests.exceptions.HTTPError as e:
+            print(f"❌ HTTP 오류 (시도 {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                time.sleep(1.5)
+            continue
+        except json.JSONDecodeError as e:
+            print(f"❌ JSON 파싱 오류 (시도 {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
                 time.sleep(1)
             continue
         except Exception as e:
-            print(f"❌ KIS API 기관 추세 분석 오류 (시도 {attempt + 1}/{max_retries}): {e}")
+            print(f"❌ 예상치 못한 오류 (시도 {attempt + 1}/{max_retries}): {e}")
             if attempt < max_retries - 1:
                 time.sleep(1)
             continue
@@ -429,16 +533,26 @@ def get_institution_netbuy_trend_kis(stock_code, app_key, app_secret, access_tok
 
 def is_institution_consecutive_buying(stock_code, app_key, app_secret, access_token, days=3):
     """
-    기관이 N일 연속 순매수했는지 확인
+    기관이 N일 연속 순매수했는지 확인 (개선된 버전)
     """
-    netbuy_list, trend = get_institution_netbuy_trend_kis(
-        stock_code, app_key, app_secret, access_token, days
-    )
-    
-    return trend == "steady_buying" and len(netbuy_list) == days
+    try:
+        netbuy_list, trend = get_institution_netbuy_trend_kis(
+            stock_code, app_key, app_secret, access_token, days
+        )
+        
+        # 더 엄격한 조건 적용
+        if trend == "steady_buying" and len(netbuy_list) == days:
+            # 모든 날의 순매수량이 양수이고 의미있는 크기인지 확인
+            return all(qty > 1000 for qty in netbuy_list)  # 최소 1000주 이상
+        
+        return False
+        
+    except Exception as e:
+        print(f"❌ 기관 연속매수 확인 오류 ({stock_code}): {e}")
+        return False
 
 
-def setup_logger(log_dir="logs", log_filename="analyze_buying_stocks_3.log", when="midnight", backup_count=7):
+def setup_logger(log_dir="logs", log_filename="buying_stocks_jhj.log", when="midnight", backup_count=7):
     os.makedirs(log_dir, exist_ok=True)
     log_path = os.path.join(log_dir, log_filename)
 
@@ -547,7 +661,7 @@ def is_bollinger_rebound(df):
 def calculate_buy_signal_score(df, name, code, foreign_trend=None):
     """종합 매수 신호 점수 계산 - MACD 골든크로스와 근접 신호 추가"""
     signals = {
-        "볼린저밴드복귀": is_bollinger_rebound(df),
+        #"볼린저밴드복귀": is_bollinger_rebound(df),
         "엔벨로프반등": is_envelope_bottom_rebound(df),  
         "엔벨로프돌파": is_envelope_squeeze_breakout(df),
         "MACD골든크로스": is_macd_golden_cross(df),
@@ -634,7 +748,7 @@ if __name__ == "__main__":
 
     # 각 신호별 종목 리스트
     signal_lists = {
-        "볼린저밴드복귀": [],
+        #"볼린저밴드복귀": [],
         "엔벨로프반등": [],
         "엔벨로프돌파": [],
         "MACD골든크로스": [],
@@ -671,8 +785,8 @@ if __name__ == "__main__":
             volume = df.iloc[-1]["acml_vol"]
             
             # 개별 신호 체크
-            if is_bollinger_rebound(df):
-                signal_lists["볼린저밴드복귀"].append(f"- {name} ({code})")
+            #if is_bollinger_rebound(df):
+            #    signal_lists["볼린저밴드복귀"].append(f"- {name} ({code})")
             if is_envelope_bottom_rebound(df):
                 signal_lists["엔벨로프반등"].append(f"- {name} ({code})")
             if is_envelope_squeeze_breakout(df):
@@ -763,7 +877,7 @@ if __name__ == "__main__":
         for signal_type, signal_list in signal_lists.items():
             if signal_list:
                 icons = {
-                    "볼린저밴드복귀": "🔵", 
+                    #"볼린저밴드복귀": "🔵", 
                     "엔벨로프반등": "📉", 
                     "엔벨로프돌파": "📈",
                     "MACD골든크로스": "⚡",

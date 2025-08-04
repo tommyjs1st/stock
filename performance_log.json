@@ -2899,5 +2899,573 @@
     "total_cost": 297400.0,
     "unrealized_pnl": 0.006220578345662408,
     "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 09:20:21",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 09:25:23",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 09:30:26",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 09:35:29",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 09:40:32",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 09:45:35",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 09:50:38",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 09:55:40",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 10:00:43",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 10:05:46",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 10:10:49",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 10:15:52",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 10:20:55",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 10:25:57",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 10:31:00",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 10:36:04",
+    "symbols": [
+      "272210"
+    ],
+    "total_trades": 2,
+    "positions": 1,
+    "total_value": 58600.0,
+    "total_cost": 58700,
+    "unrealized_pnl": -0.0017035775127768314,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 10:41:07",
+    "symbols": [
+      "272210"
+    ],
+    "total_trades": 2,
+    "positions": 1,
+    "total_value": 58600.0,
+    "total_cost": 58600.0,
+    "unrealized_pnl": 0.0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 10:46:11",
+    "symbols": [
+      "272210"
+    ],
+    "total_trades": 2,
+    "positions": 1,
+    "total_value": 58800.0,
+    "total_cost": 58600.0,
+    "unrealized_pnl": 0.0034129692832764505,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 10:51:14",
+    "symbols": [
+      "272210"
+    ],
+    "total_trades": 2,
+    "positions": 1,
+    "total_value": 58900.0,
+    "total_cost": 58600.0,
+    "unrealized_pnl": 0.005119453924914676,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 10:52:17",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 10:57:20",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 11:02:22",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 11:07:25",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 11:12:28",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 11:17:31",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 11:22:34",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 11:27:36",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 11:32:39",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 11:37:42",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 11:42:45",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 11:47:47",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 11:52:50",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 11:57:53",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 12:02:56",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 12:07:58",
+    "symbols": [],
+    "total_trades": 1,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 12:09:27",
+    "symbols": [],
+    "total_trades": 0,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 12:14:31",
+    "symbols": [],
+    "total_trades": 0,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 12:19:36",
+    "symbols": [],
+    "total_trades": 0,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 12:24:40",
+    "symbols": [],
+    "total_trades": 0,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 12:29:44",
+    "symbols": [],
+    "total_trades": 0,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 12:34:48",
+    "symbols": [],
+    "total_trades": 0,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 12:39:51",
+    "symbols": [],
+    "total_trades": 0,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 12:44:55",
+    "symbols": [],
+    "total_trades": 0,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 12:49:59",
+    "symbols": [],
+    "total_trades": 0,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 12:55:03",
+    "symbols": [],
+    "total_trades": 0,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 13:00:07",
+    "symbols": [],
+    "total_trades": 0,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 13:05:10",
+    "symbols": [],
+    "total_trades": 0,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 13:10:14",
+    "symbols": [],
+    "total_trades": 0,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 13:15:18",
+    "symbols": [],
+    "total_trades": 0,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 13:20:22",
+    "symbols": [],
+    "total_trades": 0,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 13:25:26",
+    "symbols": [],
+    "total_trades": 0,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 13:30:29",
+    "symbols": [],
+    "total_trades": 0,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 13:35:33",
+    "symbols": [],
+    "total_trades": 0,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 13:40:37",
+    "symbols": [],
+    "total_trades": 0,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 13:45:41",
+    "symbols": [],
+    "total_trades": 0,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
+  },
+  {
+    "timestamp": "2025-08-04 13:50:45",
+    "symbols": [],
+    "total_trades": 0,
+    "positions": 0,
+    "total_value": 0,
+    "total_cost": 0,
+    "unrealized_pnl": 0,
+    "daily_pnl": 0
   }
 ]

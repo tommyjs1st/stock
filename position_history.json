@@ -38,8 +38,8 @@
     "position_closed_time": "2025-07-31T14:17:47.291149"
   },
   "272210": {
-    "total_quantity": 2,
-    "purchase_count": 2,
+    "total_quantity": 0,
+    "purchase_count": 3,
     "purchases": [
       {
         "timestamp": "2025-08-01T10:03:44.177117",
@@ -54,10 +54,32 @@
         "price": 60300,
         "strategy": "scalping",
         "order_type": "BUY"
+      },
+      {
+        "timestamp": "2025-08-04T09:20:18.373092",
+        "quantity": 5,
+        "price": 54900,
+        "reason": "손절매",
+        "order_type": "SELL"
+      },
+      {
+        "timestamp": "2025-08-04T10:36:03.862664",
+        "quantity": 1,
+        "price": 58700,
+        "strategy": "scalping",
+        "order_type": "BUY"
+      },
+      {
+        "timestamp": "2025-08-04T10:52:14.726473",
+        "quantity": 1,
+        "price": 57500,
+        "reason": "매도 신호",
+        "order_type": "SELL"
       }
     ],
-    "last_purchase_time": "2025-08-01T15:00:34.069268",
-    "first_purchase_time": "2025-08-01T10:03:44.177117"
+    "last_purchase_time": "2025-08-04T10:36:03.862664",
+    "first_purchase_time": "2025-08-01T10:03:44.177117",
+    "position_closed_time": "2025-08-04T10:52:14.726473"
   },
   "348210": {
     "total_quantity": 2,

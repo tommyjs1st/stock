@@ -236,9 +236,53 @@ class KISAutoTrader:
             if holding_time < timedelta(hours=self.min_holding_period_hours):
                 remaining_hours = self.min_holding_period_hours - holding_time.total_seconds() / 3600
                 return False, f"최소 보유 기간 미충족 (남은 시간: {remaining_hours:.1f}시간)"
+        else:
+            # 수동 매수한 경우 - 오늘 장 시작 시간을 기준으로 가정
+            today_market_start = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
+        
+            # 주말이면 이전 금요일로 조정
+            while today_market_start.weekday() >= 5:
+                today_market_start -= timedelta(days=1)
+        
+            holding_time = datetime.now() - today_market_start
+        
+            if holding_time < timedelta(hours=self.min_holding_period_hours):
+                remaining_hours = self.min_holding_period_hours - holding_time.total_seconds() / 3600
+                return False, f"수동 매수 종목 - 최소 보유 기간 미충족 (남은 시간: {remaining_hours:.1f}시간)"
         
         return True, "매도 가능"
     
+    def initialize_manual_positions(self):
+        """수동 매수 종목들의 이력 초기화"""
+    
+        for symbol in self.all_positions.keys():
+            history = self.position_manager.position_history.get(symbol, {})
+        
+            if not history.get('first_purchase_time'):
+                # 수동 매수 종목으로 판단하여 오늘 장 시작 시간으로 설정
+                today_start = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
+            
+                # 주말 조정
+                while today_start.weekday() >= 5:
+                    today_start -= timedelta(days=1)
+            
+                # 이력 생성
+                if symbol not in self.position_manager.position_history:
+                    self.position_manager.position_history[symbol] = {
+                        'total_quantity': 0,
+                        'purchase_count': 0,
+                        'purchases': [],
+                        'last_purchase_time': None,
+                        'first_purchase_time': None
+                    }
+            
+                self.position_manager.position_history[symbol]['first_purchase_time'] = today_start.isoformat()
+                self.position_manager.position_history[symbol]['manual_position'] = True
+                
+                self.logger.info(f"📝 {symbol} 수동 매수 종목 이력 초기화: {today_start}")
+    
+        self.position_manager.save_position_history()
+
     def load_config(self, config_path: str):
         """설정 파일 로드"""
         try:
@@ -2445,9 +2489,9 @@ class KISAutoTrader:
         
         else:  # SELL
             # 매도는 보통 빠른 체결을 선호
-            if signal_strength >= 3.0:
+            if signal_strength >= 3.5:
                 return "urgent"
-            elif signal_strength >= 1.5:
+            elif signal_strength >= 2.0:
                 return "aggressive_limit"
             else:
                 return "limit"
@@ -4381,6 +4425,7 @@ class KISAutoTrader:
                 self.logger.info("토큰 준비 완료 ✅")
     
             # 시작 시 장 상태 확인
+            self.initialize_manual_positions()
             current_time = datetime.now()
             market_info = self.get_market_status_info(current_time)
             self.logger.info(f"📈 현재 장 상태: {market_info['message']}")

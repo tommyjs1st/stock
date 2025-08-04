@@ -1,0 +1,41 @@
+{
+  "timestamp": "20250804_111500",
+  "api_name": "stock_data",
+  "stock_code": "042660",
+  "request": {
+    "method": "GET",
+    "url": "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice?fid_cond_mrkt_div_code=J&fid_input_iscd=042660&fid_input_date_1=&fid_input_date_2=&fid_period_div_code=D&fid_org_adj_prc=0",
+    "headers": {
+      "User-Agent": "python-requests/2.32.4",
+      "Accept-Encoding": "gzip, deflate",
+      "Accept": "*/*",
+      "Connection": "keep-alive",
+      "content-type": "application/json; charset=utf-8",
+      "authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0b2tlbiIsImF1ZCI6IjFlZjNmMTE4LTcxZDQtNGFmMy05YzRiLTY5YjQyODY5ZWI0YSIsInByZHRfY2QiOiIiLCJpc3MiOiJ1bm9ndyIsImV4cCI6MTc1NDM1MTE4NywiaWF0IjoxNzU0MjY0Nzg3LCJqdGkiOiJQU09iRnB3Q0ZHSjh3aTNoRmFRWU9pQUtxZzUyYVJMMldEUjIifQ.PDqQe2X3wXV2VeNVRfFAnF-6P5bOfzhhQbiA4jzGj2i02svWeTMYCcAKK2__iLNNr0ziYqEYEiKW3tf-iQuQVA",
+      "tr_id": "FHKST03010100"
+    },
+    "body": null
+  },
+  "response": {
+    "status_code": 500,
+    "headers": {
+      "Date": "Mon, 04 Aug 2025 02:15:00 GMT",
+      "X-Content-Type-Options": "nosniff",
+      "Content-Length": "35",
+      "X-ORACLE-DMS-ECID": "006Es2gm1gkFw0zzzR06zzEjX2E0jYYz300018v01ASRk",
+      "X-ORACLE-DMS-RID": "0:1",
+      "X-XSS-Protection": "1; mode=block",
+      "Connection": "close",
+      "Content-Type": "application/json"
+    },
+    "response_time_seconds": 0.020841,
+    "content_length": 35,
+    "encoding": "utf-8",
+    "raw_text": "{\"rt_cd\":\"1\",\"msg_cd\":\"\",\"msg1\":\"\"}",
+    "parsed_json": {
+      "rt_cd": "1",
+      "msg_cd": "",
+      "msg1": ""
+    }
+  }
+}
