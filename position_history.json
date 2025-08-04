@@ -38,8 +38,8 @@
     "position_closed_time": "2025-07-31T14:17:47.291149"
   },
   "272210": {
-    "total_quantity": 0,
-    "purchase_count": 3,
+    "total_quantity": 1,
+    "purchase_count": 4,
     "purchases": [
       {
         "timestamp": "2025-08-01T10:03:44.177117",
@@ -75,9 +75,16 @@
         "price": 57500,
         "reason": "매도 신호",
         "order_type": "SELL"
+      },
+      {
+        "timestamp": "2025-08-04T14:31:16.113852",
+        "quantity": 1,
+        "price": 57800,
+        "strategy": "scalping",
+        "order_type": "BUY"
       }
     ],
-    "last_purchase_time": "2025-08-04T10:36:03.862664",
+    "last_purchase_time": "2025-08-04T14:31:16.113852",
     "first_purchase_time": "2025-08-01T10:03:44.177117",
     "position_closed_time": "2025-08-04T10:52:14.726473"
   },

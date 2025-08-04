@@ -64,52 +64,353 @@ def get_institution_netbuy_trend_kis(stock_code, app_key, app_secret, access_tok
         print(f"❌ KIS API 기관 추세 분석 오류: {e}")
         return [], "unknown"
 
+
+def get_period_price_data_alternative(access_token, app_key, app_secret, stock_code, days=60, max_retries=3):
+    """
+    대안 API: 주식현재가 일자별 API를 사용한 데이터 조회
+    더 안정적일 수 있음
+    """
+    from datetime import datetime, timedelta
+    
+    # 오늘부터 역산해서 영업일 기준으로 계산
+    end_date = datetime.now()
+    # 주말과 공휴일을 고려해 실제 달력일로는 더 많이 빼기
+    start_date = end_date - timedelta(days=int(days * 1.4))  # 영업일 고려해 1.4배
+    
+    start_date_str = start_date.strftime("%Y%m%d")
+    end_date_str = end_date.strftime("%Y%m%d")
+    
+    url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-price"
+    headers = {
+        "Content-Type": "application/json",
+        "authorization": f"Bearer {access_token}",
+        "appKey": app_key,
+        "appSecret": app_secret,
+        "tr_id": "FHKST01010400"
+    }
+    
+    # 여러 번에 나누어 조회 (API 제한 때문)
+    all_data = []
+    current_end = end_date
+    
+    for i in range(3):  # 최대 3번 나누어 조회 (각각 30일씩)
+        current_start = current_end - timedelta(days=30)
+        if current_start < start_date:
+            current_start = start_date
+            
+        params = {
+            "fid_cond_mrkt_div_code": "J",
+            "fid_input_iscd": stock_code,
+            "fid_input_date_1": current_start.strftime("%Y%m%d"),
+            "fid_input_date_2": current_end.strftime("%Y%m%d"),
+            "fid_period_div_code": "D",
+            "fid_org_adj_prc": "0"
+        }
+        
+        for attempt in range(max_retries):
+            try:
+                time.sleep(0.2)  # API 호출 간격
+                response = requests.get(url, headers=headers, params=params, timeout=10)
+                response.raise_for_status()
+                data = response.json().get("output", [])
+                
+                if data:
+                    all_data.extend(data)
+                    print(f"📊 {stock_code}: {current_start.strftime('%Y%m%d')}~{current_end.strftime('%Y%m%d')} {len(data)}건 조회")
+                break
+                
+            except Exception as e:
+                print(f"❌ 구간 조회 오류 (시도 {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(1)
+                continue
+        
+        current_end = current_start - timedelta(days=1)
+        if current_end <= start_date:
+            break
+    
+    if not all_data:
+        print(f"❌ {stock_code} 대안 API 데이터 조회 실패")
+        return None
+    
+    # DataFrame 생성 및 중복 제거
+    df = pd.DataFrame(all_data)
+    df = df.drop_duplicates(subset=['stck_bsop_date']).reset_index(drop=True)
+    
+    # 데이터 타입 변환
+    df["stck_clpr"] = pd.to_numeric(df["stck_clpr"], errors="coerce")
+    df["stck_hgpr"] = pd.to_numeric(df["stck_hgpr"], errors="coerce") 
+    df["stck_lwpr"] = pd.to_numeric(df["stck_lwpr"], errors="coerce")
+    df["acml_vol"] = pd.to_numeric(df["acml_vol"], errors="coerce")
+    
+    df = df.dropna(subset=["stck_clpr", "stck_hgpr", "stck_lwpr", "acml_vol"])
+    df = df.sort_values(by="stck_bsop_date").reset_index(drop=True)
+    
+    print(f"✅ {stock_code}: 대안 API로 총 {len(df)}일 데이터 조회 완료")
+    return df
+
+
+def get_period_price_data(access_token, app_key, app_secret, stock_code, days=60, period="D", max_retries=3):
+    """
+    국내주식기간별시세 API를 사용해 더 긴 기간 데이터 조회
+    days: 조회할 일수 (기본 60일)
+    period: "D"(일), "W"(주), "M"(월), "Y"(년)
+    """
+    from datetime import datetime, timedelta
+    
+    # 시작일과 종료일 계산
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=days + 20)  # 여유분 20일 추가 (휴장일 고려)
+    
+    start_date_str = start_date.strftime("%Y%m%d")
+    end_date_str = end_date.strftime("%Y%m%d")
+    
+    url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice"
+    headers = {
+        "Content-Type": "application/json",
+        "authorization": f"Bearer {access_token}",
+        "appKey": app_key,
+        "appSecret": app_secret,
+        "tr_id": "FHKST03010100"
+    }
+    params = {
+        "fid_cond_mrkt_div_code": "J",
+        "fid_input_iscd": stock_code,
+        "fid_input_date_1": start_date_str,  # 시작일 명시
+        "fid_input_date_2": end_date_str,    # 종료일 명시
+        "fid_period_div_code": period,       # "D":일, "W":주, "M":월, "Y":년
+        "fid_org_adj_prc": "0"              # 0:수정주가, 1:원주가
+    }
+    
+    logger.debug("📅 {stock_code}: {start_date_str} ~ {end_date_str} 데이터 조회 시작")
+    
+    # 데이터 조회 (재시도)
+    df = None
+    for attempt in range(max_retries):
+        try:
+            time.sleep(0.1)
+            response = requests.get(url, headers=headers, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json().get("output2", [])  # output2가 실제 데이터
+            df = pd.DataFrame(data)
+            break
+        except requests.exceptions.ConnectionError as e:
+            print(f"❌ 기간별 데이터 연결 오류 (시도 {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                time.sleep(1)
+            continue
+        except Exception as e:
+            print(f"❌ 기간별 데이터 조회 오류 (시도 {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                time.sleep(1)
+            continue
+    
+    if df is None or df.empty:
+        print(f"❌ {stock_code} 기간별 데이터 조회 실패")
+        return None
+    
+    # 데이터 타입 변환 및 컬럼명 통일
+    df = df.rename(columns={
+        'stck_bsop_date': 'stck_bsop_date',  # 영업일자
+        'stck_clpr': 'stck_clpr',           # 종가
+        'stck_oprc': 'stck_oprc',           # 시가
+        'stck_hgpr': 'stck_hgpr',           # 고가
+        'stck_lwpr': 'stck_lwpr',           # 저가
+        'acml_vol': 'acml_vol'              # 누적거래량
+    })
+    
+    # 숫자 변환
+    df["stck_clpr"] = pd.to_numeric(df["stck_clpr"], errors="coerce")
+    df["stck_hgpr"] = pd.to_numeric(df["stck_hgpr"], errors="coerce")
+    df["stck_lwpr"] = pd.to_numeric(df["stck_lwpr"], errors="coerce")
+    df["acml_vol"] = pd.to_numeric(df["acml_vol"], errors="coerce")
+    
+    # 결측치 제거
+    df = df.dropna(subset=["stck_clpr", "stck_hgpr", "stck_lwpr", "acml_vol"])
+    
+    # 날짜순 정렬 (과거 → 현재)
+    df = df.sort_values(by="stck_bsop_date").reset_index(drop=True)
+    
+    #print(f"✅ {stock_code}: {len(df)}일 데이터 조회 완료")
+    return df
+
+
+def get_daily_price_data_with_realtime(access_token, app_key, app_secret, stock_code, days=60, max_retries=3):
+    """
+    개선된 일봉 데이터 + 실시간 현재가 결합
+    기간별시세 API를 사용해 지정한 일수만큼 데이터 확보
+    days: 조회할 일수 (기본 60일, MACD용으로 충분)
+    """
+    # 먼저 기간별시세 API로 충분한 과거 데이터 조회
+    df = get_period_price_data(access_token, app_key, app_secret, stock_code, days=days, period="D", max_retries=max_retries)
+    
+    # 기본 API가 실패하면 대안 API 시도
+    if df is None or len(df) < 30:
+        print(f"⚠️ {stock_code}: 기본 API 실패, 대안 API 시도...")
+        df = get_period_price_data_alternative(access_token, app_key, app_secret, stock_code, days=days, max_retries=max_retries)
+    
+    if df is None or df.empty:
+        print(f"❌ {stock_code} 기간별 데이터 조회 실패")
+        return None
+    
+    # MACD 계산 가능 여부 확인
+    if len(df) < 35:
+        logger.info("⚠️ {stock_code}: 데이터 부족 ({len(df)}일) - MACD 분석에는 최소 35일 필요")
+    elif len(df) < 50:
+        logger.info("⚠️ {stock_code}: 데이터 부족 ({len(df)}일) - MACD 정확도를 위해 50일 이상 권장")
+    else:
+        logger.debug("✅ {stock_code}: {len(df)}일 데이터로 MACD 분석 가능")
+    
+    # 실시간 현재가 조회해서 최신 데이터 업데이트
+    current_price, current_volume = get_current_price(access_token, app_key, app_secret, stock_code)
+    
+    if current_price and current_volume:
+        today = datetime.now().strftime("%Y%m%d")
+        
+        # 최신 데이터가 오늘 데이터인지 확인
+        if len(df) > 0 and df.iloc[-1]["stck_bsop_date"] == today:
+            # 오늘 데이터를 실시간 가격으로 업데이트
+            df.loc[df.index[-1], "stck_clpr"] = current_price
+            df.loc[df.index[-1], "acml_vol"] = current_volume
+            logger.debug("📈 {stock_code}: 오늘 데이터를 실시간 가격으로 업데이트")
+        else:
+            # 오늘 데이터 새로 추가
+            new_row = {
+                "stck_bsop_date": today,
+                "stck_clpr": current_price,
+                "stck_hgpr": current_price,
+                "stck_lwpr": current_price,
+                "acml_vol": current_volume
+            }
+            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+            logger.debug("📈 {stock_code}: 오늘 실시간 데이터 추가")
+    
+    return df
+
+
 def is_macd_golden_cross(df):
     """
-    MACD 골든크로스 신호 감지 (30일 기간)
+    개선된 MACD 골든크로스 신호 감지 (충분한 데이터로 정확도 향상)
     """
-    if len(df) < 30:
+    if len(df) < 35:  # 최소 35일 필요
         return False
-   
-    try:
-        # DataFrame 컬럼 존재 여부 확인
-        if 'stck_clpr' not in df.columns:
-            print(f"❌ DataFrame에 'stck_clpr' 컬럼이 없습니다. 사용 가능한 컬럼: {df.columns.tolist()}")
-            return False
-            
-        close_prices = df['stck_clpr'].copy()
     
+    try:
+        close_prices = df['stck_clpr'].copy()
+        
         if close_prices.isnull().any():
             return False
-    
-        # EMA 계산
+        
+        # 표준 MACD 계산 (12일 EMA - 26일 EMA)
         ema_12 = close_prices.ewm(span=12, adjust=False).mean()
         ema_26 = close_prices.ewm(span=26, adjust=False).mean()
-    
+        ema_05 = close_prices.ewm(span=5, adjust=False).mean()
+        
         # MACD Line 계산
         macd_line = ema_12 - ema_26
-    
-        # Signal Line 계산
+        #macd_line = ema_05 - ema_12
+        
+        # Signal Line 계산 (MACD의 9일 EMA)
         signal_line = macd_line.ewm(span=9, adjust=False).mean()
+        
+        if len(macd_line) < 2:
+            return False
+        
+        # 오늘과 어제의 MACD, Signal 값
+        today_macd = macd_line.iloc[-1]
+        today_signal = signal_line.iloc[-1]
+        yesterday_macd = macd_line.iloc[-2]
+        yesterday_signal = signal_line.iloc[-2]
+        
+        # 골든크로스 조건 (매수 신호만)
+        # 1. 어제는 MACD가 Signal 아래에 있었음
+        # 2. 오늘은 MACD가 Signal 위로 돌파
+        # 3. MACD가 상승 추세
+        golden_cross_today = (
+            yesterday_macd <= yesterday_signal and  # 어제는 아래
+            today_macd > today_signal and          # 오늘은 위로 돌파
+            today_macd > yesterday_macd            # MACD가 상승 추세
+        )
+        
+        # 추가 필터: 매수 시점만 감지 (0선 근처 이하에서만 유효)
+        valid_cross = today_signal <= 0.2  # Signal이 0선 근처 또는 아래
+        
+        # 충분한 데이터가 있을 때만 추가 검증
+        if len(df) >= 50:
+            # 거래량 증가 확인 (선택사항)
+            volume_surge = df.iloc[-1]["acml_vol"] > df["acml_vol"].tail(10).mean() * 1.1
+            return golden_cross_today and valid_cross and volume_surge
+        else:
+            return golden_cross_today and valid_cross
+        
+    except Exception as e:
+        print(f"MACD 계산 오류: {e}")
+        return False
+
+
+def is_macd_near_golden_cross(df):
+    """
+    개선된 MACD 골든크로스 근접 신호 감지
+    """
+    if len(df) < 35:
+        return False
     
+    try:
+        close_prices = df['stck_clpr'].copy()
+        
+        if close_prices.isnull().any():
+            return False
+        
+        # 표준 MACD 계산
+        ema_12 = close_prices.ewm(span=12, adjust=False).mean()
+        ema_26 = close_prices.ewm(span=26, adjust=False).mean()
+        macd_line = ema_12 - ema_26
+        signal_line = macd_line.ewm(span=9, adjust=False).mean()
+        
         if len(macd_line) < 5:
             return False
-    
-        # 현재 MACD가 Signal보다 위에 있음
-        current_above = macd_line.iloc[-1] > signal_line.iloc[-1]
-    
-        # 최근 30일 내 골든크로스 발생
-        recent_cross = False
-        for i in range(1, min(31, len(macd_line))):
-            if (macd_line.iloc[-i-1] <= signal_line.iloc[-i-1] and
-                macd_line.iloc[-i] > signal_line.iloc[-i]):
-                recent_cross = True
-                break
-
-        return current_above and recent_cross
-
+        
+        current_macd = macd_line.iloc[-1]
+        current_signal = signal_line.iloc[-1]
+        
+        # 1. MACD가 Signal 아래에 있어야 함
+        if current_macd >= current_signal:
+            return False
+        
+        # 2. 차이가 매우 작음 (근접 상태)
+        diff = abs(current_macd - current_signal)
+        signal_abs = abs(current_signal)
+        is_close = (diff / max(signal_abs, 0.01) <= 0.05) or (diff <= 0.03)
+        
+        # 3. MACD 상승 추세 확인
+        macd_trend_up = False
+        if len(macd_line) >= 3:
+            macd_trend_up = (
+                macd_line.iloc[-1] > macd_line.iloc[-2] and 
+                macd_line.iloc[-2] >= macd_line.iloc[-3]
+            )
+        
+        # 4. 히스토그램 개선 추세
+        histogram_improving = False
+        if len(macd_line) >= 3:
+            hist_today = current_macd - current_signal
+            hist_yesterday = macd_line.iloc[-2] - signal_line.iloc[-2]
+            hist_2days_ago = macd_line.iloc[-3] - signal_line.iloc[-3]
+            
+            histogram_improving = (
+                hist_today > hist_yesterday and 
+                hist_yesterday > hist_2days_ago
+            )
+        
+        # 5. 매수 구간에서만 유효
+        valid_position = current_signal <= 0.3
+        
+        return (is_close and 
+                (macd_trend_up or histogram_improving) and 
+                valid_position)
+        
     except Exception as e:
-        print(f"❌ MACD 골든크로스 계산 오류: {e}")
+        print(f"MACD 근접 계산 오류: {e}")
         return False
 
 
@@ -142,87 +443,6 @@ def get_current_price(access_token, app_key, app_secret, stock_code):
     except Exception as e:
         print(f"현재가 조회 오류: {e}")
         return None, None
-
-
-def get_daily_price_data_with_realtime(access_token, app_key, app_secret, stock_code):
-    """
-    일봉 데이터 + 실시간 현재가 결합 (개선된 버전)
-    """
-    try:
-        # 기존 일봉 데이터 조회
-        url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-price"
-        headers = {
-            "Content-Type": "application/json",
-            "authorization": f"Bearer {access_token}",
-            "appKey": app_key,
-            "appSecret": app_secret,
-            "tr_id": "FHKST01010400"
-        }
-        params = {
-            "fid_cond_mrkt_div_code": "J",
-            "fid_input_iscd": stock_code,
-            "fid_period_div_code": "D",
-            "fid_org_adj_prc": "0"
-        }
-        
-        response = requests.get(url, headers=headers, params=params)
-        response.raise_for_status()
-        data = response.json().get("output", [])
-        
-        if not data:
-            print(f"❌ {stock_code}: API에서 데이터를 받지 못했습니다.")
-            return None
-            
-        df = pd.DataFrame(data)
-        
-        # 필수 컬럼 존재 여부 확인
-        required_columns = ["stck_clpr", "stck_hgpr", "stck_lwpr", "acml_vol", "stck_bsop_date"]
-        missing_columns = [col for col in required_columns if col not in df.columns]
-        if missing_columns:
-            print(f"❌ {stock_code}: 필수 컬럼 누락: {missing_columns}")
-            print(f"사용 가능한 컬럼: {df.columns.tolist()}")
-            return None
-        
-        # 데이터 타입 변환 (에러 처리 강화)
-        for col in ["stck_clpr", "stck_hgpr", "stck_lwpr", "acml_vol"]:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
-        
-        # 유효하지 않은 데이터 제거
-        df = df.dropna(subset=["stck_clpr", "stck_hgpr", "stck_lwpr", "acml_vol"])
-        
-        if df.empty:
-            print(f"❌ {stock_code}: 유효한 데이터가 없습니다.")
-            return None
-            
-        df = df.sort_values(by="stck_bsop_date").reset_index(drop=True)
-        
-        # 실시간 현재가 조회
-        current_price, current_volume = get_current_price(access_token, app_key, app_secret, stock_code)
-        
-        if current_price and current_volume:
-            today = datetime.now().strftime("%Y%m%d")
-            
-            # 최신 데이터가 오늘 데이터인지 확인
-            if len(df) > 0 and df.iloc[-1]["stck_bsop_date"] == today:
-                # 오늘 데이터를 실시간 가격으로 업데이트
-                df.loc[df.index[-1], "stck_clpr"] = current_price
-                df.loc[df.index[-1], "acml_vol"] = current_volume
-            else:
-                # 오늘 데이터 새로 추가
-                new_row = {
-                    "stck_bsop_date": today,
-                    "stck_clpr": current_price,
-                    "stck_hgpr": current_price,
-                    "stck_lwpr": current_price,
-                    "acml_vol": current_volume
-                }
-                df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-        
-        return df
-        
-    except Exception as e:
-        print(f"❌ {stock_code}: 일봉 데이터 조회 중 오류 발생: {e}")
-        return None
 
 
 def is_institution_consecutive_buying(stock_code, app_key, app_secret, access_token, days=3):
