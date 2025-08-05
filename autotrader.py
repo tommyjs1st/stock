@@ -356,15 +356,15 @@ class HybridTradingStrategy:
             latest_minute = minute_df.iloc[-1]
             
             if target_signal == 'BUY':
-                return self.evaluate_buy_timing(minute_df, latest_minute, current_price)
+                return self.evaluate_buy_timing(minute_df, latest_minute, current_price, symbol)
             else:
-                return self.evaluate_sell_timing(minute_df, latest_minute, current_price)
+                return self.evaluate_sell_timing(minute_df, latest_minute, current_price, symbol)
                 
         except Exception as e:
             self.trader.logger.error(f"분봉 타이밍 분석 실패 ({symbol}): {e}")
             return {'execute': False, 'reason': f'분석 오류: {str(e)}'}
-    
-    def evaluate_buy_timing(self, df: pd.DataFrame, latest: pd.Series, current_price: float) -> Dict:
+
+    def evaluate_buy_timing(self, df: pd.DataFrame, latest: pd.Series, current_price: float, symbol: str = None) -> Dict:
         """매수 타이밍 평가"""
         
         timing_score = 0
@@ -400,11 +400,15 @@ class HybridTradingStrategy:
             reasons.append("거래량증가")
         
         # 5. 호가 스프레드 확인
-        bid_ask = self.trader.get_current_bid_ask(symbol)
-        if bid_ask and bid_ask.get('spread', 1000) <= 500:
-            timing_score += 1
-            reasons.append("스프레드양호")
-        
+        try:
+            bid_ask = self.trader.get_current_bid_ask(symbol)
+            if bid_ask and bid_ask.get('spread', 1000) <= 500:
+                timing_score += 1
+                reasons.append("스프레드양호")
+        except Exception as bid_ask_error:
+            self.trader.logger.warning(f"호가 조회 실패 ({symbol}): {bid_ask_error}")
+            # 호가 조회 실패해도 계속 진행
+
         execute = timing_score >= 4
         
         return {
@@ -417,7 +421,7 @@ class HybridTradingStrategy:
             'recent_change': recent_change
         }
     
-    def evaluate_sell_timing(self, df: pd.DataFrame, latest: pd.Series, current_price: float) -> Dict:
+    def evaluate_sell_timing(self, df: pd.DataFrame, latest: pd.Series, current_price: float, symbol: str = None) -> Dict:
         """매도 타이밍 평가"""
         
         timing_score = 0
@@ -1116,11 +1120,23 @@ class KISAutoTrader:
     
             if data.get('output2'):
                 df = pd.DataFrame(data['output2'])
-                df['stck_cntg_hour'] = pd.to_datetime(df['stck_cntg_hour'], format='%H%M%S')
-                numeric_cols = ['stck_prpr', 'stck_oprc', 'stck_hgpr', 'stck_lwpr', 'cntg_vol']
-                for col in numeric_cols:
-                    df[col] = pd.to_numeric(df[col], errors='coerce')
-                return df.sort_values('stck_cntg_hour').reset_index(drop=True)
+                if not df.empty and 'stck_cntg_hour' in df.columns:
+                    df['stck_cntg_hour'] = pd.to_datetime(df['stck_cntg_hour'], format='%H%M%S', errors='coerce')
+                    numeric_cols = ['stck_prpr', 'stck_oprc', 'stck_hgpr', 'stck_lwpr', 'cntg_vol']
+                    for col in numeric_cols:
+                        if col in df.columns:
+                            df[col] = pd.to_numeric(df[col], errors='coerce')
+                    
+                    # NaN 제거
+                    df = df.dropna(subset=['stck_prpr'])
+                    
+                    if not df.empty:
+                        self.logger.info(f"✅ {symbol} 분봉 데이터 {len(df)}개 조회 완료")
+                        return df.sort_values('stck_cntg_hour').reset_index(drop=True)
+                    else:
+                        self.logger.warning(f"⚠️ {symbol} 분봉 데이터가 비어있음")
+                else:
+                    self.logger.warning(f"⚠️ {symbol} 분봉 데이터 구조 이상")
     
         except Exception as e:
             self.logger.error(f"분봉 데이터 조회 실패 ({symbol}): {e}")
@@ -2190,6 +2206,114 @@ def main():
         print(f"❌ 프로그램 실행 중 오류: {e}")
         import traceback
         print(f"상세 오류:\n{traceback.format_exc()}")
+
+def run_hybrid_strategy(trader, check_interval_minutes=30):
+    """하이브리드 전략 실행"""
+    trader.logger.info("🚀 하이브리드 전략 시작")
+    trader.logger.info(f"📊 일봉 분석 + 분봉 실행 시스템")
+    trader.logger.info(f"⏰ 체크 간격: {check_interval_minutes}분")
+    
+    # 하이브리드 전략 초기화
+    if not hasattr(trader, 'hybrid_strategy'):
+        trader.hybrid_strategy = HybridTradingStrategy(trader)
+    
+    # 시작 알림
+    if trader.discord_webhook:
+        trader.send_discord_notification(
+            "🚀 하이브리드 전략 시작",
+            f"일봉 분석 + 분봉 실행\n체크 간격: {check_interval_minutes}분\n대상 종목: {', '.join(getattr(trader, 'symbols', []))}",
+            0x00ff00
+        )
+    
+    daily_trades = 0
+    last_daily_summary = datetime.now().date()
+    last_position_update = datetime.now()
+    
+    try:
+        while True:
+            current_time = datetime.now()
+            market_info = trader.get_market_status_info(current_time)
+            
+            if market_info['is_trading_time']:
+                trader.logger.info(f"📊 하이브리드 사이클 - {current_time.strftime('%H:%M:%S')}")
+                
+                cycle_start_trades = trader.trade_count
+                
+                try:
+                    # 포지션 업데이트 (10분마다)
+                    if current_time - last_position_update > timedelta(minutes=10):
+                        trader.update_all_positions()
+                        last_position_update = current_time
+                    
+                    # 각 종목별 하이브리드 매매 실행
+                    for i, symbol in enumerate(getattr(trader, 'symbols', []), 1):
+                        trader.logger.info(f"🔍 [{i}/{len(trader.symbols)}] {symbol} 하이브리드 분석")
+                        
+                        try:
+                            if trader.hybrid_strategy.execute_hybrid_trade(symbol):
+                                daily_trades += 1
+                                trader.logger.info(f"✅ {symbol} 하이브리드 매매 실행됨")
+                            else:
+                                trader.logger.debug(f"⏸️ {symbol} 매매 조건 미충족")
+                                
+                            time.sleep(2)
+                            
+                        except Exception as e:
+                            trader.logger.error(f"❌ {symbol} 하이브리드 실행 오류: {e}")
+                    
+                    # 기존 포지션 손익 관리
+                    trader.process_sell_signals()
+                    
+                    # 이번 사이클 거래 결과
+                    cycle_trades = trader.trade_count - cycle_start_trades
+                    if cycle_trades > 0:
+                        trader.logger.info(f"📈 이번 사이클 거래: {cycle_trades}건")
+                    
+                    trader.logger.info("✅ 하이브리드 사이클 완료")
+                    
+                except Exception as e:
+                    trader.logger.error(f"❌ 하이브리드 실행 오류: {e}")
+                    trader.notify_error("하이브리드 실행 오류", str(e))
+            
+            else:
+                trader.logger.info(f"⏰ 장 외 시간: {market_info['message']}")
+                
+                # 장 외 시간에는 체크 간격 연장
+                if current_time.weekday() >= 5:  # 주말
+                    sleep_minutes = 120  # 2시간
+                else:
+                    sleep_minutes = 60   # 1시간
+            
+            # 일일 요약 (장 마감 후)
+            if (current_time.date() != last_daily_summary and 
+                current_time.hour >= 16):
+                
+                trader.notify_daily_summary(daily_trades, trader.daily_pnl, daily_trades)
+                daily_trades = 0
+                trader.daily_pnl = 0
+                last_daily_summary = current_time.date()
+            
+            # 대기 시간 계산
+            if market_info['is_trading_time']:
+                sleep_time = check_interval_minutes * 60
+                next_run = current_time + timedelta(minutes=check_interval_minutes)
+                trader.logger.info(f"다음 하이브리드 체크: {next_run.strftime('%H:%M:%S')}")
+            else:
+                sleep_time = sleep_minutes * 60
+                next_run = current_time + timedelta(minutes=sleep_minutes)
+                trader.logger.info(f"다음 상태 체크: {next_run.strftime('%H:%M:%S')}")
+            
+            time.sleep(sleep_time)
+            
+    except KeyboardInterrupt:
+        trader.logger.info("🛑 사용자가 하이브리드 전략을 종료했습니다.")
+        if trader.discord_webhook:
+            trader.send_discord_notification("⏹️ 하이브리드 전략 종료", "사용자가 프로그램을 종료했습니다.", 0xff6600)
+    except Exception as e:
+        trader.logger.error(f"❌ 하이브리드 전략 실행 중 오류: {e}")
+        trader.notify_error("하이브리드 전략 오류", str(e))
+    finally:
+        trader.logger.info("하이브리드 전략 프로그램 종료")
 
 def main_hybrid():
     """하이브리드 전략으로 실행"""

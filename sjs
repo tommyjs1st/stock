@@ -1,107 +1,49 @@
-    # KISAutoTrader 클래스 안에 추가할 메서드들:
+    def get_minute_data(self, symbol: str, minutes: int = 240) -> pd.DataFrame:
+        """분봉 데이터 조회"""
+        url = f"{self.base_url}/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice"
+        headers = {
+            "content-type": "application/json",
+            "authorization": f"Bearer {self.get_access_token()}",
+            "appkey": self.app_key,
+            "appsecret": self.app_secret,
+            "tr_id": "FHKST03010200"
+        }
     
-    def get_market_status_info(self, current_time=None):
-        """장 상태 정보 반환"""
-        if current_time is None:
-            current_time = datetime.now()
-        
-        is_open = self.is_market_open(current_time)
-        
-        if is_open:
-            today_close = current_time.replace(hour=15, minute=30, second=0, microsecond=0)
-            time_to_close = today_close - current_time
-            
-            return {
-                'status': 'OPEN',
-                'message': f'장 시간 중 (마감까지 {str(time_to_close).split(".")[0]})',
-                'next_change': today_close,
-                'is_trading_time': True
-            }
-        else:
-            # 다음 개장 시간 계산
-            next_day = current_time + timedelta(days=1)
-            while next_day.weekday() >= 5:
-                next_day += timedelta(days=1)
-            
-            next_open = next_day.replace(hour=9, minute=0, second=0, microsecond=0)
-            
-            if current_time.weekday() >= 5:
-                message = f'주말 휴장 (다음 개장: {next_open.strftime("%m/%d %H:%M")})'
-            elif current_time.hour < 9:
-                message = f'장 시작 전 (개장: 09:00)'
-            else:
-                message = f'장 마감 후 (다음 개장: {next_open.strftime("%m/%d %H:%M")})'
-            
-            return {
-                'status': 'CLOSED',
-                'message': message,
-                'next_change': next_open,
-                'is_trading_time': False
-            }
+        end_time = datetime.now().strftime("%H%M%S")
+        params = {
+            "fid_etc_cls_code": "",
+            "fid_cond_mrkt_div_code": "J",
+            "fid_input_iscd": symbol,
+            "fid_input_hour_1": end_time,
+            "fid_pw_data_incu_yn": "Y"
+        }
     
-    def is_market_open(self, current_time=None):
-        """한국 증시 개장 시간 확인"""
-        if current_time is None:
-            current_time = datetime.now()
-        
-        weekday = current_time.weekday()
-        if weekday >= 5:
-            return False
-        
-        hour = current_time.hour
-        minute = current_time.minute
-        
-        if hour < 9:
-            return False
-        
-        if hour > 15 or (hour == 15 and minute > 30):
-            return False
-        
-        return True
-    
-    def update_all_positions(self):
-        """모든 보유 종목 포지션 업데이트"""
         try:
-            all_holdings = self.get_all_holdings()
-            
-            self.positions = {}
-            for symbol in getattr(self, 'symbols', []):
-                if symbol in all_holdings:
-                    self.positions[symbol] = all_holdings[symbol]
-            
-            self.all_positions = all_holdings
-            
-            self.logger.info(f"💼 포지션 업데이트: 거래대상 {len(self.positions)}개, 전체 {len(self.all_positions)}개")
-            
-        except Exception as e:
-            self.logger.error(f"포지션 업데이트 실패: {e}")
+            response = requests.get(url, headers=headers, params=params, timeout=30)
+            response.raise_for_status()
+            data = response.json()
     
-    def process_sell_signals(self):
-        """매도 신호 처리"""
-        if not hasattr(self, 'all_positions') or not self.all_positions:
-            return
-        
-        positions_to_process = dict(self.all_positions)
-        
-        for symbol, position in positions_to_process.items():
-            try:
-                if symbol not in self.all_positions:
-                    continue
+            if data.get('output2'):
+                df = pd.DataFrame(data['output2'])
+                if not df.empty and 'stck_cntg_hour' in df.columns:
+                    df['stck_cntg_hour'] = pd.to_datetime(df['stck_cntg_hour'], format='%H%M%S', errors='coerce')
+                    numeric_cols = ['stck_prpr', 'stck_oprc', 'stck_hgpr', 'stck_lwpr', 'cntg_vol']
+                    for col in numeric_cols:
+                        if col in df.columns:
+                            df[col] = pd.to_numeric(df[col], errors='coerce')
                     
-                self.process_sell_for_symbol(symbol, position)
-                time.sleep(0.5)
-            except Exception as e:
-                self.logger.error(f"{symbol} 매도 처리 오류: {e}")
+                    # NaN 제거
+                    df = df.dropna(subset=['stck_prpr'])
+                    
+                    if not df.empty:
+                        self.logger.info(f"✅ {symbol} 분봉 데이터 {len(df)}개 조회 완료")
+                        return df.sort_values('stck_cntg_hour').reset_index(drop=True)
+                    else:
+                        self.logger.warning(f"⚠️ {symbol} 분봉 데이터가 비어있음")
+                else:
+                    self.logger.warning(f"⚠️ {symbol} 분봉 데이터 구조 이상")
     
-    def notify_error(self, error_type: str, error_msg: str):
-        """오류 알림"""
-        if not self.notify_on_error:
-            return
+        except Exception as e:
+            self.logger.error(f"분봉 데이터 조회 실패 ({symbol}): {e}")
     
-        title = f"⚠️ 시스템 오류: {error_type}"
-        message = f"""
-    **오류 내용**: {error_msg}
-    **시간**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-        """
-    
-        self.send_discord_notification(title, message, 0xff0000)
+        return pd.DataFrame()
