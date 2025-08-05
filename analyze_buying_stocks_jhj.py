@@ -259,11 +259,11 @@ def get_daily_price_data_with_realtime(access_token, app_key, app_secret, stock_
     
     # MACD 계산 가능 여부 확인
     if len(df) < 35:
-        logger.info("⚠️ {stock_code}: 데이터 부족 ({len(df)}일) - MACD 분석에는 최소 35일 필요")
+        logger.info(f"⚠️ {stock_code}: 데이터 부족 ({len(df)}일) - MACD 분석에는 최소 35일 필요")
     elif len(df) < 50:
-        logger.info("⚠️ {stock_code}: 데이터 부족 ({len(df)}일) - MACD 정확도를 위해 50일 이상 권장")
+        logger.info(f"⚠️ {stock_code}: 데이터 부족 ({len(df)}일) - MACD 정확도를 위해 50일 이상 권장")
     else:
-        logger.debug("✅ {stock_code}: {len(df)}일 데이터로 MACD 분석 가능")
+        logger.debug(f"✅ {stock_code}: {len(df)}일 데이터로 MACD 분석 가능")
     
     # 실시간 현재가 조회해서 최신 데이터 업데이트
     current_price, current_volume = get_current_price(access_token, app_key, app_secret, stock_code)

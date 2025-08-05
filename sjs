@@ -1,123 +1,107 @@
+    # KISAutoTrader 클래스 안에 추가할 메서드들:
     
-    def get_stock_data_with_debug(self, stock_code: str, period: str = "D", count: int = 100) -> pd.DataFrame:
-        """
-        디버깅이 포함된 주식 데이터 조회 메서드
-        """
-        print(f"🚀 주식 데이터 조회 시작 - 종목: {stock_code}")
+    def get_market_status_info(self, current_time=None):
+        """장 상태 정보 반환"""
+        if current_time is None:
+            current_time = datetime.now()
         
-        url = f"{self.base_url}/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice"
-    
-        headers = {
-            "content-type": "application/json; charset=utf-8",
-            "authorization": f"Bearer {self.get_access_token()}",
-            "appkey": self.app_key,
-            "appsecret": self.app_secret,
-            "tr_id": "FHKST03010100"
-        }
-    
-        params = {
-            "fid_cond_mrkt_div_code": "J",
-            "fid_input_iscd": stock_code,
-            "fid_input_date_1": "",
-            "fid_input_date_2": "",
-            "fid_period_div_code": period,
-            "fid_org_adj_prc": "0"
-        }
-    
-        print(f"📡 요청 정보:")
-        print(f"  URL: {url}")
-        print(f"  Headers: {json.dumps(headers, indent=2, ensure_ascii=False)}")
-        print(f"  Params: {json.dumps(params, indent=2, ensure_ascii=False)}")
-    
-        try:
-            print(f"📞 API 호출 중...")
-            response = requests.get(url, headers=headers, params=params)
+        is_open = self.is_market_open(current_time)
+        
+        if is_open:
+            today_close = current_time.replace(hour=15, minute=30, second=0, microsecond=0)
+            time_to_close = today_close - current_time
             
-            # 모든 응답 정보 로깅
-            log_api_response_detailed(response, "stock_data", stock_code)
+            return {
+                'status': 'OPEN',
+                'message': f'장 시간 중 (마감까지 {str(time_to_close).split(".")[0]})',
+                'next_change': today_close,
+                'is_trading_time': True
+            }
+        else:
+            # 다음 개장 시간 계산
+            next_day = current_time + timedelta(days=1)
+            while next_day.weekday() >= 5:
+                next_day += timedelta(days=1)
             
-            if response.status_code == 200:
-                try:
-                    data = response.json()
-                    
-                    print(f"✅ API 호출 성공!")
-                    print(f"📊 응답 데이터 키들: {list(data.keys()) if isinstance(data, dict) else '딕셔너리가 아님'}")
-                    
-                    if 'output2' in data and data['output2']:
-                        print(f"📈 차트 데이터 개수: {len(data['output2'])}")
-                        
-                        df = pd.DataFrame(data['output2'])
-                        print(f"📋 DataFrame 생성 완료 - 크기: {df.shape}")
-                        print(f"📋 컬럼들: {list(df.columns)}")
-                        
-                        # 데이터 처리 과정 상세 로깅
-                        print(f"🔄 데이터 처리 시작...")
-                        
-                        # 컬럼명 변경 및 데이터 타입 변환
-                        df = df.rename(columns={
-                            'stck_bsop_date': 'date',
-                            'stck_oprc': 'open',
-                            'stck_hgpr': 'high',
-                            'stck_lwpr': 'low',
-                            'stck_clpr': 'close',
-                            'acml_vol': 'volume'
-                        })
-                        print(f"✅ 컬럼명 변경 완료")
-    
-                        # 필요한 컬럼만 선택
-                        required_columns = ['date', 'open', 'high', 'low', 'close', 'volume']
-                        missing_columns = [col for col in required_columns if col not in df.columns]
-                        
-                        if missing_columns:
-                            print(f"❌ 필수 컬럼 누락: {missing_columns}")
-                            print(f"📋 현재 컬럼들: {list(df.columns)}")
-                            return pd.DataFrame()
-                        
-                        df = df[required_columns].copy()
-                        print(f"✅ 필수 컬럼 선택 완료")
-    
-                        # 데이터 타입 변환
-                        print(f"🔄 데이터 타입 변환 중...")
-                        for col in ['open', 'high', 'low', 'close', 'volume']:
-                            before_type = df[col].dtype
-                            df[col] = pd.to_numeric(df[col], errors='coerce')
-                            after_type = df[col].dtype
-                            print(f"  {col}: {before_type} → {after_type}")
-    
-                        df['date'] = pd.to_datetime(df['date'])
-                        df = df.sort_values('date').reset_index(drop=True)
-    
-                        # 최근 count개만 선택
-                        original_length = len(df)
-                        df = df.tail(count).reset_index(drop=True)
-                        final_length = len(df)
-                        
-                        print(f"✅ 데이터 처리 완료!")
-                        print(f"📊 처리 결과: {original_length}개 → {final_length}개")
-                        print(f"📅 데이터 기간: {df['date'].min()} ~ {df['date'].max()}")
-                        
-                        # 샘플 데이터 출력
-                        print(f"📋 최근 3일 데이터:")
-                        print(df.tail(3).to_string())
-    
-                        return df
-                    else:
-                        print(f"❌ output2 데이터가 없거나 비어있음")
-                        if 'output2' in data:
-                            print(f"📊 output2 타입: {type(data['output2'])}")
-                            print(f"📊 output2 길이: {len(data['output2']) if isinstance(data['output2'], list) else 'N/A'}")
-                        return pd.DataFrame()
-                        
-                except json.JSONDecodeError as e:
-                    print(f"❌ JSON 파싱 오류: {e}")
-                    return pd.DataFrame()
-                except Exception as e:
-                    print(f"❌ 데이터 처리 오류: {e}")
-                    return pd.DataFrame()
+            next_open = next_day.replace(hour=9, minute=0, second=0, microsecond=0)
+            
+            if current_time.weekday() >= 5:
+                message = f'주말 휴장 (다음 개장: {next_open.strftime("%m/%d %H:%M")})'
+            elif current_time.hour < 9:
+                message = f'장 시작 전 (개장: 09:00)'
             else:
-                print(f"❌ API 호출 실패 - 상태코드: {response.status_code}")
-                return pd.DataFrame()
+                message = f'장 마감 후 (다음 개장: {next_open.strftime("%m/%d %H:%M")})'
+            
+            return {
+                'status': 'CLOSED',
+                'message': message,
+                'next_change': next_open,
+                'is_trading_time': False
+            }
     
+    def is_market_open(self, current_time=None):
+        """한국 증시 개장 시간 확인"""
+        if current_time is None:
+            current_time = datetime.now()
+        
+        weekday = current_time.weekday()
+        if weekday >= 5:
+            return False
+        
+        hour = current_time.hour
+        minute = current_time.minute
+        
+        if hour < 9:
+            return False
+        
+        if hour > 15 or (hour == 15 and minute > 30):
+            return False
+        
+        return True
+    
+    def update_all_positions(self):
+        """모든 보유 종목 포지션 업데이트"""
+        try:
+            all_holdings = self.get_all_holdings()
+            
+            self.positions = {}
+            for symbol in getattr(self, 'symbols', []):
+                if symbol in all_holdings:
+                    self.positions[symbol] = all_holdings[symbol]
+            
+            self.all_positions = all_holdings
+            
+            self.logger.info(f"💼 포지션 업데이트: 거래대상 {len(self.positions)}개, 전체 {len(self.all_positions)}개")
+            
         except Exception as e:
-            print(f"❌ 전체 프로세스 오류: {e}")
-            return pd.DataFrame()
+            self.logger.error(f"포지션 업데이트 실패: {e}")
+    
+    def process_sell_signals(self):
+        """매도 신호 처리"""
+        if not hasattr(self, 'all_positions') or not self.all_positions:
+            return
+        
+        positions_to_process = dict(self.all_positions)
+        
+        for symbol, position in positions_to_process.items():
+            try:
+                if symbol not in self.all_positions:
+                    continue
+                    
+                self.process_sell_for_symbol(symbol, position)
+                time.sleep(0.5)
+            except Exception as e:
+                self.logger.error(f"{symbol} 매도 처리 오류: {e}")
+    
+    def notify_error(self, error_type: str, error_msg: str):
+        """오류 알림"""
+        if not self.notify_on_error:
+            return
+    
+        title = f"⚠️ 시스템 오류: {error_type}"
+        message = f"""
+    **오류 내용**: {error_msg}
+    **시간**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+        """
+    
+        self.send_discord_notification(title, message, 0xff0000)

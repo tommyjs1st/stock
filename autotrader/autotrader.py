@@ -1,108 +1,4 @@
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
-import json
-import pandas as pd
-import numpy as np
-import time
-from datetime import datetime, timedelta
-import logging
-from typing import Dict, List, Optional
-import yaml
-import os
-from pathlib import Path
-import sys
-
-
-
-class PositionManager:
-    """종목별 포지션 관리 클래스"""
-    def __init__(self, trader):
-        self.trader = trader
-        self.position_history_file = "position_history.json"
-        self.position_history = {}
-        self.load_position_history()
-    
-    def load_position_history(self):
-        """포지션 이력 로드"""
-        try:
-            if os.path.exists(self.position_history_file):
-                with open(self.position_history_file, 'r', encoding='utf-8') as f:
-                    self.position_history = json.load(f)
-                self.trader.logger.info(f"📋 포지션 이력 로드: {len(self.position_history)}개 종목")
-        except Exception as e:
-            self.trader.logger.error(f"포지션 이력 로드 실패: {e}")
-            self.position_history = {}
-    
-    def save_position_history(self):
-        """포지션 이력 저장"""
-        try:
-            with open(self.position_history_file, 'w', encoding='utf-8') as f:
-                json.dump(self.position_history, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            self.trader.logger.error(f"포지션 이력 저장 실패: {e}")
-    
-    def record_purchase(self, symbol: str, quantity: int, price: float, strategy: str):
-        """매수 기록"""
-        now = datetime.now()
-        
-        if symbol not in self.position_history:
-            self.position_history[symbol] = {
-                'total_quantity': 0,
-                'purchase_count': 0,
-                'purchases': [],
-                'last_purchase_time': None,
-                'first_purchase_time': None
-            }
-        
-        purchase_record = {
-            'timestamp': now.isoformat(),
-            'quantity': quantity,
-            'price': price,
-            'strategy': strategy,
-            'order_type': 'BUY'
-        }
-        
-        self.position_history[symbol]['purchases'].append(purchase_record)
-        self.position_history[symbol]['total_quantity'] += quantity
-        self.position_history[symbol]['purchase_count'] += 1
-        self.position_history[symbol]['last_purchase_time'] = now.isoformat()
-        
-        if not self.position_history[symbol]['first_purchase_time']:
-            self.position_history[symbol]['first_purchase_time'] = now.isoformat()
-        
-        self.save_position_history()
-        
-        self.trader.logger.info(f"📝 매수 기록: {symbol} {quantity}주 @ {price:,}원 "
-                               f"(누적: {self.position_history[symbol]['total_quantity']}주)")
-    
-    def record_sale(self, symbol: str, quantity: int, price: float, reason: str):
-        """매도 기록"""
-        now = datetime.now()
-        
-        if symbol in self.position_history:
-            sale_record = {
-                'timestamp': now.isoformat(),
-                'quantity': quantity,
-                'price': price,
-                'reason': reason,
-                'order_type': 'SELL'
-            }
-            
-            self.position_history[symbol]['purchases'].append(sale_record)
-            self.position_history[symbol]['total_quantity'] -= quantity
-            
-            if self.position_history[symbol]['total_quantity'] <= 0:
-                self.position_history[symbol]['total_quantity'] = 0
-                self.position_history[symbol]['position_closed_time'] = now.isoformat()
-            
-            self.save_position_history()
-            
-            self.trader.logger.info(f"📝 매도 기록: {symbol} {quantity}주 @ {price:,}원 "
-                                   f"사유: {reason} (잔여: {self.position_history[symbol]['total_quantity']}주)")
-
 class HybridTradingStrategy:
-    """일봉 전략 + 분봉 실행 하이브리드 시스템"""
     def __init__(self, trader):
         self.trader = trader
         self.pending_signals = {}
@@ -590,28 +486,91 @@ class HybridTradingStrategy:
         timing_reasons = ', '.join(timing_analysis.get('reasons', []))
         
         message = f"""
-종목: {symbol} ({stock_name})
-수량: {quantity}주 @ {price:,}원
-📅 일봉 분석:
-
-신호 강도: {daily_analysis['strength']:.2f}
-사유: {daily_reasons}
-RSI: {daily_analysis.get('rsi', 0):.1f}
-
-⏰ 분봉 타이밍:
-
-타이밍 점수: {timing_analysis['timing_score']}/5
-사유: {timing_reasons}
-분봉 RSI: {timing_analysis.get('minute_rsi', 0):.1f}
-
-시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-"""
-        color = 0x00ff00 if action == "BUY" else 0xff6600
-        self.trader.send_discord_notification(title, message, color)
-
+class PositionManager:
+    def __init__(self, trader):
+        self.trader = trader
+        self.position_history_file = "position_history.json"
+        self.position_history = {}
+        self.load_position_history()
+    
+    def load_position_history(self):
+        """포지션 이력 로드"""
+        try:
+            if os.path.exists(self.position_history_file):
+                with open(self.position_history_file, 'r', encoding='utf-8') as f:
+                    self.position_history = json.load(f)
+                self.trader.logger.info(f"📋 포지션 이력 로드: {len(self.position_history)}개 종목")
+        except Exception as e:
+            self.trader.logger.error(f"포지션 이력 로드 실패: {e}")
+            self.position_history = {}
+    
+    def save_position_history(self):
+        """포지션 이력 저장"""
+        try:
+            with open(self.position_history_file, 'w', encoding='utf-8') as f:
+                json.dump(self.position_history, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            self.trader.logger.error(f"포지션 이력 저장 실패: {e}")
+    
+    def record_purchase(self, symbol: str, quantity: int, price: float, strategy: str):
+        """매수 기록"""
+        now = datetime.now()
+        
+        if symbol not in self.position_history:
+            self.position_history[symbol] = {
+                'total_quantity': 0,
+                'purchase_count': 0,
+                'purchases': [],
+                'last_purchase_time': None,
+                'first_purchase_time': None
+            }
+        
+        purchase_record = {
+            'timestamp': now.isoformat(),
+            'quantity': quantity,
+            'price': price,
+            'strategy': strategy,
+            'order_type': 'BUY'
+        }
+        
+        self.position_history[symbol]['purchases'].append(purchase_record)
+        self.position_history[symbol]['total_quantity'] += quantity
+        self.position_history[symbol]['purchase_count'] += 1
+        self.position_history[symbol]['last_purchase_time'] = now.isoformat()
+        
+        if not self.position_history[symbol]['first_purchase_time']:
+            self.position_history[symbol]['first_purchase_time'] = now.isoformat()
+        
+        self.save_position_history()
+        
+        self.trader.logger.info(f"📝 매수 기록: {symbol} {quantity}주 @ {price:,}원 "
+                               f"(누적: {self.position_history[symbol]['total_quantity']}주)")
+    
+    def record_sale(self, symbol: str, quantity: int, price: float, reason: str):
+        """매도 기록"""
+        now = datetime.now()
+        
+        if symbol in self.position_history:
+            sale_record = {
+                'timestamp': now.isoformat(),
+                'quantity': quantity,
+                'price': price,
+                'reason': reason,
+                'order_type': 'SELL'
+            }
+            
+            self.position_history[symbol]['purchases'].append(sale_record)
+            self.position_history[symbol]['total_quantity'] -= quantity
+            
+            if self.position_history[symbol]['total_quantity'] <= 0:
+                self.position_history[symbol]['total_quantity'] = 0
+                self.position_history[symbol]['position_closed_time'] = now.isoformat()
+            
+            self.save_position_history()
+            
+            self.trader.logger.info(f"📝 매도 기록: {symbol} {quantity}주 @ {price:,}원 "
+                                   f"사유: {reason} (잔여: {self.position_history[symbol]['total_quantity']}주)")
 class KISAutoTrader:
-    """KIS API 기반 하이브리드 자동매매 시스템"""
-
     def __init__(self, config_path: str = "config.yaml"):
         
         # 필수 속성들을 먼저 초기화
@@ -938,24 +897,17 @@ class KISAutoTrader:
     
         with open(config_path, 'w', encoding='utf-8') as f:
             yaml.dump(sample_config, f, default_flow_style=False, allow_unicode=True)
-
-    def load_saved_token(self):
-        """저장된 토큰 파일에서 토큰 로드"""
-        try:
-            if os.path.exists(self.token_file):
-                with open(self.token_file, 'r', encoding='utf-8') as f:
-                    token_data = json.load(f)
-            expire_time_str = token_data.get('access_token_token_expired', '')
-            if expire_time_str:
-                expire_time = datetime.strptime(expire_time_str, '%Y-%m-%d %H:%M:%S')
+    expire_time_str = token_data.get('access_token_token_expired', '')
+                if expire_time_str:
+                    expire_time = datetime.strptime(expire_time_str, '%Y-%m-%d %H:%M:%S')
     
-                if datetime.now() < expire_time - timedelta(minutes=10):
-                    self.access_token = token_data.get('access_token')
-                    self.last_token_time = datetime.fromtimestamp(token_data.get('requested_at', 0))
-                    self.logger.info(f"기존 토큰을 재사용합니다. (만료: {expire_time_str})")
-                    return True
-                else:
-                    self.logger.info(f"저장된 토큰이 만료되었습니다.")
+                    if datetime.now() < expire_time - timedelta(minutes=10):
+                        self.access_token = token_data.get('access_token')
+                        self.last_token_time = datetime.fromtimestamp(token_data.get('requested_at', 0))
+                        self.logger.info(f"기존 토큰을 재사용합니다. (만료: {expire_time_str})")
+                        return True
+                    else:
+                        self.logger.info(f"저장된 토큰이 만료되었습니다.")
     
         except Exception as e:
             self.logger.warning(f"토큰 파일 로드 실패: {e}")
@@ -1162,7 +1114,7 @@ class KISAutoTrader:
     
     def detect_macd_golden_cross(self, df: pd.DataFrame) -> Dict:
         """MACD 골든크로스 감지"""
-        if 'macd_cross' not in df.columns or len(df) < 10:
+    if 'macd_cross' not in df.columns or len(df) < 10:
             return {
                 'golden_cross': False,
                 'cross_strength': 0,
@@ -1888,13 +1840,6 @@ class KISAutoTrader:
         stock_name = self.get_stock_name(symbol)
         title = f"{action_emoji} {action} 주문 체결!"
         message = f"""
-종목: {symbol} ({stock_name})
-수량: {quantity}주
-가격: {price:,}원
-총액: {quantity * price:,}원
-주문번호: {order_no}
-시간: {datetime.now().strftime('%H:%M:%S')}
-"""
         self.send_discord_notification(title, message, color)
     
     def notify_trade_failure(self, action: str, symbol: str, error_msg: str):
@@ -1904,10 +1849,6 @@ class KISAutoTrader:
     
         title = f"❌ {action} 주문 실패"
         message = f"""
-종목: {symbol}
-오류: {error_msg}
-시간: {datetime.now().strftime('%H:%M:%S')}
-"""
         self.send_discord_notification(title, message, 0xff0000)
     
     def notify_daily_summary(self, total_trades: int, profit_loss: float, successful_trades: int):
@@ -1919,12 +1860,6 @@ class KISAutoTrader:
         color = 0x00ff00 if profit_loss >= 0 else 0xff0000
     
         message = f"""
-총 거래 횟수: {total_trades}회
-성공한 거래: {successful_trades}회
-일일 수익률: {profit_loss:.2%}
-거래 종목: {', '.join(getattr(self, 'symbols', []))}
-날짜: {datetime.now().strftime('%Y-%m-%d')}
-"""
         self.send_discord_notification(title, message, color)
     
     def notify_error(self, error_type: str, error_msg: str):
@@ -1934,9 +1869,6 @@ class KISAutoTrader:
     
         title = f"⚠️ 시스템 오류: {error_type}"
         message = f"""
-오류 내용: {error_msg}
-시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-"""
         self.send_discord_notification(title, message, 0xff0000)
     
     def run_hybrid_strategy(self, check_interval_minutes=30):
@@ -2043,228 +1975,153 @@ class KISAutoTrader:
         finally:
             self.logger.info("하이브리드 전략 프로그램 종료")
     
-    def integrate_hybrid_strategy(self):
-        """하이브리드 전략을 기존 트레이더에 통합"""
-        self.hybrid_strategy = HybridTradingStrategy(self)
-
-	#END of class ====================
     
-def check_dependencies():
-    """필수 라이브러리 확인"""
-    required_modules = ['requests', 'pandas', 'numpy', 'yaml']
-    missing_modules = []
+    def check_dependencies():
+        """필수 라이브러리 확인"""
+        required_modules = ['requests', 'pandas', 'numpy', 'yaml']
+        missing_modules = []
     
-    for module in required_modules:
-        try:
-            __import__(module)
-        except ImportError:
-            missing_modules.append(module)
+        for module in required_modules:
+            try:
+                __import__(module)
+            except ImportError:
+                missing_modules.append(module)
     
-    if missing_modules:
-        print(f"❌ 필수 라이브러리가 설치되지 않았습니다: {', '.join(missing_modules)}")
-        print("다음 명령어로 설치하세요:")
-        print(f"pip install {' '.join(missing_modules)}")
-        return False
+        if missing_modules:
+            print(f"❌ 필수 라이브러리가 설치되지 않았습니다: {', '.join(missing_modules)}")
+            print("다음 명령어로 설치하세요:")
+            print(f"pip install {' '.join(missing_modules)}")
+            return False
     
-    return True
+        return True
     
-def check_config_file():
-    """설정 파일 존재 확인"""
-    if not os.path.exists('config.yaml'):
+    def check_config_file():
+        """설정 파일 존재 확인"""
+        if not os.path.exists('config.yaml'):
         print("❌ config.yaml 파일이 없습니다.")
         print("샘플 설정 파일을 생성하시겠습니까? (y/n): ", end="")
     
-    try:
-        response = input().lower()
-        if response in ['y', 'yes', '예']:
-            trader = KISAutoTrader.__new__(KISAutoTrader)
-            trader.create_sample_config('config.yaml')
-            print("✅ config.yaml 파일이 생성되었습니다. 설정을 입력한 후 다시 실행하세요.")
-        return False
-    except KeyboardInterrupt:
-        print("\n프로그램을 종료합니다.")
-        return False
-    
-    return True
-    
-def create_logs_directory():
-    os.makedirs('logs', exist_ok=True)
-    
-def test_hybrid_strategy():
-    print("🧪 하이브리드 전략 테스트")
-    print("="*60)
-
-    try:
-        trader = KISAutoTrader()
-    
-        # 테스트 종목으로 분석
-        test_symbol = trader.symbols[0] if hasattr(trader, 'symbols') and trader.symbols else "005930"
-        
-        print(f"📊 {test_symbol} 하이브리드 분석 테스트:")
-        
-        # 1. 일봉 분석
-        print("\n1️⃣ 일봉 전략 분석:")
-        daily_analysis = trader.hybrid_strategy.analyze_daily_strategy(test_symbol)
-    
-        for key, value in daily_analysis.items():
-            if key != 'macd_analysis':
-                print(f"  {key}: {value}")
-    
-        # 2. 분봉 타이밍 분석
-        if daily_analysis['signal'] in ['BUY', 'SELL']:
-            print(f"\n2️⃣ 분봉 타이밍 분석 ({daily_analysis['signal']}):")
-            timing_analysis = trader.hybrid_strategy.find_optimal_entry_timing(test_symbol, daily_analysis['signal'])
-        
-            for key, value in timing_analysis.items():
-                print(f"  {key}: {value}")
-            
-            # 3. 종합 판단
-            print(f"\n3️⃣ 종합 판단:")
-            if daily_analysis['strength'] >= 4.0 and timing_analysis.get('execute', False):
-                print("  ✅ 매매 실행 권장")
-            else:
-                print("  ⏸️ 매매 보류 권장")
-                if daily_analysis['strength'] < 4.0:
-                    print(f"    - 일봉 신호 부족: {daily_analysis['strength']:.2f} < 4.0")
-                    if not timing_analysis.get('execute', False):
-                        print(f"    - 분봉 타이밍 부적절: {timing_analysis.get('reason', '기준 미달')}")
-        else:
-            print("\n2️⃣ 일봉에서 HOLD 신호 - 분봉 분석 생략")
-            
-    except Exception as e:
-        print(f"❌ 테스트 실패: {e}")
-        import traceback
-        traceback.print_exc()
-    
-def main():
-    """업데이트된 메인 함수"""
-
-    # 의존성 확인
-    if not check_dependencies():
-        sys.exit(1)
-    
-    # 로그 디렉토리 생성
-    create_logs_directory()
-    
-    # 설정 파일 확인
-    if not check_config_file():
-        sys.exit(1)
-    
-    try:
-        trader = KISAutoTrader()
-        
-        # 연결 테스트
-        token = trader.get_access_token()
-        if not token:
-            trader.logger.error("❌ KIS API 연결 실패")
-            return
-            
-        trader.logger.info("✅ KIS API 연결 테스트 성공")
-            
-        # 실행 모드 결정
-        hybrid_mode = '--hybrid' in sys.argv
-        test_mode = '--test' in sys.argv
-        debug_mode = '--debug' in sys.argv
-            
-        if test_mode:
-            # 테스트 모드
-            test_hybrid_strategy()
-                
-        elif hybrid_mode:
-            # 하이브리드 전략 실행
-            interval = 15 if debug_mode else 30  # 디버그 모드는 15분
-            trader.logger.info(f"🚀 하이브리드 전략 모드 (체크 간격: {interval}분)")
-                
-            trader.run_hybrid_strategy(check_interval_minutes=interval)
-                
-        else:
-            # 기본 실행 (하이브리드 전략)
-            trader.logger.info("🚀 기본 하이브리드 전략 실행")
-            trader.run_hybrid_strategy(check_interval_minutes=30)
-                
-    except FileNotFoundError as e:
-        print(f"❌ 필수 파일이 없습니다: {e}")
-    except KeyboardInterrupt:
-        print("\n🛑 사용자가 프로그램을 종료했습니다.")
-    except Exception as e:
-        print(f"❌ 프로그램 실행 중 오류: {e}")
-        import traceback
-        print(f"상세 오류:\n{traceback.format_exc()}")
-
-def main_hybrid():
-    """하이브리드 전략으로 실행"""
-
-    # 의존성 확인
-    required_modules = ['requests', 'pandas', 'numpy', 'yaml']
-    missing_modules = []
-    
-    for module in required_modules:
-        try:
-            __import__(module)
-        except ImportError:
-            missing_modules.append(module)
-    
-    if missing_modules:
-        print(f"❌ 필수 라이브러리가 설치되지 않았습니다: {', '.join(missing_modules)}")
-        print("다음 명령어로 설치하세요:")
-        print(f"pip install {' '.join(missing_modules)}")
-        return
-    
-    # 로그 디렉토리 생성
-    os.makedirs('logs', exist_ok=True)
-    
-    # 설정 파일 확인
-    if not os.path.exists('config.yaml'):
-        print("❌ config.yaml 파일이 없습니다.")
-        print("샘플 설정 파일을 생성하시겠습니까? (y/n): ", end="")
-        
         try:
             response = input().lower()
             if response in ['y', 'yes', '예']:
                 trader = KISAutoTrader.__new__(KISAutoTrader)
                 trader.create_sample_config('config.yaml')
                 print("✅ config.yaml 파일이 생성되었습니다. 설정을 입력한 후 다시 실행하세요.")
-            return
+            return False
         except KeyboardInterrupt:
             print("\n프로그램을 종료합니다.")
-            return
+            return False
     
-    try:
-        trader = KISAutoTrader()
+        return True
+    
+    def create_logs_directory():
+        """로그 디렉토리 생성"""
+        os.makedirs('logs', exist_ok=True)
+    
+    def test_hybrid_strategy():
+        """하이브리드 전략 테스트"""
+        print("🧪 하이브리드 전략 테스트")
+        print("="*60)
+    
+        try:
+            trader = KISAutoTrader()
         
-        # 연결 테스트
-        token = trader.get_access_token()
-        if not token:
-            trader.logger.error("❌ KIS API 연결 실패")
-            return
+            # 테스트 종목으로 분석
+            test_symbol = trader.symbols[0] if hasattr(trader, 'symbols') and trader.symbols else "005930"
+        
+            print(f"📊 {test_symbol} 하이브리드 분석 테스트:")
+        
+            # 1. 일봉 분석
+            print("\n1️⃣ 일봉 전략 분석:")
+            daily_analysis = trader.hybrid_strategy.analyze_daily_strategy(test_symbol)
+        
+            for key, value in daily_analysis.items():
+                if key != 'macd_analysis':
+                    print(f"  {key}: {value}")
+        
+            # 2. 분봉 타이밍 분석
+            if daily_analysis['signal'] in ['BUY', 'SELL']:
+                print(f"\n2️⃣ 분봉 타이밍 분석 ({daily_analysis['signal']}):")
+                timing_analysis = trader.hybrid_strategy.find_optimal_entry_timing(test_symbol, daily_analysis['signal'])
             
-        trader.logger.info("✅ KIS API 연결 테스트 성공")
+                for key, value in timing_analysis.items():
+                    print(f"  {key}: {value}")
+                
+                # 3. 종합 판단
+                print(f"\n3️⃣ 종합 판단:")
+                if daily_analysis['strength'] >= 4.0 and timing_analysis.get('execute', False):
+                    print("  ✅ 매매 실행 권장")
+                else:
+                    print("  ⏸️ 매매 보류 권장")
+                    if daily_analysis['strength'] < 4.0:
+                        print(f"    - 일봉 신호 부족: {daily_analysis['strength']:.2f} < 4.0")
+                        if not timing_analysis.get('execute', False):
+                            print(f"    - 분봉 타이밍 부적절: {timing_analysis.get('reason', '기준 미달')}")
+            else:
+                print("\n2️⃣ 일봉에서 HOLD 신호 - 분봉 분석 생략")
+                
+        except Exception as e:
+            print(f"❌ 테스트 실패: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def main():
+        """메인 실행 함수"""
+        # 의존성 확인
+        if not check_dependencies():
+            sys.exit(1)
+    
+        # 로그 디렉토리 생성
+        create_logs_directory()
+    
+        # 설정 파일 확인
+        if not check_config_file():
+            sys.exit(1)
+    
+        try:
+            trader = KISAutoTrader()
         
-        # 실행 모드 결정
-        debug_mode = '--debug' in sys.argv
-        
-        # 하이브리드 전략 실행
-        interval = 15 if debug_mode else 30  # 디버그 모드는 15분
-        trader.logger.info(f"🚀 하이브리드 전략 모드 (체크 간격: {interval}분)")
-        
-        run_hybrid_strategy(trader, check_interval_minutes=interval)
-        
-    except FileNotFoundError as e:
-        print(f"❌ 필수 파일이 없습니다: {e}")
-    except KeyboardInterrupt:
-        print("\n🛑 사용자가 프로그램을 종료했습니다.")
-    except Exception as e:
-        print(f"❌ 프로그램 실행 중 오류: {e}")
-        import traceback
-        print(f"상세 오류:\n{traceback.format_exc()}")
-
-
-
-if __name__ == "__main__":
-    # 명령어 인수 처리
-    if '--hybrid' in sys.argv:
-        main_hybrid()
-    elif '--test' in sys.argv or '--test-hybrid' in sys.argv:
-        test_hybrid_strategy()
-    else:
-        main()
+            # 연결 테스트
+            token = trader.get_access_token()
+            if not token:
+                trader.logger.error("❌ KIS API 연결 실패")
+                return
+            
+            trader.logger.info("✅ KIS API 연결 테스트 성공")
+            
+            # 실행 모드 결정
+            hybrid_mode = '--hybrid' in sys.argv
+            test_mode = '--test' in sys.argv
+            debug_mode = '--debug' in sys.argv
+            
+            if test_mode:
+                # 테스트 모드
+                test_hybrid_strategy()
+                
+            elif hybrid_mode:
+                # 하이브리드 전략 실행
+                interval = 15 if debug_mode else 30  # 디버그 모드는 15분
+                trader.logger.info(f"🚀 하이브리드 전략 모드 (체크 간격: {interval}분)")
+                
+                trader.run_hybrid_strategy(check_interval_minutes=interval)
+                
+            else:
+                # 기본 실행 (하이브리드 전략)
+                trader.logger.info("🚀 기본 하이브리드 전략 실행")
+                trader.run_hybrid_strategy(check_interval_minutes=30)
+                
+        except FileNotFoundError as e:
+            print(f"❌ 필수 파일이 없습니다: {e}")
+        except KeyboardInterrupt:
+            print("\n🛑 사용자가 프로그램을 종료했습니다.")
+        except Exception as e:
+            print(f"❌ 프로그램 실행 중 오류: {e}")
+            import traceback
+            print(f"상세 오류:\n{traceback.format_exc()}")
+    
+    if name == "main":
+        # 명령어 인수 처리
+        if '--test' in sys.argv or '--test-hybrid' in sys.argv:
+            test_hybrid_strategy()
+        else:
+            main()

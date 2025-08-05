@@ -1912,3 +1912,13 @@ BGF: 외국인 최근 순매수량: [-18466, -67086, -48262, -28457, 41390], 매
 ❌ KIS API 외국인 추세 분석 오류: 500 Server Error: Internal Server Error for url: https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-investor?fid_cond_mrkt_div_code=J&fid_input_iscd=293180
 ❌ KIS API 외국인 추세 분석 오류: 500 Server Error: Internal Server Error for url: https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-investor?fid_cond_mrkt_div_code=J&fid_input_iscd=293180
 ❌ 디스코드 전송 실패: Invalid URL 'None': No scheme supplied. Perhaps you meant https://None?
+⚠️ 439260: 기본 API 실패, 대안 API 시도...
+📊 439260: 20250705~20250804 2건 조회
+📊 439260: 20250604~20250704 2건 조회
+📊 439260: 20250512~20250603 2건 조회
+✅ 439260: 대안 API로 총 2일 데이터 조회 완료
+⚠️ 439260: 기본 API 실패, 대안 API 시도...
+📊 439260: 20250706~20250805 3건 조회
+📊 439260: 20250605~20250705 3건 조회
+📊 439260: 20250513~20250604 3건 조회
+✅ 439260: 대안 API로 총 3일 데이터 조회 완료

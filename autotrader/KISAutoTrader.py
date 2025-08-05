@@ -1,617 +1,4 @@
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
-import json
-import pandas as pd
-import numpy as np
-import time
-from datetime import datetime, timedelta
-import logging
-from typing import Dict, List, Optional
-import yaml
-import os
-from pathlib import Path
-import sys
-
-
-
-class PositionManager:
-    """종목별 포지션 관리 클래스"""
-    def __init__(self, trader):
-        self.trader = trader
-        self.position_history_file = "position_history.json"
-        self.position_history = {}
-        self.load_position_history()
-    
-    def load_position_history(self):
-        """포지션 이력 로드"""
-        try:
-            if os.path.exists(self.position_history_file):
-                with open(self.position_history_file, 'r', encoding='utf-8') as f:
-                    self.position_history = json.load(f)
-                self.trader.logger.info(f"📋 포지션 이력 로드: {len(self.position_history)}개 종목")
-        except Exception as e:
-            self.trader.logger.error(f"포지션 이력 로드 실패: {e}")
-            self.position_history = {}
-    
-    def save_position_history(self):
-        """포지션 이력 저장"""
-        try:
-            with open(self.position_history_file, 'w', encoding='utf-8') as f:
-                json.dump(self.position_history, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            self.trader.logger.error(f"포지션 이력 저장 실패: {e}")
-    
-    def record_purchase(self, symbol: str, quantity: int, price: float, strategy: str):
-        """매수 기록"""
-        now = datetime.now()
-        
-        if symbol not in self.position_history:
-            self.position_history[symbol] = {
-                'total_quantity': 0,
-                'purchase_count': 0,
-                'purchases': [],
-                'last_purchase_time': None,
-                'first_purchase_time': None
-            }
-        
-        purchase_record = {
-            'timestamp': now.isoformat(),
-            'quantity': quantity,
-            'price': price,
-            'strategy': strategy,
-            'order_type': 'BUY'
-        }
-        
-        self.position_history[symbol]['purchases'].append(purchase_record)
-        self.position_history[symbol]['total_quantity'] += quantity
-        self.position_history[symbol]['purchase_count'] += 1
-        self.position_history[symbol]['last_purchase_time'] = now.isoformat()
-        
-        if not self.position_history[symbol]['first_purchase_time']:
-            self.position_history[symbol]['first_purchase_time'] = now.isoformat()
-        
-        self.save_position_history()
-        
-        self.trader.logger.info(f"📝 매수 기록: {symbol} {quantity}주 @ {price:,}원 "
-                               f"(누적: {self.position_history[symbol]['total_quantity']}주)")
-    
-    def record_sale(self, symbol: str, quantity: int, price: float, reason: str):
-        """매도 기록"""
-        now = datetime.now()
-        
-        if symbol in self.position_history:
-            sale_record = {
-                'timestamp': now.isoformat(),
-                'quantity': quantity,
-                'price': price,
-                'reason': reason,
-                'order_type': 'SELL'
-            }
-            
-            self.position_history[symbol]['purchases'].append(sale_record)
-            self.position_history[symbol]['total_quantity'] -= quantity
-            
-            if self.position_history[symbol]['total_quantity'] <= 0:
-                self.position_history[symbol]['total_quantity'] = 0
-                self.position_history[symbol]['position_closed_time'] = now.isoformat()
-            
-            self.save_position_history()
-            
-            self.trader.logger.info(f"📝 매도 기록: {symbol} {quantity}주 @ {price:,}원 "
-                                   f"사유: {reason} (잔여: {self.position_history[symbol]['total_quantity']}주)")
-
-class HybridTradingStrategy:
-    """일봉 전략 + 분봉 실행 하이브리드 시스템"""
-    def __init__(self, trader):
-        self.trader = trader
-        self.pending_signals = {}
-        self.daily_analysis_cache = {}
-        self.last_daily_analysis = {}
-        
-    def analyze_daily_strategy(self, symbol: str) -> Dict:
-        """일봉 기반 전략 분석 (하루 1-2회만 실행)"""
-        
-        # 캐시 확인 (4시간 이내면 재사용)
-        now = datetime.now()
-        if symbol in self.last_daily_analysis:
-            last_time = self.last_daily_analysis[symbol]
-            if now - last_time < timedelta(hours=4):
-                return self.daily_analysis_cache.get(symbol, {'signal': 'HOLD', 'strength': 0})
-        
-        self.trader.logger.info(f"📅 {symbol} 일봉 전략 분석 실행")
-        
-        # 일봉 데이터 조회 (6개월)
-        df = self.trader.get_daily_data(symbol, days=180)
-        
-        if df.empty or len(df) < 60:
-            return {'signal': 'HOLD', 'strength': 0, 'current_price': 0}
-        
-        try:
-            current_price = float(df['stck_prpr'].iloc[-1])
-            
-            # 일봉 기술 지표 계산
-            df = self.calculate_daily_indicators(df)
-            latest = df.iloc[-1]
-            
-            # 장기 추세 분석
-            trend_analysis = self.analyze_long_term_trend(df)
-            
-            # 신호 생성
-            signal_result = self.generate_daily_signal(df, latest, trend_analysis)
-            
-            # 캐시 업데이트
-            self.daily_analysis_cache[symbol] = signal_result
-            self.last_daily_analysis[symbol] = now
-            
-            self.trader.logger.info(f"📊 {symbol} 일봉 분석 완료: {signal_result['signal']} (강도: {signal_result['strength']:.2f})")
-            
-            return signal_result
-            
-        except Exception as e:
-            self.trader.logger.error(f"일봉 분석 실패 ({symbol}): {e}")
-            return {'signal': 'HOLD', 'strength': 0, 'current_price': 0}
-    
-    def calculate_daily_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
-        """일봉 기술 지표 계산"""
-        
-        # 이동평균선
-        df['ma5'] = df['stck_prpr'].rolling(5).mean()
-        df['ma20'] = df['stck_prpr'].rolling(20).mean()
-        df['ma60'] = df['stck_prpr'].rolling(60).mean()
-        df['ma120'] = df['stck_prpr'].rolling(120).mean()
-        
-        # MACD
-        df = self.trader.calculate_macd(df)
-        
-        # RSI
-        delta = df['stck_prpr'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-        rs = gain / loss
-        df['rsi'] = 100 - (100 / (1 + rs))
-        
-        # 볼린저 밴드
-        df['bb_middle'] = df['stck_prpr'].rolling(20).mean()
-        bb_std = df['stck_prpr'].rolling(20).std()
-        df['bb_upper'] = df['bb_middle'] + (bb_std * 2)
-        df['bb_lower'] = df['bb_middle'] - (bb_std * 2)
-        
-        # 스토캐스틱
-        low_14 = df['stck_lwpr'].rolling(14).min()
-        high_14 = df['stck_hgpr'].rolling(14).max()
-        df['stoch_k'] = 100 * ((df['stck_prpr'] - low_14) / (high_14 - low_14))
-        df['stoch_d'] = df['stoch_k'].rolling(3).mean()
-        
-        return df
-    
-    def analyze_long_term_trend(self, df: pd.DataFrame) -> Dict:
-        """장기 추세 분석"""
-        
-        current_price = df['stck_prpr'].iloc[-1]
-        
-        # 다양한 기간 수익률
-        returns = {}
-        for days in [5, 10, 20, 40, 60, 120]:
-            if len(df) > days:
-                past_price = df['stck_prpr'].iloc[-(days+1)]
-                returns[f'{days}d'] = (current_price - past_price) / past_price
-        
-        # 추세 강도 계산
-        trend_score = 0
-        
-        # 단기 추세 (5-20일)
-        if returns.get('5d', 0) > 0.02:
-            trend_score += 1
-        if returns.get('10d', 0) > 0.05:
-            trend_score += 1
-        if returns.get('20d', 0) > 0.1:
-            trend_score += 2
-        
-        # 중장기 추세 (40-120일)
-        if returns.get('60d', 0) > 0.2:
-            trend_score += 2
-        if returns.get('120d', 0) > 0.3:
-            trend_score += 1
-        
-        # 이동평균 정배열 체크
-        latest = df.iloc[-1]
-        ma_alignment = (latest['ma5'] > latest['ma20'] > 
-                       latest['ma60'] > latest['ma120'])
-        
-        if ma_alignment:
-            trend_score += 2
-        
-        return {
-            'trend_score': trend_score,
-            'returns': returns,
-            'ma_alignment': ma_alignment,
-            'current_price': current_price
-        }
-    
-    def generate_daily_signal(self, df: pd.DataFrame, latest: pd.Series, trend_analysis: Dict) -> Dict:
-        """일봉 기반 신호 생성"""
-        
-        signal = 'HOLD'
-        strength = 0
-        reasons = []
-        
-        current_price = trend_analysis['current_price']
-        trend_score = trend_analysis['trend_score']
-        
-        # 매수 조건 평가
-        buy_score = 0
-        
-        # 1. 장기 추세 (가중치 높음)
-        if trend_score >= 6:
-            buy_score += 3.0
-            reasons.append("강한상승추세")
-        elif trend_score >= 4:
-            buy_score += 2.0
-            reasons.append("상승추세")
-        elif trend_score >= 2:
-            buy_score += 1.0
-            reasons.append("약한상승추세")
-        
-        # 2. MACD
-        macd_analysis = self.trader.detect_macd_golden_cross(df)
-        if macd_analysis['golden_cross'] and macd_analysis['signal_age'] <= 10:
-            buy_score += 2.5
-            reasons.append(f"MACD골든크로스({macd_analysis['signal_age']}일전)")
-        elif macd_analysis.get('macd_above_zero', False):
-            buy_score += 1.0
-            reasons.append("MACD상승권")
-        
-        # 3. RSI
-        rsi = latest['rsi']
-        if 30 <= rsi <= 50:
-            buy_score += 1.5
-            reasons.append("RSI매수권")
-        elif 50 < rsi <= 65:
-            buy_score += 0.5
-            reasons.append("RSI중립")
-        
-        # 4. 스토캐스틱
-        if latest['stoch_k'] < 30 and latest['stoch_d'] < 30:
-            buy_score += 1.0
-            reasons.append("스토캐스틱과매도")
-        
-        # 5. 볼린저 밴드
-        bb_position = ((current_price - latest['bb_lower']) / 
-                      (latest['bb_upper'] - latest['bb_lower']))
-        if bb_position < 0.3:
-            buy_score += 1.0
-            reasons.append("볼린저하단")
-        
-        # 6. 이동평균 돌파
-        if current_price > latest['ma20'] > latest['ma60']:
-            buy_score += 1.0
-            reasons.append("이평선돌파")
-        
-        # 매도 조건 평가
-        sell_score = 0
-        
-        if rsi > 75:
-            sell_score += 2.0
-            reasons.append("RSI과매수")
-        
-        if bb_position > 0.8:
-            sell_score += 1.5
-            reasons.append("볼린저상단")
-        
-        if current_price < latest['ma20']:
-            sell_score += 2.0
-            reasons.append("20일선이탈")
-        
-        if trend_analysis['returns'].get('10d', 0) < -0.1:
-            sell_score += 2.0
-            reasons.append("급락추세")
-        
-        # 최종 신호 결정
-        if buy_score >= 5.0:
-            signal = 'BUY'
-            strength = min(buy_score, 5.0)
-        elif sell_score >= 3.0:
-            signal = 'SELL'
-            strength = min(sell_score, 5.0)
-        
-        return {
-            'signal': signal,
-            'strength': strength,
-            'current_price': current_price,
-            'reasons': reasons,
-            'trend_score': trend_score,
-            'rsi': float(rsi),
-            'bb_position': bb_position,
-            'buy_score': buy_score,
-            'sell_score': sell_score,
-            'macd_analysis': macd_analysis
-        }
-    
-    def find_optimal_entry_timing(self, symbol: str, target_signal: str) -> Dict:
-        """분봉 기반 최적 진입 타이밍 찾기"""
-        
-        self.trader.logger.info(f"🎯 {symbol} {target_signal} 최적 타이밍 분석")
-        
-        # 최근 4시간 분봉 데이터
-        minute_df = self.trader.get_minute_data(symbol, minutes=240)
-        
-        if minute_df.empty or len(minute_df) < 20:
-            return {'execute': False, 'reason': '분봉 데이터 부족'}
-        
-        try:
-            current_price = float(minute_df['stck_prpr'].iloc[-1])
-            
-            # 분봉 기술지표
-            minute_df['ma5'] = minute_df['stck_prpr'].rolling(5).mean()
-            minute_df['ma20'] = minute_df['stck_prpr'].rolling(20).mean()
-            
-            # 분봉 RSI
-            delta = minute_df['stck_prpr'].diff()
-            gain = (delta.where(delta > 0, 0)).rolling(14).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-            rs = gain / loss
-            minute_df['minute_rsi'] = 100 - (100 / (1 + rs))
-            
-            latest_minute = minute_df.iloc[-1]
-            
-            if target_signal == 'BUY':
-                return self.evaluate_buy_timing(minute_df, latest_minute, current_price)
-            else:
-                return self.evaluate_sell_timing(minute_df, latest_minute, current_price)
-                
-        except Exception as e:
-            self.trader.logger.error(f"분봉 타이밍 분석 실패 ({symbol}): {e}")
-            return {'execute': False, 'reason': f'분석 오류: {str(e)}'}
-    
-    def evaluate_buy_timing(self, df: pd.DataFrame, latest: pd.Series, current_price: float) -> Dict:
-        """매수 타이밍 평가"""
-        
-        timing_score = 0
-        reasons = []
-        
-        # 1. 분봉 추세
-        if latest['ma5'] > latest['ma20']:
-            timing_score += 2
-            reasons.append("분봉상승추세")
-        
-        # 2. 분봉 RSI
-        minute_rsi = latest['minute_rsi']
-        if minute_rsi < 40:
-            timing_score += 2
-            reasons.append("분봉RSI과매도")
-        elif 40 <= minute_rsi <= 60:
-            timing_score += 1
-            reasons.append("분봉RSI적정")
-        
-        # 3. 최근 가격 움직임
-        recent_change = (current_price - df['stck_prpr'].iloc[-10]) / df['stck_prpr'].iloc[-10]
-        if -0.02 <= recent_change <= 0.01:
-            timing_score += 1
-            reasons.append("적정변동폭")
-        
-        # 4. 거래량 확인
-        avg_volume = df['cntg_vol'].rolling(20).mean().iloc[-1]
-        current_volume = df['cntg_vol'].iloc[-1]
-        volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1
-        
-        if volume_ratio > 1.5:
-            timing_score += 1
-            reasons.append("거래량증가")
-        
-        # 5. 호가 스프레드 확인
-        bid_ask = self.trader.get_current_bid_ask(symbol)
-        if bid_ask and bid_ask.get('spread', 1000) <= 500:
-            timing_score += 1
-            reasons.append("스프레드양호")
-        
-        execute = timing_score >= 4
-        
-        return {
-            'execute': execute,
-            'timing_score': timing_score,
-            'reasons': reasons,
-            'current_price': current_price,
-            'minute_rsi': minute_rsi,
-            'volume_ratio': volume_ratio,
-            'recent_change': recent_change
-        }
-    
-    def evaluate_sell_timing(self, df: pd.DataFrame, latest: pd.Series, current_price: float) -> Dict:
-        """매도 타이밍 평가"""
-        
-        timing_score = 0
-        reasons = []
-        
-        # 1. 분봉 추세 약화
-        if latest['ma5'] < latest['ma20']:
-            timing_score += 2
-            reasons.append("분봉하락추세")
-        
-        # 2. 분봉 RSI
-        minute_rsi = latest['minute_rsi']
-        if minute_rsi > 65:
-            timing_score += 2
-            reasons.append("분봉RSI과매수")
-        
-        # 3. 급락 신호
-        recent_change = (current_price - df['stck_prpr'].iloc[-5]) / df['stck_prpr'].iloc[-5]
-        if recent_change < -0.015:
-            timing_score += 3
-            reasons.append("급락감지")
-        
-        # 4. 거래량 급증
-        avg_volume = df['cntg_vol'].rolling(10).mean().iloc[-1]
-        current_volume = df['cntg_vol'].iloc[-1]
-        volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1
-        
-        if volume_ratio > 3.0:
-            timing_score += 2
-            reasons.append("거래량급증")
-        
-        execute = timing_score >= 3
-        
-        return {
-            'execute': execute,
-            'timing_score': timing_score,
-            'reasons': reasons,
-            'current_price': current_price,
-            'minute_rsi': minute_rsi,
-            'volume_ratio': volume_ratio,
-            'recent_change': recent_change
-        }
-    
-    def execute_hybrid_trade(self, symbol: str) -> bool:
-        """하이브리드 매매 실행"""
-        
-        # 1. 일봉 전략 분석
-        daily_analysis = self.analyze_daily_strategy(symbol)
-        
-        if daily_analysis['signal'] == 'HOLD' or daily_analysis['strength'] < 3.0:
-            return False
-        
-        # 2. 분봉 타이밍 분석
-        timing_analysis = self.find_optimal_entry_timing(symbol, daily_analysis['signal'])
-        
-        if not timing_analysis['execute']:
-            self.trader.logger.info(f"⏰ {symbol} 타이밍 부적절: {timing_analysis.get('reason', '기준 미달')}")
-            return False
-        
-        # 3. 실제 매매 실행
-        current_price = timing_analysis['current_price']
-        
-        if daily_analysis['signal'] == 'BUY':
-            return self.execute_smart_buy(symbol, daily_analysis, timing_analysis, current_price)
-        else:
-            return self.execute_smart_sell(symbol, daily_analysis, timing_analysis, current_price)
-    
-    def execute_smart_buy(self, symbol: str, daily_analysis: Dict, timing_analysis: Dict, current_price: float) -> bool:
-        """스마트 매수 실행"""
-        
-        # 매수 가능 여부 확인
-        can_buy, reason = self.trader.can_purchase_symbol(symbol)
-        if not can_buy:
-            self.trader.logger.info(f"🚫 {symbol} 매수 불가: {reason}")
-            return False
-        
-        # 포지션 크기 계산
-        quantity = self.trader.calculate_position_size(symbol, current_price, daily_analysis['strength'])
-        
-        if quantity <= 0:
-            self.trader.logger.warning(f"⚠️ {symbol} 매수 수량 0")
-            return False
-        
-        # 분봉 기반 주문 전략 결정
-        order_strategy = self.determine_order_strategy(timing_analysis)
-        
-        self.trader.logger.info(f"💰 {symbol} 하이브리드 매수 실행:")
-        self.trader.logger.info(f"  일봉 신호: {daily_analysis['signal']} (강도: {daily_analysis['strength']:.2f})")
-        self.trader.logger.info(f"  일봉 사유: {', '.join(daily_analysis.get('reasons', []))}")
-        self.trader.logger.info(f"  분봉 타이밍: {timing_analysis['timing_score']}/5")
-        self.trader.logger.info(f"  분봉 사유: {', '.join(timing_analysis.get('reasons', []))}")
-        self.trader.logger.info(f"  수량: {quantity}주, 전략: {order_strategy}")
-        
-        # 주문 실행
-        result = self.trader.place_order_with_strategy(symbol, 'BUY', quantity, order_strategy)
-        
-        if result['success']:
-            executed_price = result.get('limit_price', current_price)
-            self.trader.position_manager.record_purchase(
-                symbol, quantity, executed_price, "hybrid_strategy"
-            )
-            
-            # 하이브리드 매수 알림
-            self.notify_hybrid_trade(symbol, 'BUY', daily_analysis, timing_analysis, quantity, executed_price)
-            
-            return True
-        
-        return False
-    
-    def execute_smart_sell(self, symbol: str, daily_analysis: Dict, timing_analysis: Dict, current_price: float) -> bool:
-        """스마트 매도 실행"""
-        
-        current_position = self.trader.positions.get(symbol, {})
-        if not current_position or current_position.get('quantity', 0) <= 0:
-            return False
-        
-        can_sell, reason = self.trader.can_sell_symbol(symbol)
-        if not can_sell:
-            self.trader.logger.info(f"🚫 {symbol} 매도 불가: {reason}")
-            return False
-        
-        quantity = current_position['quantity']
-        order_strategy = "aggressive_limit"
-        
-        self.trader.logger.info(f"💸 {symbol} 하이브리드 매도 실행:")
-        self.trader.logger.info(f"  일봉 신호: {daily_analysis['signal']} (강도: {daily_analysis['strength']:.2f})")
-        self.trader.logger.info(f"  분봉 타이밍: {timing_analysis['timing_score']}")
-        
-        result = self.trader.place_order_with_strategy(symbol, 'SELL', quantity, order_strategy)
-        
-        if result['success']:
-            executed_price = result.get('limit_price', current_price)
-            self.trader.position_manager.record_sale(
-                symbol, quantity, executed_price, "hybrid_strategy"
-            )
-            
-            self.notify_hybrid_trade(symbol, 'SELL', daily_analysis, timing_analysis, quantity, executed_price)
-            
-            return True
-        
-        return False
-    
-    def determine_order_strategy(self, timing_analysis: Dict) -> str:
-        """분봉 분석 기반 주문 전략 결정"""
-        
-        timing_score = timing_analysis['timing_score']
-        minute_rsi = timing_analysis.get('minute_rsi', 50)
-        volume_ratio = timing_analysis.get('volume_ratio', 1)
-        
-        if timing_score >= 4 and minute_rsi < 35:
-            return "urgent"
-        elif timing_score >= 3 and volume_ratio > 2.0:
-            return "aggressive_limit"
-        else:
-            return "patient_limit"
-    
-    def notify_hybrid_trade(self, symbol: str, action: str, daily_analysis: Dict, 
-                           timing_analysis: Dict, quantity: int, price: float):
-        """하이브리드 매매 알림"""
-        
-        if not self.trader.notify_on_trade:
-            return
-        
-        stock_name = self.trader.get_stock_name(symbol)
-        action_emoji = "🛒" if action == "BUY" else "💸"
-        
-        title = f"{action_emoji} 하이브리드 {action}!"
-        
-        daily_reasons = ', '.join(daily_analysis.get('reasons', []))
-        timing_reasons = ', '.join(timing_analysis.get('reasons', []))
-        
-        message = f"""
-종목: {symbol} ({stock_name})
-수량: {quantity}주 @ {price:,}원
-📅 일봉 분석:
-
-신호 강도: {daily_analysis['strength']:.2f}
-사유: {daily_reasons}
-RSI: {daily_analysis.get('rsi', 0):.1f}
-
-⏰ 분봉 타이밍:
-
-타이밍 점수: {timing_analysis['timing_score']}/5
-사유: {timing_reasons}
-분봉 RSI: {timing_analysis.get('minute_rsi', 0):.1f}
-
-시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-"""
-        color = 0x00ff00 if action == "BUY" else 0xff6600
-        self.trader.send_discord_notification(title, message, color)
-
 class KISAutoTrader:
-    """KIS API 기반 하이브리드 자동매매 시스템"""
-
     def __init__(self, config_path: str = "config.yaml"):
         
         # 필수 속성들을 먼저 초기화
@@ -938,24 +325,17 @@ class KISAutoTrader:
     
         with open(config_path, 'w', encoding='utf-8') as f:
             yaml.dump(sample_config, f, default_flow_style=False, allow_unicode=True)
-
-    def load_saved_token(self):
-        """저장된 토큰 파일에서 토큰 로드"""
-        try:
-            if os.path.exists(self.token_file):
-                with open(self.token_file, 'r', encoding='utf-8') as f:
-                    token_data = json.load(f)
-            expire_time_str = token_data.get('access_token_token_expired', '')
-            if expire_time_str:
-                expire_time = datetime.strptime(expire_time_str, '%Y-%m-%d %H:%M:%S')
+    expire_time_str = token_data.get('access_token_token_expired', '')
+                if expire_time_str:
+                    expire_time = datetime.strptime(expire_time_str, '%Y-%m-%d %H:%M:%S')
     
-                if datetime.now() < expire_time - timedelta(minutes=10):
-                    self.access_token = token_data.get('access_token')
-                    self.last_token_time = datetime.fromtimestamp(token_data.get('requested_at', 0))
-                    self.logger.info(f"기존 토큰을 재사용합니다. (만료: {expire_time_str})")
-                    return True
-                else:
-                    self.logger.info(f"저장된 토큰이 만료되었습니다.")
+                    if datetime.now() < expire_time - timedelta(minutes=10):
+                        self.access_token = token_data.get('access_token')
+                        self.last_token_time = datetime.fromtimestamp(token_data.get('requested_at', 0))
+                        self.logger.info(f"기존 토큰을 재사용합니다. (만료: {expire_time_str})")
+                        return True
+                    else:
+                        self.logger.info(f"저장된 토큰이 만료되었습니다.")
     
         except Exception as e:
             self.logger.warning(f"토큰 파일 로드 실패: {e}")
@@ -1162,7 +542,7 @@ class KISAutoTrader:
     
     def detect_macd_golden_cross(self, df: pd.DataFrame) -> Dict:
         """MACD 골든크로스 감지"""
-        if 'macd_cross' not in df.columns or len(df) < 10:
+    if 'macd_cross' not in df.columns or len(df) < 10:
             return {
                 'golden_cross': False,
                 'cross_strength': 0,
@@ -1888,13 +1268,6 @@ class KISAutoTrader:
         stock_name = self.get_stock_name(symbol)
         title = f"{action_emoji} {action} 주문 체결!"
         message = f"""
-종목: {symbol} ({stock_name})
-수량: {quantity}주
-가격: {price:,}원
-총액: {quantity * price:,}원
-주문번호: {order_no}
-시간: {datetime.now().strftime('%H:%M:%S')}
-"""
         self.send_discord_notification(title, message, color)
     
     def notify_trade_failure(self, action: str, symbol: str, error_msg: str):
@@ -1904,10 +1277,6 @@ class KISAutoTrader:
     
         title = f"❌ {action} 주문 실패"
         message = f"""
-종목: {symbol}
-오류: {error_msg}
-시간: {datetime.now().strftime('%H:%M:%S')}
-"""
         self.send_discord_notification(title, message, 0xff0000)
     
     def notify_daily_summary(self, total_trades: int, profit_loss: float, successful_trades: int):
@@ -1919,12 +1288,6 @@ class KISAutoTrader:
         color = 0x00ff00 if profit_loss >= 0 else 0xff0000
     
         message = f"""
-총 거래 횟수: {total_trades}회
-성공한 거래: {successful_trades}회
-일일 수익률: {profit_loss:.2%}
-거래 종목: {', '.join(getattr(self, 'symbols', []))}
-날짜: {datetime.now().strftime('%Y-%m-%d')}
-"""
         self.send_discord_notification(title, message, color)
     
     def notify_error(self, error_type: str, error_msg: str):
@@ -1934,9 +1297,6 @@ class KISAutoTrader:
     
         title = f"⚠️ 시스템 오류: {error_type}"
         message = f"""
-오류 내용: {error_msg}
-시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-"""
         self.send_discord_notification(title, message, 0xff0000)
     
     def run_hybrid_strategy(self, check_interval_minutes=30):
@@ -2043,228 +1403,153 @@ class KISAutoTrader:
         finally:
             self.logger.info("하이브리드 전략 프로그램 종료")
     
-    def integrate_hybrid_strategy(self):
-        """하이브리드 전략을 기존 트레이더에 통합"""
-        self.hybrid_strategy = HybridTradingStrategy(self)
-
-	#END of class ====================
     
-def check_dependencies():
-    """필수 라이브러리 확인"""
-    required_modules = ['requests', 'pandas', 'numpy', 'yaml']
-    missing_modules = []
+    def check_dependencies():
+        """필수 라이브러리 확인"""
+        required_modules = ['requests', 'pandas', 'numpy', 'yaml']
+        missing_modules = []
     
-    for module in required_modules:
-        try:
-            __import__(module)
-        except ImportError:
-            missing_modules.append(module)
+        for module in required_modules:
+            try:
+                __import__(module)
+            except ImportError:
+                missing_modules.append(module)
     
-    if missing_modules:
-        print(f"❌ 필수 라이브러리가 설치되지 않았습니다: {', '.join(missing_modules)}")
-        print("다음 명령어로 설치하세요:")
-        print(f"pip install {' '.join(missing_modules)}")
-        return False
+        if missing_modules:
+            print(f"❌ 필수 라이브러리가 설치되지 않았습니다: {', '.join(missing_modules)}")
+            print("다음 명령어로 설치하세요:")
+            print(f"pip install {' '.join(missing_modules)}")
+            return False
     
-    return True
+        return True
     
-def check_config_file():
-    """설정 파일 존재 확인"""
-    if not os.path.exists('config.yaml'):
+    def check_config_file():
+        """설정 파일 존재 확인"""
+        if not os.path.exists('config.yaml'):
         print("❌ config.yaml 파일이 없습니다.")
         print("샘플 설정 파일을 생성하시겠습니까? (y/n): ", end="")
     
-    try:
-        response = input().lower()
-        if response in ['y', 'yes', '예']:
-            trader = KISAutoTrader.__new__(KISAutoTrader)
-            trader.create_sample_config('config.yaml')
-            print("✅ config.yaml 파일이 생성되었습니다. 설정을 입력한 후 다시 실행하세요.")
-        return False
-    except KeyboardInterrupt:
-        print("\n프로그램을 종료합니다.")
-        return False
-    
-    return True
-    
-def create_logs_directory():
-    os.makedirs('logs', exist_ok=True)
-    
-def test_hybrid_strategy():
-    print("🧪 하이브리드 전략 테스트")
-    print("="*60)
-
-    try:
-        trader = KISAutoTrader()
-    
-        # 테스트 종목으로 분석
-        test_symbol = trader.symbols[0] if hasattr(trader, 'symbols') and trader.symbols else "005930"
-        
-        print(f"📊 {test_symbol} 하이브리드 분석 테스트:")
-        
-        # 1. 일봉 분석
-        print("\n1️⃣ 일봉 전략 분석:")
-        daily_analysis = trader.hybrid_strategy.analyze_daily_strategy(test_symbol)
-    
-        for key, value in daily_analysis.items():
-            if key != 'macd_analysis':
-                print(f"  {key}: {value}")
-    
-        # 2. 분봉 타이밍 분석
-        if daily_analysis['signal'] in ['BUY', 'SELL']:
-            print(f"\n2️⃣ 분봉 타이밍 분석 ({daily_analysis['signal']}):")
-            timing_analysis = trader.hybrid_strategy.find_optimal_entry_timing(test_symbol, daily_analysis['signal'])
-        
-            for key, value in timing_analysis.items():
-                print(f"  {key}: {value}")
-            
-            # 3. 종합 판단
-            print(f"\n3️⃣ 종합 판단:")
-            if daily_analysis['strength'] >= 4.0 and timing_analysis.get('execute', False):
-                print("  ✅ 매매 실행 권장")
-            else:
-                print("  ⏸️ 매매 보류 권장")
-                if daily_analysis['strength'] < 4.0:
-                    print(f"    - 일봉 신호 부족: {daily_analysis['strength']:.2f} < 4.0")
-                    if not timing_analysis.get('execute', False):
-                        print(f"    - 분봉 타이밍 부적절: {timing_analysis.get('reason', '기준 미달')}")
-        else:
-            print("\n2️⃣ 일봉에서 HOLD 신호 - 분봉 분석 생략")
-            
-    except Exception as e:
-        print(f"❌ 테스트 실패: {e}")
-        import traceback
-        traceback.print_exc()
-    
-def main():
-    """업데이트된 메인 함수"""
-
-    # 의존성 확인
-    if not check_dependencies():
-        sys.exit(1)
-    
-    # 로그 디렉토리 생성
-    create_logs_directory()
-    
-    # 설정 파일 확인
-    if not check_config_file():
-        sys.exit(1)
-    
-    try:
-        trader = KISAutoTrader()
-        
-        # 연결 테스트
-        token = trader.get_access_token()
-        if not token:
-            trader.logger.error("❌ KIS API 연결 실패")
-            return
-            
-        trader.logger.info("✅ KIS API 연결 테스트 성공")
-            
-        # 실행 모드 결정
-        hybrid_mode = '--hybrid' in sys.argv
-        test_mode = '--test' in sys.argv
-        debug_mode = '--debug' in sys.argv
-            
-        if test_mode:
-            # 테스트 모드
-            test_hybrid_strategy()
-                
-        elif hybrid_mode:
-            # 하이브리드 전략 실행
-            interval = 15 if debug_mode else 30  # 디버그 모드는 15분
-            trader.logger.info(f"🚀 하이브리드 전략 모드 (체크 간격: {interval}분)")
-                
-            trader.run_hybrid_strategy(check_interval_minutes=interval)
-                
-        else:
-            # 기본 실행 (하이브리드 전략)
-            trader.logger.info("🚀 기본 하이브리드 전략 실행")
-            trader.run_hybrid_strategy(check_interval_minutes=30)
-                
-    except FileNotFoundError as e:
-        print(f"❌ 필수 파일이 없습니다: {e}")
-    except KeyboardInterrupt:
-        print("\n🛑 사용자가 프로그램을 종료했습니다.")
-    except Exception as e:
-        print(f"❌ 프로그램 실행 중 오류: {e}")
-        import traceback
-        print(f"상세 오류:\n{traceback.format_exc()}")
-
-def main_hybrid():
-    """하이브리드 전략으로 실행"""
-
-    # 의존성 확인
-    required_modules = ['requests', 'pandas', 'numpy', 'yaml']
-    missing_modules = []
-    
-    for module in required_modules:
-        try:
-            __import__(module)
-        except ImportError:
-            missing_modules.append(module)
-    
-    if missing_modules:
-        print(f"❌ 필수 라이브러리가 설치되지 않았습니다: {', '.join(missing_modules)}")
-        print("다음 명령어로 설치하세요:")
-        print(f"pip install {' '.join(missing_modules)}")
-        return
-    
-    # 로그 디렉토리 생성
-    os.makedirs('logs', exist_ok=True)
-    
-    # 설정 파일 확인
-    if not os.path.exists('config.yaml'):
-        print("❌ config.yaml 파일이 없습니다.")
-        print("샘플 설정 파일을 생성하시겠습니까? (y/n): ", end="")
-        
         try:
             response = input().lower()
             if response in ['y', 'yes', '예']:
                 trader = KISAutoTrader.__new__(KISAutoTrader)
                 trader.create_sample_config('config.yaml')
                 print("✅ config.yaml 파일이 생성되었습니다. 설정을 입력한 후 다시 실행하세요.")
-            return
+            return False
         except KeyboardInterrupt:
             print("\n프로그램을 종료합니다.")
-            return
+            return False
     
-    try:
-        trader = KISAutoTrader()
+        return True
+    
+    def create_logs_directory():
+        """로그 디렉토리 생성"""
+        os.makedirs('logs', exist_ok=True)
+    
+    def test_hybrid_strategy():
+        """하이브리드 전략 테스트"""
+        print("🧪 하이브리드 전략 테스트")
+        print("="*60)
+    
+        try:
+            trader = KISAutoTrader()
         
-        # 연결 테스트
-        token = trader.get_access_token()
-        if not token:
-            trader.logger.error("❌ KIS API 연결 실패")
-            return
+            # 테스트 종목으로 분석
+            test_symbol = trader.symbols[0] if hasattr(trader, 'symbols') and trader.symbols else "005930"
+        
+            print(f"📊 {test_symbol} 하이브리드 분석 테스트:")
+        
+            # 1. 일봉 분석
+            print("\n1️⃣ 일봉 전략 분석:")
+            daily_analysis = trader.hybrid_strategy.analyze_daily_strategy(test_symbol)
+        
+            for key, value in daily_analysis.items():
+                if key != 'macd_analysis':
+                    print(f"  {key}: {value}")
+        
+            # 2. 분봉 타이밍 분석
+            if daily_analysis['signal'] in ['BUY', 'SELL']:
+                print(f"\n2️⃣ 분봉 타이밍 분석 ({daily_analysis['signal']}):")
+                timing_analysis = trader.hybrid_strategy.find_optimal_entry_timing(test_symbol, daily_analysis['signal'])
             
-        trader.logger.info("✅ KIS API 연결 테스트 성공")
+                for key, value in timing_analysis.items():
+                    print(f"  {key}: {value}")
+                
+                # 3. 종합 판단
+                print(f"\n3️⃣ 종합 판단:")
+                if daily_analysis['strength'] >= 4.0 and timing_analysis.get('execute', False):
+                    print("  ✅ 매매 실행 권장")
+                else:
+                    print("  ⏸️ 매매 보류 권장")
+                    if daily_analysis['strength'] < 4.0:
+                        print(f"    - 일봉 신호 부족: {daily_analysis['strength']:.2f} < 4.0")
+                        if not timing_analysis.get('execute', False):
+                            print(f"    - 분봉 타이밍 부적절: {timing_analysis.get('reason', '기준 미달')}")
+            else:
+                print("\n2️⃣ 일봉에서 HOLD 신호 - 분봉 분석 생략")
+                
+        except Exception as e:
+            print(f"❌ 테스트 실패: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def main():
+        """메인 실행 함수"""
+        # 의존성 확인
+        if not check_dependencies():
+            sys.exit(1)
+    
+        # 로그 디렉토리 생성
+        create_logs_directory()
+    
+        # 설정 파일 확인
+        if not check_config_file():
+            sys.exit(1)
+    
+        try:
+            trader = KISAutoTrader()
         
-        # 실행 모드 결정
-        debug_mode = '--debug' in sys.argv
-        
-        # 하이브리드 전략 실행
-        interval = 15 if debug_mode else 30  # 디버그 모드는 15분
-        trader.logger.info(f"🚀 하이브리드 전략 모드 (체크 간격: {interval}분)")
-        
-        run_hybrid_strategy(trader, check_interval_minutes=interval)
-        
-    except FileNotFoundError as e:
-        print(f"❌ 필수 파일이 없습니다: {e}")
-    except KeyboardInterrupt:
-        print("\n🛑 사용자가 프로그램을 종료했습니다.")
-    except Exception as e:
-        print(f"❌ 프로그램 실행 중 오류: {e}")
-        import traceback
-        print(f"상세 오류:\n{traceback.format_exc()}")
-
-
-
-if __name__ == "__main__":
-    # 명령어 인수 처리
-    if '--hybrid' in sys.argv:
-        main_hybrid()
-    elif '--test' in sys.argv or '--test-hybrid' in sys.argv:
-        test_hybrid_strategy()
-    else:
-        main()
+            # 연결 테스트
+            token = trader.get_access_token()
+            if not token:
+                trader.logger.error("❌ KIS API 연결 실패")
+                return
+            
+            trader.logger.info("✅ KIS API 연결 테스트 성공")
+            
+            # 실행 모드 결정
+            hybrid_mode = '--hybrid' in sys.argv
+            test_mode = '--test' in sys.argv
+            debug_mode = '--debug' in sys.argv
+            
+            if test_mode:
+                # 테스트 모드
+                test_hybrid_strategy()
+                
+            elif hybrid_mode:
+                # 하이브리드 전략 실행
+                interval = 15 if debug_mode else 30  # 디버그 모드는 15분
+                trader.logger.info(f"🚀 하이브리드 전략 모드 (체크 간격: {interval}분)")
+                
+                trader.run_hybrid_strategy(check_interval_minutes=interval)
+                
+            else:
+                # 기본 실행 (하이브리드 전략)
+                trader.logger.info("🚀 기본 하이브리드 전략 실행")
+                trader.run_hybrid_strategy(check_interval_minutes=30)
+                
+        except FileNotFoundError as e:
+            print(f"❌ 필수 파일이 없습니다: {e}")
+        except KeyboardInterrupt:
+            print("\n🛑 사용자가 프로그램을 종료했습니다.")
+        except Exception as e:
+            print(f"❌ 프로그램 실행 중 오류: {e}")
+            import traceback
+            print(f"상세 오류:\n{traceback.format_exc()}")
+    
+    if name == "main":
+        # 명령어 인수 처리
+        if '--test' in sys.argv or '--test-hybrid' in sys.argv:
+            test_hybrid_strategy()
+        else:
+            main()
