@@ -725,7 +725,10 @@ class KISAutoTrader:
             self.performance_tracking = backtest.get('performance_tracking', True)
             
             # 종목 설정
-            self.symbols = self.load_symbols_from_backtest(config)
+            self.symbols, backtest_stock_names = self.load_symbols_from_backtest(config)
+
+            # 백테스트에서 가져온 종목명을 기존 종목명과 병합
+            self.stock_names.update(backtest_stock_names)
     
         except FileNotFoundError:
             self.create_sample_config(config_path)
@@ -856,15 +859,20 @@ class KISAutoTrader:
         
         return session
     
-    def load_symbols_from_backtest(self, config: dict) -> List[str]:
+    def load_symbols_from_backtest(self, config: dict) -> tuple[List[str], Dict[str, str]]:
         """백테스트 결과에서 종목 로드"""
         symbols = []
+        stock_names = []
         
         # 1. config에 직접 지정된 symbols 확인
         if 'symbols' in config.get('trading', {}):
             symbols = config['trading']['symbols']
-            self.logger.info(f"설정 파일에서 종목 로드: {symbols}")
-            return symbols
+            # 종목명은 기존 방식으로 처리
+            for symbol in symbols:
+                stock_names[symbol] = self.get_stock_name(symbol)
+
+            self.logger.info(f"설정 파일에서 종목 로드: {[f'{s}({stock_names[s]})' for s in symbols]}")
+            return symbols, stock_names
         
         # 2. 백테스트 결과 파일에서 로드
         try:
@@ -880,23 +888,29 @@ class KISAutoTrader:
                 
                 filtered_symbols.sort(key=lambda x: x['priority'])
                 selected = filtered_symbols[:self.max_symbols]
+
+                # 종목코드와 종목명 추출
                 symbols = [item['symbol'] for item in selected]
+                stock_names = {item['symbol']: item.get('name', item['symbol']) for item in selected}
                 
                 # 종목별 전략 매핑 저장
                 for item in selected:
                     self.strategy_map[item['symbol']] = item['strategy']
                 
-                self.logger.info(f"백테스트 결과에서 종목 로드: {symbols}")
+                symbol_info = [f"{s}({stock_names[s]})" for s in symbols]
+                self.logger.info(f"백테스트 결과에서 종목 로드: {symbol_info}")
                 
             else:
                 self.logger.warning(f"백테스트 결과 파일을 찾을 수 없음: {self.backtest_results_file}")
-                symbols = ['005930', '035720', '042660']  # 기본 종목
+                symbols = ['278470', '0062040', '042660']  # 기본 종목
+                stock_names = {s: self.get_stock_name(s) for s in symbols}
                 
         except Exception as e:
             self.logger.error(f"백테스트 결과 로드 실패: {e}")
-            symbols = ['005930', '035720', '042660']
+            symbols = ['278470', '0062040', '042660']
+            stock_names = {s: self.get_stock_name(s) for s in symbols}
         
-        return symbols
+        return symbols, stock_names
     
     def create_sample_config(self, config_path: str):
         """샘플 설정 파일 생성"""
@@ -1947,12 +1961,15 @@ class KISAutoTrader:
     
         title = "📊 일일 거래 요약"
         color = 0x00ff00 if profit_loss >= 0 else 0xff0000
+
+        # 종목명 포함한 리스트 생성
+        symbol_list_with_names = [f"{s}({self.get_stock_name(s)})" for s in getattr(self, 'symbols', [])]
     
         message = f"""
 총 거래 횟수: {total_trades}회
 성공한 거래: {successful_trades}회
 일일 수익률: {profit_loss:.2%}
-거래 종목: {', '.join(getattr(self, 'symbols', []))}
+거래 종목: {', '.join(symbol_list_with_names)}
 날짜: {datetime.now().strftime('%Y-%m-%d')}
 """
         self.send_discord_notification(title, message, color)
@@ -1979,11 +1996,14 @@ class KISAutoTrader:
         if not hasattr(self, 'hybrid_strategy'):
             self.hybrid_strategy = HybridTradingStrategy(self)
         
+        # 시작 알림에 종목명 포함
+        symbol_list_with_names = [f"{s}({self.get_stock_name(s)})" for s in getattr(self, 'symbols', [])]
+    
         # 시작 알림
         if self.discord_webhook:
             self.send_discord_notification(
                 "🚀 하이브리드 전략 시작",
-                f"일봉 분석 + 분봉 실행\n체크 간격: {check_interval_minutes}분\n대상 종목: {', '.join(getattr(self, 'symbols', []))}",
+                f"일봉 분석 + 분봉 실행\n체크 간격: {check_interval_minutes}분\n대상 종목: {', '.join(symbol_list_with_names)}",
                 0x00ff00
             )
         
@@ -2009,19 +2029,20 @@ class KISAutoTrader:
                         
                         # 각 종목별 하이브리드 매매 실행
                         for i, symbol in enumerate(getattr(self, 'symbols', []), 1):
-                            self.logger.info(f"🔍 [{i}/{len(self.symbols)}] {symbol} 하이브리드 분석")
+                            stock_name = self.get_stock_name(symbol)
+                            self.logger.info(f"🔍 [{i}/{len(self.symbols)}] {symbol} ({stock_name}) 하이브리드 분석")
                             
                             try:
                                 if self.hybrid_strategy.execute_hybrid_trade(symbol):
                                     daily_trades += 1
-                                    self.logger.info(f"✅ {symbol} 하이브리드 매매 실행됨")
+                                    self.logger.info(f"✅ {symbol} ({stock_name}) 하이브리드 매매 실행됨")
                                 else:
-                                    self.logger.debug(f"⏸️ {symbol} 매매 조건 미충족")
+                                    self.logger.debug(f"⏸️ {symbol} ({stock_name}) 매매 조건 미충족")
                                     
                                 time.sleep(2)
                                 
                             except Exception as e:
-                                self.logger.error(f"❌ {symbol} 하이브리드 실행 오류: {e}")
+                                self.logger.error(f"❌ {symbol} ({stock_name}) 하이브리드 실행 오류: {e}")
                         
                         # 기존 포지션 손익 관리
                         self.process_sell_signals()
@@ -2030,7 +2051,7 @@ class KISAutoTrader:
                         self.logger.info("✅ 하이브리드 사이클 완료")
                         
                     except Exception as e:
-                        self.logger.error(f"❌ 하이브리드 실행 오류: {e}")
+                        self.logger.error(f"❌ 하이브리드 실행 오류2: {e}")
                         self.notify_error("하이브리드 실행 오류", str(e))
                 
                 else:
@@ -2132,8 +2153,9 @@ def test_hybrid_strategy():
         
         # 테스트 종목으로 분석
         test_symbol = trader.symbols[0] if hasattr(trader, 'symbols') and trader.symbols else "005930"
-        
-        print(f"📊 {test_symbol} 하이브리드 분석 테스트:")
+        test_name = trader.get_stock_name(test_symbol)
+       
+        print(f"📊 {test_symbol}({test_name}) 하이브리드 분석 테스트:") 
         
         # 1. 일봉 분석
         print("\n1️⃣ 일봉 전략 분석:")
@@ -2264,19 +2286,20 @@ def run_hybrid_strategy(trader, check_interval_minutes=30):
                     
                     # 각 종목별 하이브리드 매매 실행
                     for i, symbol in enumerate(getattr(trader, 'symbols', []), 1):
-                        trader.logger.info(f"🔍 [{i}/{len(trader.symbols)}] {symbol} 하이브리드 분석")
+                        stock_name = trader.get_stock_name(symbol)
+                        trader.logger.info(f"🔍 [{i}/{len(trader.symbols)}] {symbol} ({stock_name}) 하이브리드 분석")
                         
                         try:
                             if trader.hybrid_strategy.execute_hybrid_trade(symbol):
                                 daily_trades += 1
-                                trader.logger.info(f"✅ {symbol} 하이브리드 매매 실행됨")
+                                trader.logger.info(f"✅ {symbol} ({stock_name}) 하이브리드 매매 실행됨")
                             else:
-                                trader.logger.debug(f"⏸️ {symbol} 매매 조건 미충족")
+                                trader.logger.debug(f"⏸️ {symbol} ({stock_name}) 매매 조건 미충족")
                                 
                             time.sleep(2)
                             
                         except Exception as e:
-                            trader.logger.error(f"❌ {symbol} 하이브리드 실행 오류: {e}")
+                            trader.logger.error(f"❌ {symbol} ({stock_name}) 하이브리드 실행 오류: {e}")
                     
                     # 기존 포지션 손익 관리
                     trader.process_sell_signals()
@@ -2289,7 +2312,7 @@ def run_hybrid_strategy(trader, check_interval_minutes=30):
                     trader.logger.info("✅ 하이브리드 사이클 완료")
                     
                 except Exception as e:
-                    trader.logger.error(f"❌ 하이브리드 실행 오류: {e}")
+                    trader.logger.error(f"❌ 하이브리드 실행 오류3: {e}")
                     trader.notify_error("하이브리드 실행 오류", str(e))
             
             else:
