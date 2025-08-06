@@ -186,7 +186,7 @@ def get_period_price_data(access_token, app_key, app_secret, stock_code, days=60
         "fid_org_adj_prc": "0"              # 0:수정주가, 1:원주가
     }
     
-    logger.debug("📅 {stock_code}: {start_date_str} ~ {end_date_str} 데이터 조회 시작")
+    logger.debug(f"📅 {stock_code}: {start_date_str} ~ {end_date_str} 데이터 조회 시작")
     
     # 데이터 조회 (재시도)
     df = None
@@ -274,9 +274,9 @@ def get_daily_price_data_with_realtime(access_token, app_key, app_secret, stock_
         # 최신 데이터가 오늘 데이터인지 확인
         if len(df) > 0 and df.iloc[-1]["stck_bsop_date"] == today:
             # 오늘 데이터를 실시간 가격으로 업데이트
+            logger.debug(f"📈 {stock_code}: 오늘 데이터를 실시간 가격으로 업데이트: {df.loc[df.index[-1], 'stck_clpr']} -> {current_price}")
             df.loc[df.index[-1], "stck_clpr"] = current_price
             df.loc[df.index[-1], "acml_vol"] = current_volume
-            logger.debug("📈 {stock_code}: 오늘 데이터를 실시간 가격으로 업데이트")
         else:
             # 오늘 데이터 새로 추가
             new_row = {
@@ -287,7 +287,7 @@ def get_daily_price_data_with_realtime(access_token, app_key, app_secret, stock_
                 "acml_vol": current_volume
             }
             df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-            logger.debug("📈 {stock_code}: 오늘 실시간 데이터 추가")
+            logger.debug(f"📈 {stock_code}: 오늘 실시간 데이터 추가")
     
     return df
 
@@ -719,7 +719,7 @@ def setup_logger(log_dir="logs", log_filename="buying_stocks_jhj.log", when="mid
     log_path = os.path.join(log_dir, log_filename)
 
     logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
     if logger.hasHandlers():
         logger.handlers.clear()
@@ -907,6 +907,8 @@ if __name__ == "__main__":
     
     logger.info("📊 시가총액 상위 200개 종목 분석 시작...")
     stock_list = get_top_200_stocks()
+    #stock_list = {}
+    #stock_list["뷰티스킨"] = "406820"
 
     # 각 신호별 종목 리스트
     signal_lists = {
