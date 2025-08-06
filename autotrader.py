@@ -672,7 +672,10 @@ class KISAutoTrader:
         self.last_api_call = None
         self.min_api_interval = 0.5
         
-        self.logger.info("✅ 하이브리드 자동매매 시스템 초기화 완료")
+
+        self.hybrid_strategy = HybridTradingStrategy(self)
+
+        self.logger.debug("✅ 하이브리드 자동매매 시스템 초기화 완료")
     
     def load_config(self, config_path: str):
         """설정 파일 로드"""
@@ -710,7 +713,7 @@ class KISAutoTrader:
     
             # 알림 설정
             notification = config.get('notification', {})
-            self.discord_webhook = notification.get('discord_webhook', '')
+            self.discord_webhook = notification.get('discord_webhook_auto', '')
             self.notify_on_trade = notification.get('notify_on_trade', True)
             self.notify_on_error = notification.get('notify_on_error', True)
             self.notify_on_daily_summary = notification.get('notify_on_daily_summary', True)
@@ -2112,7 +2115,10 @@ def test_hybrid_strategy():
 
     try:
         trader = KISAutoTrader()
-    
+        
+        # 하이브리드 전략 초기화 (이 부분 추가)
+        trader.hybrid_strategy = HybridTradingStrategy(trader)
+        
         # 테스트 종목으로 분석
         test_symbol = trader.symbols[0] if hasattr(trader, 'symbols') and trader.symbols else "005930"
         
@@ -2121,16 +2127,16 @@ def test_hybrid_strategy():
         # 1. 일봉 분석
         print("\n1️⃣ 일봉 전략 분석:")
         daily_analysis = trader.hybrid_strategy.analyze_daily_strategy(test_symbol)
-    
+        
         for key, value in daily_analysis.items():
             if key != 'macd_analysis':
                 print(f"  {key}: {value}")
-    
+        
         # 2. 분봉 타이밍 분석
         if daily_analysis['signal'] in ['BUY', 'SELL']:
             print(f"\n2️⃣ 분봉 타이밍 분석 ({daily_analysis['signal']}):")
             timing_analysis = trader.hybrid_strategy.find_optimal_entry_timing(test_symbol, daily_analysis['signal'])
-        
+            
             for key, value in timing_analysis.items():
                 print(f"  {key}: {value}")
             
@@ -2142,8 +2148,8 @@ def test_hybrid_strategy():
                 print("  ⏸️ 매매 보류 권장")
                 if daily_analysis['strength'] < 4.0:
                     print(f"    - 일봉 신호 부족: {daily_analysis['strength']:.2f} < 4.0")
-                    if not timing_analysis.get('execute', False):
-                        print(f"    - 분봉 타이밍 부적절: {timing_analysis.get('reason', '기준 미달')}")
+                if not timing_analysis.get('execute', False):
+                    print(f"    - 분봉 타이밍 부적절: {timing_analysis.get('reason', '기준 미달')}")
         else:
             print("\n2️⃣ 일봉에서 HOLD 신호 - 분봉 분석 생략")
             

@@ -1,78 +1,78 @@
 {
-  "generated_at": "2025-08-04 21:47:05",
+  "generated_at": "2025-08-06 08:51:47",
   "backtest_period": "36 days",
   "verified_symbols": [
     {
       "symbol": "062040",
-      "strategy": "momentum",
-      "return": 30.31,
-      "win_rate": 0.889,
-      "sharpe_ratio": 5.665,
-      "max_drawdown": -0.018,
-      "total_trades": 9,
+      "strategy": "scalping",
+      "return": 30.34,
+      "win_rate": 0.652,
+      "sharpe_ratio": 4.473,
+      "max_drawdown": -0.092,
+      "total_trades": 23,
       "priority": 2,
-      "last_updated": "2025-08-04 21:47:05"
+      "last_updated": "2025-08-06 08:51:47"
     },
     {
       "symbol": "278470",
       "strategy": "momentum",
-      "return": 0.45,
-      "win_rate": 0.444,
-      "sharpe_ratio": 0.094,
-      "max_drawdown": -0.066,
-      "total_trades": 9,
-      "priority": 5,
-      "last_updated": "2025-08-04 21:47:05"
+      "return": 3.31,
+      "win_rate": 0.6,
+      "sharpe_ratio": 0.848,
+      "max_drawdown": -0.064,
+      "total_trades": 5,
+      "priority": 4,
+      "last_updated": "2025-08-06 08:51:47"
     },
     {
       "symbol": "042660",
       "strategy": "scalping",
-      "return": 53.25,
-      "win_rate": 0.577,
-      "sharpe_ratio": 7.698,
-      "max_drawdown": -0.086,
-      "total_trades": 26,
+      "return": 50.33,
+      "win_rate": 0.6,
+      "sharpe_ratio": 7.275,
+      "max_drawdown": -0.084,
+      "total_trades": 25,
       "priority": 1,
-      "last_updated": "2025-08-04 21:47:05"
+      "last_updated": "2025-08-06 08:51:47"
     },
     {
       "symbol": "272210",
-      "strategy": "scalping",
-      "return": 11.16,
-      "win_rate": 0.593,
-      "sharpe_ratio": 2.222,
-      "max_drawdown": -0.079,
-      "total_trades": 27,
-      "priority": 3,
-      "last_updated": "2025-08-04 21:47:05"
+      "strategy": "momentum",
+      "return": 1.58,
+      "win_rate": 0.571,
+      "sharpe_ratio": 0.504,
+      "max_drawdown": -0.042,
+      "total_trades": 7,
+      "priority": 5,
+      "last_updated": "2025-08-06 08:51:47"
     },
     {
       "symbol": "181710",
       "strategy": "mean_reversion",
-      "return": 3.66,
-      "win_rate": 0.667,
-      "sharpe_ratio": 0.821,
-      "max_drawdown": -0.085,
-      "total_trades": 3,
-      "priority": 4,
-      "last_updated": "2025-08-04 21:47:05"
+      "return": 3.48,
+      "win_rate": 0.5,
+      "sharpe_ratio": 0.781,
+      "max_drawdown": -0.087,
+      "total_trades": 4,
+      "priority": 3,
+      "last_updated": "2025-08-06 08:51:47"
     },
     {
       "symbol": "001440",
-      "strategy": "momentum",
-      "return": 0.3,
-      "win_rate": 0.6,
-      "sharpe_ratio": 0.111,
-      "max_drawdown": -0.051,
-      "total_trades": 10,
+      "strategy": "mean_reversion",
+      "return": 0.0,
+      "win_rate": 0.0,
+      "sharpe_ratio": 0.0,
+      "max_drawdown": 0.0,
+      "total_trades": 0,
       "priority": 6,
-      "last_updated": "2025-08-04 21:47:05"
+      "last_updated": "2025-08-06 08:51:47"
     }
   ],
   "summary": {
     "total_symbols": 6,
-    "avg_return": 16.52,
+    "avg_return": 14.84,
     "best_symbol": "042660",
-    "best_return": 53.25
+    "best_return": 50.33
   }
 }
