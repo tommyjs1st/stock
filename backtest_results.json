@@ -1,155 +1,108 @@
 {
-  "generated_at": "2025-08-06 12:39:53",
-  "backtest_period": "78 days",
+  "generated_at": "2025-08-06 14:23:11",
+  "backtest_period": "48 days",
   "verified_symbols": [
     {
-      "symbol": "033780",
+      "symbol": "181710",
+      "name": "NHN",
       "strategy": "mean_reversion",
-      "return": 14.33,
-      "win_rate": 0.75,
-      "sharpe_ratio": 6.264,
-      "max_drawdown": -0.012,
-      "total_trades": 16,
+      "return": 6.13,
+      "win_rate": 0.6,
+      "sharpe_ratio": 1.351,
+      "max_drawdown": -0.087,
+      "total_trades": 5,
       "priority": 4,
-      "last_updated": "2025-08-06 12:39:53"
-    },
-    {
-      "symbol": "042660",
-      "strategy": "scalping",
-      "return": 47.61,
-      "win_rate": 0.577,
-      "sharpe_ratio": 6.805,
-      "max_drawdown": -0.084,
-      "total_trades": 26,
-      "priority": 1,
-      "last_updated": "2025-08-06 12:39:53"
-    },
-    {
-      "symbol": "241560",
-      "strategy": "momentum",
-      "return": 0.95,
-      "win_rate": 0.375,
-      "sharpe_ratio": 0.334,
-      "max_drawdown": -0.055,
-      "total_trades": 8,
-      "priority": 9,
-      "last_updated": "2025-08-06 12:39:53"
+      "last_updated": "2025-08-06 14:23:11"
     },
     {
       "symbol": "001440",
+      "name": "대한전선",
       "strategy": "mean_reversion",
-      "return": 0.61,
+      "return": 0.67,
       "win_rate": 1.0,
       "sharpe_ratio": 2.85,
       "max_drawdown": 0.0,
       "total_trades": 1,
-      "priority": 10,
-      "last_updated": "2025-08-06 12:39:53"
-    },
-    {
-      "symbol": "034020",
-      "strategy": "mean_reversion",
-      "return": 0.0,
-      "win_rate": 0.0,
-      "sharpe_ratio": 0.0,
-      "max_drawdown": 0.0,
-      "total_trades": 0,
-      "priority": 11,
-      "last_updated": "2025-08-06 12:39:53"
-    },
-    {
-      "symbol": "086280",
-      "strategy": "momentum",
-      "return": 11.19,
-      "win_rate": 0.6,
-      "sharpe_ratio": 3.897,
-      "max_drawdown": -0.013,
-      "total_trades": 10,
-      "priority": 7,
-      "last_updated": "2025-08-06 12:39:53"
-    },
-    {
-      "symbol": "062040",
-      "strategy": "scalping",
-      "return": 31.36,
-      "win_rate": 0.667,
-      "sharpe_ratio": 4.63,
-      "max_drawdown": -0.092,
-      "total_trades": 24,
-      "priority": 2,
-      "last_updated": "2025-08-06 12:39:53"
+      "priority": 5,
+      "last_updated": "2025-08-06 14:23:11"
     },
     {
       "symbol": "272210",
-      "strategy": "momentum + breakout",
-      "return": 0.0,
-      "win_rate": 0.0,
-      "sharpe_ratio": 0.0,
-      "max_drawdown": 0.0,
-      "total_trades": 0,
-      "priority": 12,
-      "last_updated": "2025-08-06 12:39:53"
-    },
-    {
-      "symbol": "015760",
-      "strategy": "momentum + breakout",
-      "return": 0.0,
-      "win_rate": 0.0,
-      "sharpe_ratio": 0.0,
-      "max_drawdown": 0.0,
-      "total_trades": 0,
-      "priority": 13,
-      "last_updated": "2025-08-06 12:39:53"
-    },
-    {
-      "symbol": "181710",
+      "name": "한화시스템",
       "strategy": "mean_reversion",
-      "return": 6.66,
-      "win_rate": 0.6,
-      "sharpe_ratio": 1.456,
-      "max_drawdown": -0.087,
-      "total_trades": 5,
-      "priority": 8,
-      "last_updated": "2025-08-06 12:39:53"
-    },
-    {
-      "symbol": "010120",
-      "strategy": "momentum",
-      "return": 11.25,
-      "win_rate": 0.556,
-      "sharpe_ratio": 2.455,
-      "max_drawdown": -0.058,
-      "total_trades": 9,
+      "return": 0.05,
+      "win_rate": 0.5,
+      "sharpe_ratio": 0.015,
+      "max_drawdown": -0.08,
+      "total_trades": 8,
       "priority": 6,
-      "last_updated": "2025-08-06 12:39:53"
-    },
-    {
-      "symbol": "055550",
-      "strategy": "mean_reversion",
-      "return": 13.74,
-      "win_rate": 0.625,
-      "sharpe_ratio": 4.249,
-      "max_drawdown": -0.045,
-      "total_trades": 16,
-      "priority": 5,
-      "last_updated": "2025-08-06 12:39:53"
+      "last_updated": "2025-08-06 14:23:11"
     },
     {
       "symbol": "278470",
+      "name": "에이피알",
       "strategy": "momentum",
-      "return": 18.04,
+      "return": 15.83,
       "win_rate": 0.667,
-      "sharpe_ratio": 2.86,
+      "sharpe_ratio": 2.76,
       "max_drawdown": -0.064,
       "total_trades": 6,
       "priority": 3,
-      "last_updated": "2025-08-06 12:39:53"
+      "last_updated": "2025-08-06 14:23:11"
+    },
+    {
+      "symbol": "062040",
+      "name": "산일전기",
+      "strategy": "scalping",
+      "return": 32.59,
+      "win_rate": 0.667,
+      "sharpe_ratio": 4.808,
+      "max_drawdown": -0.092,
+      "total_trades": 24,
+      "priority": 2,
+      "last_updated": "2025-08-06 14:23:11"
+    },
+    {
+      "symbol": "042660",
+      "name": "한화오션",
+      "strategy": "scalping",
+      "return": 47.35,
+      "win_rate": 0.577,
+      "sharpe_ratio": 6.758,
+      "max_drawdown": -0.084,
+      "total_trades": 26,
+      "priority": 1,
+      "last_updated": "2025-08-06 14:23:11"
+    },
+    {
+      "symbol": "015760",
+      "name": "한국전력",
+      "strategy": "momentum + breakout",
+      "return": 0.0,
+      "win_rate": 0.0,
+      "sharpe_ratio": 0.0,
+      "max_drawdown": 0.0,
+      "total_trades": 0,
+      "priority": 7,
+      "last_updated": "2025-08-06 14:23:11"
+    },
+    {
+      "symbol": "012630",
+      "name": "HDC",
+      "strategy": "mean_reversion",
+      "return": 0.0,
+      "win_rate": 0.0,
+      "sharpe_ratio": 0.0,
+      "max_drawdown": 0.0,
+      "total_trades": 0,
+      "priority": 8,
+      "last_updated": "2025-08-06 14:23:11"
     }
   ],
   "summary": {
-    "total_symbols": 13,
-    "avg_return": 11.98,
+    "total_symbols": 8,
+    "avg_return": 12.83,
     "best_symbol": "042660",
-    "best_return": 47.61
+    "best_return": 47.35
   }
 }

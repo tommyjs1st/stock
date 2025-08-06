@@ -61,7 +61,7 @@ def get_institution_netbuy_trend_kis(stock_code, app_key, app_secret, access_tok
         return netbuy_list, trend
 
     except Exception as e:
-        print(f"❌ KIS API 기관 추세 분석 오류: {e}")
+        logger.error(f"❌ KIS API 기관 추세 분석 오류: {e}")
         return [], "unknown"
 
 
@@ -116,11 +116,11 @@ def get_period_price_data_alternative(access_token, app_key, app_secret, stock_c
                 
                 if data:
                     all_data.extend(data)
-                    print(f"📊 {stock_code}: {current_start.strftime('%Y%m%d')}~{current_end.strftime('%Y%m%d')} {len(data)}건 조회")
+                    logger.info(f"📊 {stock_code}: {current_start.strftime('%Y%m%d')}~{current_end.strftime('%Y%m%d')} {len(data)}건 조회")
                 break
                 
             except Exception as e:
-                print(f"❌ 구간 조회 오류 (시도 {attempt + 1}/{max_retries}): {e}")
+                logger.error(f"❌ 구간 조회 오류 (시도 {attempt + 1}/{max_retries}): {e}")
                 if attempt < max_retries - 1:
                     time.sleep(1)
                 continue
@@ -130,7 +130,7 @@ def get_period_price_data_alternative(access_token, app_key, app_secret, stock_c
             break
     
     if not all_data:
-        print(f"❌ {stock_code} 대안 API 데이터 조회 실패")
+        logger.error(f"❌ {stock_code} 대안 API 데이터 조회 실패")
         return None
     
     # DataFrame 생성 및 중복 제거
@@ -146,7 +146,7 @@ def get_period_price_data_alternative(access_token, app_key, app_secret, stock_c
     df = df.dropna(subset=["stck_clpr", "stck_hgpr", "stck_lwpr", "acml_vol"])
     df = df.sort_values(by="stck_bsop_date").reset_index(drop=True)
     
-    print(f"✅ {stock_code}: 대안 API로 총 {len(df)}일 데이터 조회 완료")
+    logger.info(f"✅ {stock_code}: 대안 API로 총 {len(df)}일 데이터 조회 완료")
     return df
 
 
@@ -195,18 +195,18 @@ def get_period_price_data(access_token, app_key, app_secret, stock_code, days=60
             df = pd.DataFrame(data)
             break
         except requests.exceptions.ConnectionError as e:
-            print(f"❌ 기간별 데이터 연결 오류 (시도 {attempt + 1}/{max_retries}): {e}")
+            logger.error(f"❌ 기간별 데이터 연결 오류 (시도 {attempt + 1}/{max_retries}): {e}")
             if attempt < max_retries - 1:
                 time.sleep(1)
             continue
         except Exception as e:
-            print(f"❌ 기간별 데이터 조회 오류 (시도 {attempt + 1}/{max_retries}): {e}")
+            logger.error(f"❌ 기간별 데이터 조회 오류 (시도 {attempt + 1}/{max_retries}): {e}")
             if attempt < max_retries - 1:
                 time.sleep(1)
             continue
     
     if df is None or df.empty:
-        print(f"❌ {stock_code} 기간별 데이터 조회 실패")
+        logger.error(f"❌ {stock_code} 기간별 데이터 조회 실패")
         return None
     
     # 데이터 타입 변환 및 컬럼명 통일
@@ -231,7 +231,7 @@ def get_period_price_data(access_token, app_key, app_secret, stock_code, days=60
     # 날짜순 정렬 (과거 → 현재)
     df = df.sort_values(by="stck_bsop_date").reset_index(drop=True)
     
-    #print(f"✅ {stock_code}: {len(df)}일 데이터 조회 완료")
+    logger.debug(f"✅ {stock_code}: {len(df)}일 데이터 조회 완료")
     return df
 
 
@@ -246,11 +246,11 @@ def get_daily_price_data_with_realtime(access_token, app_key, app_secret, stock_
     
     # 기본 API가 실패하면 대안 API 시도
     if df is None or len(df) < 30:
-        print(f"⚠️ {stock_code}: 기본 API 실패, 대안 API 시도...")
+        logger.info(f"⚠️ {stock_code}: 기본 API 실패, 대안 API 시도...")
         df = get_period_price_data_alternative(access_token, app_key, app_secret, stock_code, days=days, max_retries=max_retries)
     
     if df is None or df.empty:
-        print(f"❌ {stock_code} 기간별 데이터 조회 실패")
+        logger.error(f"❌ {stock_code} 기간별 데이터 조회 실패")
         return None
     
     # MACD 계산 가능 여부 확인
@@ -344,7 +344,7 @@ def is_macd_golden_cross(df):
             return golden_cross_today and valid_cross
         
     except Exception as e:
-        print(f"MACD 계산 오류: {e}")
+        logger.error(f"MACD 계산 오류: {e}")
         return False
 
 
@@ -410,7 +410,7 @@ def is_macd_near_golden_cross(df):
                 valid_position)
         
     except Exception as e:
-        print(f"MACD 근접 계산 오류: {e}")
+        logger.error(f"MACD 근접 계산 오류: {e}")
         return False
 
 
@@ -441,7 +441,7 @@ def get_current_price(access_token, app_key, app_secret, stock_code):
         
         return current_price, current_volume
     except Exception as e:
-        print(f"현재가 조회 오류: {e}")
+        logger.error(f"현재가 조회 오류: {e}")
         return None, None
 
 
@@ -457,7 +457,7 @@ def is_institution_consecutive_buying(stock_code, app_key, app_secret, access_to
         # 3일 연속 모두 순매수인 경우
         return trend == "steady_buying" and len(netbuy_list) == days
     except Exception as e:
-        print(f"❌ {stock_code}: 기관 연속 매수 확인 중 오류: {e}")
+        logger.error(f"❌ {stock_code}: 기관 연속 매수 확인 중 오류: {e}")
         return False
 
 
@@ -505,7 +505,7 @@ def get_foreign_netbuy_trend_kis(stock_code, app_key, app_secret, access_token, 
         return netbuy_list, trend
 
     except Exception as e:
-        print(f"❌ KIS API 외국인 추세 분석 오류: {e}")
+        logger.error(f"❌ KIS API 외국인 추세 분석 오류: {e}")
         return [], "unknown"
 
 
@@ -547,7 +547,7 @@ def get_foreign_net_buy_kis(stock_code, app_key, app_secret, access_token, days=
         return total_net_buy
 
     except Exception as e:
-        print(f"❌ KIS API 외국인 순매수 조회 오류: {e}")
+        logger.error(f"❌ KIS API 외국인 순매수 조회 오류: {e}")
         return 0
 
 
@@ -582,7 +582,7 @@ def get_fundamental_data_from_naver(stock_code):
             "부채비율": extract_number("부채비율")
         }
     except Exception as e:
-        print(f"❌ {stock_code}: 기본적 분석 데이터 조회 오류: {e}")
+        logger.error(f"❌ {stock_code}: 기본적 분석 데이터 조회 오류: {e}")
         return {"PER": None, "PBR": None, "ROE": None, "부채비율": None}
 
 
@@ -675,7 +675,7 @@ def get_top_200_stocks():
     exclude_keywords = ["KODEX","TIGER", "PLUS", "ACE", "ETF", "ETN", "리츠", "우", "스팩"]
 
     try:
-        for page in range(1, 3):
+        for page in range(1, 11):
             url = f"https://finance.naver.com/sise/sise_market_sum.nhn?sosok=0&page={page}"
             headers = {"User-Agent": "Mozilla/5.0"}
             res = requests.get(url, headers=headers, timeout=10)
@@ -700,7 +700,7 @@ def get_top_200_stocks():
             
             time.sleep(0.1)  # 요청 간격 조절
     except Exception as e:
-        print(f"❌ 종목 리스트 조회 중 오류: {e}")
+        logger.error(f"❌ 종목 리스트 조회 중 오류: {e}")
     
     return stocks
 
@@ -749,7 +749,7 @@ def get_daily_price_data(access_token, app_key, app_secret, stock_code):
             
         return df.sort_values(by="stck_bsop_date").reset_index(drop=True)
     except Exception as e:
-        print(f"❌ {stock_code}: 일봉 데이터 조회 오류: {e}")
+        logger.error(f"❌ {stock_code}: 일봉 데이터 조회 오류: {e}")
         return None
 
 # 기존 지표들 (에러 처리 강화)
@@ -775,7 +775,7 @@ def is_golden_cross(df):
                 not pd.isna(yesterday["ma5"]) and not pd.isna(yesterday["ma20"]) and
                 yesterday["ma5"] < yesterday["ma20"] and today["ma5"] > today["ma20"])
     except Exception as e:
-        print(f"❌ 골든크로스 계산 오류: {e}")
+        logger.error(f"❌ 골든크로스 계산 오류: {e}")
         return False
 
 def is_bollinger_rebound(df):
@@ -801,7 +801,7 @@ def is_bollinger_rebound(df):
                 yesterday["stck_clpr"] < yesterday["lower_band"] and
                 today["stck_clpr"] > today["lower_band"])
     except Exception as e:
-        print(f"❌ 볼린저밴드 계산 오류: {e}")
+        logger.error(f"❌ 볼린저밴드 계산 오류: {e}")
         return False
 
 def is_macd_signal_cross(df):
@@ -826,7 +826,7 @@ def is_macd_signal_cross(df):
             
         return (macd.iloc[-2] < signal.iloc[-2] and macd.iloc[-1] > signal.iloc[-1])
     except Exception as e:
-        print(f"❌ MACD 계산 오류: {e}")
+        logger.error(f"❌ MACD 계산 오류: {e}")
         return False
 
 # 🆕 추가 기술적 지표들 (에러 처리 강화)
@@ -847,7 +847,7 @@ def is_rsi_oversold_recovery(df, period=14, oversold_threshold=30, recovery_thre
         return (rsi.iloc[-2] < oversold_threshold and 
                 rsi.iloc[-1] > recovery_threshold)
     except Exception as e:
-        print(f"❌ RSI 계산 오류: {e}")
+        logger.error(f"❌ RSI 계산 오류: {e}")
         return False
 
 def is_stochastic_oversold_recovery(df, k_period=14, d_period=3, oversold_threshold=20):
@@ -876,7 +876,7 @@ def is_stochastic_oversold_recovery(df, k_period=14, d_period=3, oversold_thresh
                 stoch_k.iloc[-1] > stoch_d.iloc[-1] and
                 stoch_k.iloc[-1] < oversold_threshold + 10)
     except Exception as e:
-        print(f"❌ 스토캐스틱 계산 오류: {e}")
+        logger.error(f"❌ 스토캐스틱 계산 오류: {e}")
         return False
 
 def is_volume_breakout(df, volume_period=20, volume_multiplier=2.0):
@@ -897,7 +897,7 @@ def is_volume_breakout(df, volume_period=20, volume_multiplier=2.0):
         # 오늘 거래량이 평균의 2배 이상
         return today_volume > avg_volume_today * volume_multiplier
     except Exception as e:
-        print(f"❌ 거래량 계산 오류: {e}")
+        logger.error(f"❌ 거래량 계산 오류: {e}")
         return False
 
 def is_williams_r_oversold_recovery(df, period=14, oversold_threshold=-80, recovery_threshold=-70):
@@ -918,7 +918,7 @@ def is_williams_r_oversold_recovery(df, period=14, oversold_threshold=-80, recov
         return (willr.iloc[-2] < oversold_threshold and 
                 willr.iloc[-1] > recovery_threshold)
     except Exception as e:
-        print(f"❌ Williams %R 계산 오류: {e}")
+        logger.error(f"❌ Williams %R 계산 오류: {e}")
         return False
 
 def is_double_bottom_pattern(df, lookback=20, tolerance=0.02):
@@ -954,7 +954,7 @@ def is_double_bottom_pattern(df, lookback=20, tolerance=0.02):
         return (price_diff < tolerance and 
                 current_price > max(low1_price, low2_price) * 1.02)
     except Exception as e:
-        print(f"❌ 이중바닥 패턴 계산 오류: {e}")
+        logger.error(f"❌ 이중바닥 패턴 계산 오류: {e}")
         return False
 
 def is_ichimoku_bullish_signal(df):
@@ -1004,7 +1004,7 @@ def is_ichimoku_bullish_signal(df):
                 conversion_line.iloc[-2] < base_line.iloc[-2] and 
                 current_conversion > current_base)
     except Exception as e:
-        print(f"❌ 일목균형표 계산 오류: {e}")
+        logger.error(f"❌ 일목균형표 계산 오류: {e}")
         return False
 
 def is_cup_handle_pattern(df, cup_depth=0.1, handle_depth=0.05, min_periods=30):
@@ -1038,7 +1038,7 @@ def is_cup_handle_pattern(df, cup_depth=0.1, handle_depth=0.05, min_periods=30):
                 len(recent_data) >= 6 and
                 current_price > recent_data["stck_clpr"].iloc[-5])  # 최근 5일 상승
     except Exception as e:
-        print(f"❌ 컵앤핸들 패턴 계산 오류: {e}")
+        logger.error(f"❌ 컵앤핸들 패턴 계산 오류: {e}")
         return False
 
 def calculate_buy_signal_score(df, name, code, app_key, app_secret, access_token, foreign_trend=None):
@@ -1068,13 +1068,13 @@ def calculate_buy_signal_score(df, name, code, app_key, app_secret, access_token
 
         return score, active_signals
     except Exception as e:
-        print(f"❌ {name}: 매수 신호 점수 계산 오류: {e}")
+        logger.error(f"❌ {name}: 매수 신호 점수 계산 오류: {e}")
         return 0, []
 
 def send_discord_message(message, webhook_url):
     """디스코드 메시지 전송 (에러 처리 강화)"""
     if not webhook_url:
-        print("❌ Discord webhook URL이 설정되지 않았습니다.")
+        logger.error("❌ Discord webhook URL이 설정되지 않았습니다.")
         return
         
     logger.info(message)
@@ -1087,7 +1087,7 @@ def send_discord_message(message, webhook_url):
             response = requests.post(webhook_url, json=data, timeout=10)
             response.raise_for_status()
         except Exception as e:
-            print(f"❌ 디스코드 전송 실패: {e}")
+            logger.error(f"❌ 디스코드 전송 실패: {e}")
         time.sleep(0.5)
 
 def format_multi_signal_message(grade, stocks):
@@ -1285,7 +1285,7 @@ if __name__ == "__main__":
                         signal_combinations[combo_key] = []
                     signal_combinations[combo_key].append(f"{name}({code})")
 
-                if score >= 2:
+                if score >= 3:
                     backtest_candidates.append({
                         "code": code,
                         "name": name,
@@ -1358,9 +1358,9 @@ if __name__ == "__main__":
 
         # 5. backtest_list.json 파일 저장
         try:
-            print("저장할 데이터:", backtest_candidates)
-            print(f"데이터 타입: {type(backtest_candidates)}")
-            print(f"데이터 개수: {len(backtest_candidates)}")
+            logger.debug("저장할 데이터:", backtest_candidates)
+            logger.debug(f"데이터 타입: {type(backtest_candidates)}")
+            logger.debug(f"데이터 개수: {len(backtest_candidates)}")
             
             # numpy 타입 변환
             converted_data = convert_numpy_types(backtest_candidates)
@@ -1376,7 +1376,7 @@ if __name__ == "__main__":
             import os
             if os.path.exists(temp_filename):
                 file_size = os.path.getsize(temp_filename)
-                print(f"임시 파일 크기: {file_size} bytes")
+                logger.debug(f"임시 파일 크기: {file_size} bytes")
                 
                 # 정상적으로 저장되었다면 원본 파일로 이동
                 os.rename(temp_filename, final_filename)
@@ -1386,14 +1386,13 @@ if __name__ == "__main__":
                 
         except Exception as e:
             logger.error(f"❌ backtest_list.json 저장 실패: {e}")
-            print(f"상세 오류: {type(e).__name__}: {str(e)}")
+            logger.error(f"상세 오류: {type(e).__name__}: {str(e)}")
             
             # 데이터 유효성 검사
             try:
                 json.dumps(backtest_candidates, ensure_ascii=False)
-                print("JSON 직렬화는 가능함")
             except Exception as json_error:
-                print(f"JSON 직렬화 오류: {json_error}")
+                logger.error(f"JSON 직렬화 오류: {json_error}")
             
             error_msg = f"❌ **[파일 저장 오류]**\nbacktest_list.json 저장 중 오류: {str(e)}"
             send_discord_message(error_msg, webhook_url)

@@ -763,8 +763,19 @@ class KISAutoTrader:
     def save_stock_names(self):
         """종목명 매핑을 파일로 저장"""
         try:
-            with open(self.stock_names_file, 'w', encoding='utf-8') as f:
-                json.dump(self.stock_names, f, ensure_ascii=False, indent=2)
+            if os.path.exists('stock_names.json'):
+                with open('stock_names.json', 'r', encoding='utf-8') as f:
+                    existing_names = json.load(f)
+            else:
+                existing_names = {}
+    
+            # 기존 데이터와 새 데이터 병합
+            merged_names = {**existing_names, **self.stock_names}
+    
+            # 병합된 데이터 저장
+            with open('stock_names.json', 'w', encoding='utf-8') as f:
+                json.dump(merged_names, f, ensure_ascii=False, indent=2)
+
         except Exception as e:
             self.logger.error(f"종목명 저장 실패: {e}")
     
