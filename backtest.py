@@ -938,6 +938,86 @@ class KISBacktester:
         self.logger = logging.getLogger(__name__)
 
 
+def load_stock_codes_from_file(file_path: str) -> List[str]:
+    """
+    파일에서 종목 코드를 읽어오는 함수
+    지원 형식:
+    1. JSON 파일: 
+       - ["062040", "278470", ...] 형태
+       - {"stocks": ["062040", "278470", ...]} 형태
+       - [{"code": "034020", "name": "두산에너빌리티", ...}, ...] 형태 (객체 배열)
+    """
+    if not os.path.exists(file_path):
+        print(f"❌ 파일을 찾을 수 없습니다: {file_path}")
+        return []
+    
+    file_extension = os.path.splitext(file_path)[1].lower()
+    stock_codes = []
+    
+    try:
+        if file_extension == '.json':
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            if isinstance(data, list):
+                if data and isinstance(data[0], dict):
+                    # [{"code": "034020", "name": "두산에너빌리티", ...}, ...] 형태
+                    if 'code' in data[0]:
+                        stock_codes = [str(item['code']).zfill(6) for item in data if 'code' in item]
+                        print(f"✅ JSON 객체 배열에서 {len(stock_codes)}개 종목 코드 추출: {file_path}")
+                    else:
+                        print(f"❌ 객체에 'code' 필드가 없습니다.")
+                        return []
+                else:
+                    # ["062040", "278470", ...] 형태
+                    stock_codes = [str(code).zfill(6) for code in data]
+                    print(f"✅ JSON 배열에서 {len(stock_codes)}개 종목 로드: {file_path}")
+                    
+            elif isinstance(data, dict):
+                if 'stocks' in data:
+                    # {"stocks": ["062040", "278470", ...]} 형태
+                    stock_codes = [str(code).zfill(6) for code in data['stocks']]
+                elif 'symbols' in data:
+                    # {"symbols": ["062040", "278470", ...]} 형태
+                    stock_codes = [str(code).zfill(6) for code in data['symbols']]
+                elif 'codes' in data:
+                    # {"codes": ["062040", "278470", ...]} 형태
+                    stock_codes = [str(code).zfill(6) for code in data['codes']]
+                else:
+                    # 딕셔너리의 모든 값을 종목코드로 간주
+                    for key, value in data.items():
+                        if isinstance(value, list):
+                            if value and isinstance(value[0], dict) and 'code' in value[0]:
+                                # 객체 배열인 경우
+                                stock_codes.extend([str(item['code']).zfill(6) for item in value if 'code' in item])
+                            else:
+                                # 일반 배열인 경우
+                                stock_codes.extend([str(code).zfill(6) for code in value])
+                            break
+                print(f"✅ JSON 딕셔너리에서 {len(stock_codes)}개 종목 로드: {file_path}")
+                
+        else:
+            print(f"❌ 지원하지 않는 파일 형식: {file_extension}")
+            print("지원 형식: .json")
+            return []
+        
+        # 중복 제거 및 유효성 검사
+        unique_codes = []
+        for code in stock_codes:
+            if code and len(code) == 6 and code.isdigit():
+                if code not in unique_codes:
+                    unique_codes.append(code)
+            else:
+                print(f"⚠️ 유효하지 않은 종목코드 제외: {code}")
+        
+        print(f"📊 최종 {len(unique_codes)}개 종목 추가 로드 완료")
+        
+        return unique_codes
+        
+    except Exception as e:
+        print(f"❌ 파일 읽기 오류 ({file_path}): {e}")
+        return []
+
 # 실행 코드
 if __name__ == "__main__":
     APP_KEY = os.getenv("KIS_APP_KEY")
@@ -948,7 +1028,7 @@ if __name__ == "__main__":
     backtester = KISBacktester(APP_KEY, APP_SECRET)
 
     # 분석할 종목 리스트
-    stock_codes = [
+    stock_list = [
         "062040",  # 산일전기
         "278470",  # 에이피알
         "042660",  # 한화오션
@@ -956,6 +1036,10 @@ if __name__ == "__main__":
         "181710",  # NHN
         "001440",  # 대한전선
     ]
+
+    stock_list.extend(load_stock_codes_from_file("backtest_list.json"))
+    stock_codes = list(set(stock_list))
+    print(f"📋 분석대상 목록: {', '.join(stock_codes[:10])}{'...' if len(stock_codes) > 10 else ''}")
 
     # 백테스트 실행
     results = backtester.run_comprehensive_backtest(stock_codes, days=100)

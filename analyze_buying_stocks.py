@@ -675,7 +675,7 @@ def get_top_200_stocks():
     exclude_keywords = ["KODEX","TIGER", "PLUS", "ACE", "ETF", "ETN", "리츠", "우", "스팩"]
 
     try:
-        for page in range(1, 11):
+        for page in range(1, 3):
             url = f"https://finance.naver.com/sise/sise_market_sum.nhn?sosok=0&page={page}"
             headers = {"User-Agent": "Mozilla/5.0"}
             res = requests.get(url, headers=headers, timeout=10)
@@ -1141,6 +1141,22 @@ def format_signal_combination_message(combinations):
     
     return header + "\n".join(combo_lines) if combo_lines else ""
 
+
+def convert_numpy_types(obj):
+    """numpy 타입을 JSON 직렬화 가능한 타입으로 변환"""
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {key: convert_numpy_types(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_types(item) for item in obj]
+    else:
+        return obj
+
 if __name__ == "__main__":
     try:
         app_key = os.getenv("KIS_APP_KEY")
@@ -1151,6 +1167,7 @@ if __name__ == "__main__":
         
         logger.info("📊 시가총액 상위 200개 종목 분석 시작...")
         stock_list = get_top_200_stocks()
+        backtest_candidates = []  # score 3 이상 종목들을 저장할 리스트
         
         if not stock_list:
             logger.error("❌ 종목 리스트를 가져올 수 없습니다.")
@@ -1268,6 +1285,18 @@ if __name__ == "__main__":
                         signal_combinations[combo_key] = []
                     signal_combinations[combo_key].append(f"{name}({code})")
 
+                if score >= 2:
+                    backtest_candidates.append({
+                        "code": code,
+                        "name": name,
+                        "score": score,
+                        "signals": active_signals,
+                        "price": current_price,
+                        "volume": volume,
+                        "foreign_netbuy": netbuy_list,
+                        "analysis_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    })
+
                 analyzed_count += 1
                 if analyzed_count % 50 == 0:
                     logger.info(f"진행 상황: {analyzed_count}개 종목 분석 완료")
@@ -1327,7 +1356,50 @@ if __name__ == "__main__":
                     send_discord_message(msg, webhook_url)
                     logger.info(f"{signal_type}: {len(signal_list)}개")
 
+        # 5. backtest_list.json 파일 저장
+        try:
+            print("저장할 데이터:", backtest_candidates)
+            print(f"데이터 타입: {type(backtest_candidates)}")
+            print(f"데이터 개수: {len(backtest_candidates)}")
+            
+            # numpy 타입 변환
+            converted_data = convert_numpy_types(backtest_candidates)
+
+            # 임시 파일에 먼저 저장
+            temp_filename = "backtest_list_temp.json"
+            final_filename = "backtest_list.json"
+            
+            with open(temp_filename, "w", encoding="utf-8") as f:
+                json.dump(converted_data, f, ensure_ascii=False, indent=2)
+            
+            # 임시 파일이 정상적으로 생성되었는지 확인
+            import os
+            if os.path.exists(temp_filename):
+                file_size = os.path.getsize(temp_filename)
+                print(f"임시 파일 크기: {file_size} bytes")
+                
+                # 정상적으로 저장되었다면 원본 파일로 이동
+                os.rename(temp_filename, final_filename)
+                logger.info(f"✅ backtest_list.json 저장 완료: {len(backtest_candidates)}개 종목")
+            else:
+                raise Exception("임시 파일 생성 실패")
+                
+        except Exception as e:
+            logger.error(f"❌ backtest_list.json 저장 실패: {e}")
+            print(f"상세 오류: {type(e).__name__}: {str(e)}")
+            
+            # 데이터 유효성 검사
+            try:
+                json.dumps(backtest_candidates, ensure_ascii=False)
+                print("JSON 직렬화는 가능함")
+            except Exception as json_error:
+                print(f"JSON 직렬화 오류: {json_error}")
+            
+            error_msg = f"❌ **[파일 저장 오류]**\nbacktest_list.json 저장 중 오류: {str(e)}"
+            send_discord_message(error_msg, webhook_url)
+        
         logger.info("✅ 모든 분석 및 전송 완료!")
+
 
     except Exception as e:
         logger.error(f"❌ 메인 프로세스 오류: {e}")
