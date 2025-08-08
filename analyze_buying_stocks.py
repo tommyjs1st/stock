@@ -1358,6 +1358,10 @@ if __name__ == "__main__":
 
         # 5. backtest_list.json 파일 저장
         try:
+
+            # score 기준으로 내림차순 정렬 후 상위 5개만 선택
+            backtest_candidates = sorted(backtest_candidates, key=lambda x: x['score'], reverse=True)[:5]
+    
             logger.debug("저장할 데이터:", backtest_candidates)
             logger.debug(f"데이터 타입: {type(backtest_candidates)}")
             logger.debug(f"데이터 개수: {len(backtest_candidates)}")
