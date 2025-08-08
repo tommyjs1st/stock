@@ -673,9 +673,103 @@ class KISAutoTrader:
         self.min_api_interval = 0.5
         
 
+        # 백테스트 파일 모니터링을 위한 속성 추가
+        self.last_backtest_update = self.get_backtest_file_modified_time()
+        self.backtest_check_interval_hours = 6  # 6시간마다 체크
+        self.last_backtest_check = datetime.now()
+
         self.hybrid_strategy = HybridTradingStrategy(self)
 
         self.logger.debug("✅ 하이브리드 자동매매 시스템 초기화 완료")
+    
+
+    def get_backtest_file_modified_time(self) -> float:
+        """백테스트 결과 파일의 수정 시간 반환"""
+        try:
+            if os.path.exists(self.backtest_results_file):
+                return os.path.getmtime(self.backtest_results_file)
+        except Exception as e:
+            self.logger.warning(f"백테스트 파일 시간 확인 실패: {e}")
+        return 0
+    
+    def check_backtest_update(self) -> bool:
+        """백테스트 결과 파일이 업데이트되었는지 확인"""
+        current_time = self.get_backtest_file_modified_time()
+        
+        if current_time > self.last_backtest_update:
+            self.logger.info("🔄 백테스트 결과 파일이 업데이트됨을 감지")
+            return True
+        return False
+    
+    def reload_symbols_from_backtest(self) -> bool:
+        """백테스트 결과에서 종목 다시 로드"""
+        try:
+            self.logger.info("📊 백테스트 결과 다시 로드 중...")
+            
+            # 새로운 종목 로드
+            new_symbols, new_stock_names = self.load_symbols_from_backtest({'trading': {}})
+            
+            # 기존 종목과 비교
+            old_symbols = set(getattr(self, 'symbols', []))
+            new_symbols_set = set(new_symbols)
+            
+            added_symbols = new_symbols_set - old_symbols
+            removed_symbols = old_symbols - new_symbols_set
+            
+            # 변경사항 로깅
+            if added_symbols:
+                self.logger.info(f"➕ 추가된 종목: {list(added_symbols)}")
+            if removed_symbols:
+                self.logger.info(f"➖ 제거된 종목: {list(removed_symbols)}")
+            
+            # 종목 리스트 업데이트
+            self.symbols = new_symbols
+            self.stock_names.update(new_stock_names)
+            
+            # 제거된 종목의 포지션 처리 (선택적)
+            for symbol in removed_symbols:
+                if symbol in self.positions and self.positions[symbol].get('quantity', 0) > 0:
+                    self.logger.warning(f"⚠️ 제거된 종목 {symbol}의 포지션이 남아있음")
+            
+            # 백테스트 파일 시간 업데이트
+            self.last_backtest_update = self.get_backtest_file_modified_time()
+            
+            # 알림 전송
+            if added_symbols or removed_symbols:
+                self.notify_symbol_changes(added_symbols, removed_symbols)
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"백테스트 결과 재로드 실패: {e}")
+            return False
+    
+    def notify_symbol_changes(self, added: set, removed: set):
+        """종목 변경 알림"""
+        if not self.discord_webhook:
+            return
+        
+        message_parts = []
+        
+        if added:
+            added_list = [f"{s}({self.get_stock_name(s)})" for s in added]
+            message_parts.append(f"➕ 추가: {', '.join(added_list)}")
+        
+        if removed:
+            removed_list = [f"{s}({self.get_stock_name(s)})" for s in removed]
+            message_parts.append(f"➖ 제거: {', '.join(removed_list)}")
+        
+        if message_parts:
+            title = "🔄 거래 종목 업데이트"
+            message = f"""
+백테스트 결과 업데이트로 인한 종목 변경
+
+{chr(10).join(message_parts)}
+
+현재 종목: {', '.join([f'{s}({self.get_stock_name(s)})' for s in self.symbols])}
+시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+            self.send_discord_notification(title, message, 0x0099ff)
     
     def load_config(self, config_path: str):
         """설정 파일 로드"""
@@ -1643,16 +1737,17 @@ class KISAutoTrader:
             response.raise_for_status()
             result = response.json()
     
+            stock_name = self.get_stock_name(symbol)
             if result.get('rt_cd') == '0':
                 order_no = result.get('output', {}).get('odno', 'Unknown')
-                self.logger.info(f"✅ 주문 성공: {symbol} {side} {quantity}주 (주문번호: {order_no})")
+                self.logger.info(f"✅ 주문 성공: {symbol}({stock_name}) {side} {quantity}주 (주문번호: {order_no})")
                 self.trade_count += 1
-                self.notify_trade_success(side, symbol, quantity, price if price > 0 else 0, order_no)
+                self.notify_trade_success(side, symbol, quantity, price if price > 0 else 0, order_no, stock_name)
                 return {'success': True, 'order_no': order_no, 'limit_price': price}
             else:
                 error_msg = result.get('msg1', 'Unknown error')
-                self.logger.error(f"주문 실패: {error_msg}")
-                self.notify_trade_failure(side, symbol, error_msg)
+                self.logger.error(f"주문 실패: {error_msg} ({stock_name})")
+                self.notify_trade_failure(side, symbol, error_msg, stock_name)
                 return {'success': False, 'error': error_msg}
     
         except Exception as e:
@@ -1830,62 +1925,82 @@ class KISAutoTrader:
     
         return True
     
+
     def is_market_open(self, current_time=None):
-        """한국 증시 개장 시간 확인"""
+        """한국 증시 개장 시간 확인 (수정된 버전)"""
         if current_time is None:
             current_time = datetime.now()
         
-        weekday = current_time.weekday()
-        if weekday >= 5:
+        # 주말 체크
+        weekday = current_time.weekday()  # 0=월, 6=일
+        if weekday >= 5:  # 토요일(5), 일요일(6)
             return False
         
+        # 시간 체크
         hour = current_time.hour
         minute = current_time.minute
+        current_time_minutes = hour * 60 + minute
         
-        if hour < 9:
-            return False
+        # 개장: 09:00 (540분), 마감: 15:30 (930분)
+        market_open_minutes = 9 * 60  # 540
+        market_close_minutes = 15 * 60 + 30  # 930
         
-        if hour > 15 or (hour == 15 and minute > 30):
-            return False
-        
-        return True
+        return market_open_minutes <= current_time_minutes <= market_close_minutes
     
     def get_market_status_info(self, current_time=None):
-        """장 상태 정보 반환"""
+        """장 상태 정보 반환 (수정된 버전)"""
         if current_time is None:
             current_time = datetime.now()
         
         is_open = self.is_market_open(current_time)
         
         if is_open:
+            # 장이 열려있는 경우
             today_close = current_time.replace(hour=15, minute=30, second=0, microsecond=0)
             time_to_close = today_close - current_time
             
+            hours, remainder = divmod(time_to_close.total_seconds(), 3600)
+            minutes, _ = divmod(remainder, 60)
+            
             return {
                 'status': 'OPEN',
-                'message': f'장 시간 중 (마감까지 {str(time_to_close).split(".")[0]})',
+                'message': f'장 시간 중 (마감까지 {int(hours)}시간 {int(minutes)}분)',
                 'next_change': today_close,
                 'is_trading_time': True
             }
         else:
-            # 다음 개장 시간 계산
-            next_day = current_time + timedelta(days=1)
-            while next_day.weekday() >= 5:
-                next_day += timedelta(days=1)
+            # 장이 닫혀있는 경우
+            weekday = current_time.weekday()
             
-            next_open = next_day.replace(hour=9, minute=0, second=0, microsecond=0)
-            
-            if current_time.weekday() >= 5:
+            if weekday >= 5:  # 주말
+                # 다음 월요일 09:00 계산
+                days_until_monday = 7 - weekday  # 토요일이면 2일, 일요일이면 1일
+                next_open = current_time + timedelta(days=days_until_monday)
+                next_open = next_open.replace(hour=9, minute=0, second=0, microsecond=0)
                 message = f'주말 휴장 (다음 개장: {next_open.strftime("%m/%d %H:%M")})'
+            
             elif current_time.hour < 9:
-                message = f'장 시작 전 (개장: 09:00)'
+                # 장 시작 전
+                next_open = current_time.replace(hour=9, minute=0, second=0, microsecond=0)
+                time_to_open = next_open - current_time
+                hours, remainder = divmod(time_to_open.total_seconds(), 3600)
+                minutes, _ = divmod(remainder, 60)
+                message = f'장 시작 전 (개장까지 {int(hours)}시간 {int(minutes)}분)'
+            
             else:
+                # 장 마감 후
+                next_day = current_time + timedelta(days=1)
+                # 다음날이 주말이면 월요일로
+                while next_day.weekday() >= 5:
+                    next_day += timedelta(days=1)
+                
+                next_open = next_day.replace(hour=9, minute=0, second=0, microsecond=0)
                 message = f'장 마감 후 (다음 개장: {next_open.strftime("%m/%d %H:%M")})'
             
             return {
                 'status': 'CLOSED',
                 'message': message,
-                'next_change': next_open,
+                'next_change': next_open if 'next_open' in locals() else current_time + timedelta(hours=12),
                 'is_trading_time': False
             }
     
@@ -1921,7 +2036,7 @@ class KISAutoTrader:
             self.logger.error(f"디스코드 알림 오류: {e}")
             return False
     
-    def notify_trade_success(self, action: str, symbol: str, quantity: int, price: int, order_no: str):
+    def notify_trade_success(self, action: str, symbol: str, quantity: int, price: int, order_no: str, stock_name: str):
         """매매 성공 알림"""
         if not self.notify_on_trade:
             return
@@ -1929,7 +2044,6 @@ class KISAutoTrader:
         action_emoji = "🛒" if action == "매수" else "💸"
         color = 0x00ff00 if action == "매수" else 0xff6600
     
-        stock_name = self.get_stock_name(symbol)
         title = f"{action_emoji} {action} 주문 체결!"
         message = f"""
 종목: {symbol} ({stock_name})
@@ -1941,14 +2055,14 @@ class KISAutoTrader:
 """
         self.send_discord_notification(title, message, color)
     
-    def notify_trade_failure(self, action: str, symbol: str, error_msg: str):
+    def notify_trade_failure(self, action: str, symbol: str, error_msg: str, stock_name: str):
         """매매 실패 알림"""
         if not self.notify_on_error:
             return
     
         title = f"❌ {action} 주문 실패"
         message = f"""
-종목: {symbol}
+종목: {symbol} ({stock_name})
 오류: {error_msg}
 시간: {datetime.now().strftime('%H:%M:%S')}
 """
@@ -1987,7 +2101,7 @@ class KISAutoTrader:
         self.send_discord_notification(title, message, 0xff0000)
     
     def run_hybrid_strategy(self, check_interval_minutes=30):
-        """하이브리드 전략 실행"""
+        """하이브리드 전략 실행 (수정된 버전)"""
         self.logger.info("🚀 하이브리드 전략 시작")
         self.logger.info(f"📊 일봉 분석 + 분봉 실행 시스템")
         self.logger.info(f"⏰ 체크 간격: {check_interval_minutes}분")
@@ -2016,57 +2130,69 @@ class KISAutoTrader:
                 current_time = datetime.now()
                 market_info = self.get_market_status_info(current_time)
                 
+                self.logger.info(f"🕐 현재 시간: {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
+                self.logger.info(f"📊 시장 상태: {market_info['status']} - {market_info['message']}")
+                
                 if market_info['is_trading_time']:
-                    self.logger.info(f"📊 하이브리드 사이클 - {current_time.strftime('%H:%M:%S')}")
+                    self.logger.info(f"📊 하이브리드 사이클 시작 - {current_time.strftime('%H:%M:%S')}")
                     
                     cycle_start_trades = self.trade_count
                     
                     try:
                         # 포지션 업데이트 (10분마다)
                         if current_time - last_position_update > timedelta(minutes=10):
+                            self.logger.info("🔄 포지션 정보 업데이트 중...")
                             self.update_all_positions()
                             last_position_update = current_time
                         
                         # 각 종목별 하이브리드 매매 실행
+                        self.logger.info(f"🎯 종목별 하이브리드 분석 시작 (총 {len(getattr(self, 'symbols', []))}개)")
+                        
                         for i, symbol in enumerate(getattr(self, 'symbols', []), 1):
                             stock_name = self.get_stock_name(symbol)
-                            self.logger.info(f"🔍 [{i}/{len(self.symbols)}] {symbol} ({stock_name}) 하이브리드 분석")
+                            self.logger.info(f"🔍 [{i}/{len(self.symbols)}] {symbol} ({stock_name}) 하이브리드 분석 시작")
                             
                             try:
-                                if self.hybrid_strategy.execute_hybrid_trade(symbol):
+                                # 실제 하이브리드 매매 실행
+                                trade_executed = self.hybrid_strategy.execute_hybrid_trade(symbol)
+                                
+                                if trade_executed:
                                     daily_trades += 1
                                     self.logger.info(f"✅ {symbol} ({stock_name}) 하이브리드 매매 실행됨")
                                 else:
-                                    self.logger.debug(f"⏸️ {symbol} ({stock_name}) 매매 조건 미충족")
+                                    self.logger.info(f"⏸️ {symbol} ({stock_name}) 매매 조건 미충족")
                                     
+                                # 종목 간 간격
                                 time.sleep(2)
                                 
                             except Exception as e:
                                 self.logger.error(f"❌ {symbol} ({stock_name}) 하이브리드 실행 오류: {e}")
+                                import traceback
+                                self.logger.error(f"상세 오류: {traceback.format_exc()}")
                         
                         # 기존 포지션 손익 관리
+                        self.logger.info("💼 기존 포지션 손익 관리 중...")
                         self.process_sell_signals()
                         
-                        # 이번 사이클
-                        self.logger.info("✅ 하이브리드 사이클 완료")
+                        # 이번 사이클 완료
+                        cycle_end_trades = self.trade_count
+                        cycle_trades = cycle_end_trades - cycle_start_trades
+                        self.logger.info(f"✅ 하이브리드 사이클 완료 (이번 사이클 거래: {cycle_trades}회)")
                         
                     except Exception as e:
-                        self.logger.error(f"❌ 하이브리드 실행 오류2: {e}")
+                        self.logger.error(f"❌ 하이브리드 실행 중 오류: {e}")
+                        import traceback
+                        self.logger.error(f"상세 오류: {traceback.format_exc()}")
                         self.notify_error("하이브리드 실행 오류", str(e))
                 
                 else:
                     self.logger.info(f"⏰ 장 외 시간: {market_info['message']}")
-                    
-                    # 장 외 시간에는 체크 간격 연장
-                    if current_time.weekday() >= 5:  # 주말
-                        sleep_minutes = 120  # 2시간
-                    else:
-                        sleep_minutes = 60   # 1시간
                 
-                # 일일 요약 (장 마감 후)
+                # 일일 요약 (장 마감 후 한 번만)
                 if (current_time.date() != last_daily_summary and 
                     current_time.hour >= 16):
                     
+                    self.logger.info(f"📈 일일 거래 요약 전송 중...")
                     self.notify_daily_summary(daily_trades, self.daily_pnl, daily_trades)
                     daily_trades = 0
                     self.daily_pnl = 0
@@ -2076,23 +2202,48 @@ class KISAutoTrader:
                 if market_info['is_trading_time']:
                     sleep_time = check_interval_minutes * 60
                     next_run = current_time + timedelta(minutes=check_interval_minutes)
-                    self.logger.info(f"다음 하이브리드 체크: {next_run.strftime('%H:%M:%S')}")
+                    self.logger.info(f"⏰ 다음 하이브리드 체크: {next_run.strftime('%H:%M:%S')} ({check_interval_minutes}분 후)")
                 else:
+                    # 장 외 시간에는 체크 간격 연장
+                    if current_time.weekday() >= 5:  # 주말
+                        sleep_minutes = 120  # 2시간
+                    else:
+                        sleep_minutes = 60   # 1시간
+                    
                     sleep_time = sleep_minutes * 60
                     next_run = current_time + timedelta(minutes=sleep_minutes)
-                    self.logger.info(f"다음 상태 체크: {next_run.strftime('%H:%M:%S')}")
+                    self.logger.info(f"⏰ 다음 상태 체크: {next_run.strftime('%H:%M:%S')} ({sleep_minutes}분 후)")
                 
-                time.sleep(sleep_time)
+                # 실제 대기
+                self.logger.info(f"😴 {sleep_time//60:.0f}분 대기 중...")
+                
+                # 긴 대기 시간을 작은 단위로 나누어 중간에 상태 확인
+                sleep_chunk = 60  # 1분씩 나누어 대기
+                remaining_sleep = sleep_time
+                
+                while remaining_sleep > 0:
+                    chunk_sleep = min(sleep_chunk, remaining_sleep)
+                    time.sleep(chunk_sleep)
+                    remaining_sleep -= chunk_sleep
+                    
+                    # 5분마다 상태 로그
+                    if remaining_sleep > 0 and int(remaining_sleep) % 300 == 0:
+                        remaining_minutes = remaining_sleep // 60
+                        self.logger.info(f"⏳ 대기 중... (남은 시간: {remaining_minutes:.0f}분)")
+                
+                self.logger.info("⏰ 대기 완료, 다음 사이클 시작")
                 
         except KeyboardInterrupt:
             self.logger.info("🛑 사용자가 하이브리드 전략을 종료했습니다.")
             if self.discord_webhook:
                 self.send_discord_notification("⏹️ 하이브리드 전략 종료", "사용자가 프로그램을 종료했습니다.", 0xff6600)
         except Exception as e:
-            self.logger.error(f"❌ 하이브리드 전략 실행 중 오류: {e}")
-            self.notify_error("하이브리드 전략 오류", str(e))
+            self.logger.error(f"❌ 하이브리드 전략 실행 중 치명적 오류: {e}")
+            import traceback
+            self.logger.error(f"상세 오류: {traceback.format_exc()}")
+            self.notify_error("하이브리드 전략 치명적 오류", str(e))
         finally:
-            self.logger.info("하이브리드 전략 프로그램 종료")
+            self.logger.info("🔚 하이브리드 전략 프로그램 종료")
     
     def integrate_hybrid_strategy(self):
         """하이브리드 전략을 기존 트레이더에 통합"""
@@ -2101,8 +2252,8 @@ class KISAutoTrader:
 	#END of class ====================
     
 def test_hybrid_strategy():
-    logger.debug("🧪 하이브리드 전략 테스트")
-    logger.debug("="*60)
+    print("🧪 하이브리드 전략 테스트")
+    print("="*60)
 
     try:
         trader = KISAutoTrader()
@@ -2114,39 +2265,39 @@ def test_hybrid_strategy():
         test_symbol = trader.symbols[0] if hasattr(trader, 'symbols') and trader.symbols else "005930"
         test_name = trader.get_stock_name(test_symbol)
        
-        logger.info(f"📊 {test_symbol}({test_name}) 하이브리드 분석 테스트:") 
+        trader.logger.info(f"📊 {test_symbol}({test_name}) 하이브리드 분석 테스트:") 
         
         # 1. 일봉 분석
-        logger.info("\n1️⃣ 일봉 전략 분석:")
+        trader.logger.info("\n1️⃣ 일봉 전략 분석:")
         daily_analysis = trader.hybrid_strategy.analyze_daily_strategy(test_symbol)
         
         for key, value in daily_analysis.items():
             if key != 'macd_analysis':
-                logger.info(f"  {key}: {value}")
+                trader.logger.info(f"  {key}: {value}")
         
         # 2. 분봉 타이밍 분석
         if daily_analysis['signal'] in ['BUY', 'SELL']:
-            logger.info(f"\n2️⃣ 분봉 타이밍 분석 ({daily_analysis['signal']}):")
+            trader.logger.info(f"\n2️⃣ 분봉 타이밍 분석 ({daily_analysis['signal']}):")
             timing_analysis = trader.hybrid_strategy.find_optimal_entry_timing(test_symbol, daily_analysis['signal'])
             
             for key, value in timing_analysis.items():
-                logger.info(f"  {key}: {value}")
+                trader.logger.info(f"  {key}: {value}")
             
             # 3. 종합 판단
-            logger.info(f"\n3️⃣ 종합 판단:")
+            trader.logger.info(f"\n3️⃣ 종합 판단:")
             if daily_analysis['strength'] >= 4.0 and timing_analysis.get('execute', False):
-                logger.info("  ✅ 매매 실행 권장")
+                trader.logger.info("  ✅ 매매 실행 권장")
             else:
                 logger.info("  ⏸️ 매매 보류 권장")
                 if daily_analysis['strength'] < 4.0:
-                    logger.info(f"    - 일봉 신호 부족: {daily_analysis['strength']:.2f} < 4.0")
+                    trader.logger.info(f"    - 일봉 신호 부족: {daily_analysis['strength']:.2f} < 4.0")
                 if not timing_analysis.get('execute', False):
-                    logger.info(f"    - 분봉 타이밍 부적절: {timing_analysis.get('reason', '기준 미달')}")
+                    trader.logger.info(f"    - 분봉 타이밍 부적절: {timing_analysis.get('reason', '기준 미달')}")
         else:
-            logger.info("\n2️⃣ 일봉에서 HOLD 신호 - 분봉 분석 생략")
+            trader.logger.info("\n2️⃣ 일봉에서 HOLD 신호 - 분봉 분석 생략")
             
     except Exception as e:
-        logger.error(f"❌ 테스트 실패: {e}")
+        print(f"❌ 테스트 실패: {e}")
         import traceback
         traceback.print_exc()
     
