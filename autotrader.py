@@ -832,16 +832,38 @@ class KISAutoTrader:
             raise
     
     def setup_logging(self):
-        """로깅 설정"""
+        """로깅 설정 - 일단위로 로그 파일 생성"""
         os.makedirs('logs', exist_ok=True)
+        
+        # TimedRotatingFileHandler 설정
+        file_handler = TimedRotatingFileHandler(
+            filename='logs/autotrader.log',
+            when='midnight',  # 자정에 로테이션
+            interval=1,       # 1일마다
+            backupCount=30,   # 최대 30개 백업 파일 유지 (30일치)
+            encoding='utf-8',
+            delay=False,
+            utc=False
+        )
+        
+        # 로테이션된 파일명 형식 설정 (YYYY-MM-DD 형식)
+        file_handler.suffix = "%Y-%m-%d"
+        file_handler.namer = lambda name: name.replace('.log', '') + '.log'
+        
+        # 로그 포맷 설정
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(formatter)
+        
+        # 콘솔 핸들러 설정
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        
+        # 기본 로깅 설정
         logging.basicConfig(
             level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler('logs/autotrader.log', encoding='utf-8'),
-                logging.StreamHandler()
-            ]
+            handlers=[file_handler, console_handler]
         )
+        
         self.logger = logging.getLogger(__name__)
     
     def load_stock_names(self):
@@ -2215,7 +2237,7 @@ class KISAutoTrader:
                     self.logger.info(f"⏰ 다음 상태 체크: {next_run.strftime('%H:%M:%S')} ({sleep_minutes}분 후)")
                 
                 # 실제 대기
-                self.logger.info(f"😴 {sleep_time//60:.0f}분 대기 중...")
+                self.logger.debug(f"😴 {sleep_time//60:.0f}분 대기 중...")
                 
                 # 긴 대기 시간을 작은 단위로 나누어 중간에 상태 확인
                 sleep_chunk = 60  # 1분씩 나누어 대기
@@ -2229,9 +2251,9 @@ class KISAutoTrader:
                     # 5분마다 상태 로그
                     if remaining_sleep > 0 and int(remaining_sleep) % 300 == 0:
                         remaining_minutes = remaining_sleep // 60
-                        self.logger.info(f"⏳ 대기 중... (남은 시간: {remaining_minutes:.0f}분)")
+                        self.logger.debug(f"⏳ 대기 중... (남은 시간: {remaining_minutes:.0f}분)")
                 
-                self.logger.info("⏰ 대기 완료, 다음 사이클 시작")
+                self.logger.debug("⏰ 대기 완료, 다음 사이클 시작")
                 
         except KeyboardInterrupt:
             self.logger.info("🛑 사용자가 하이브리드 전략을 종료했습니다.")
