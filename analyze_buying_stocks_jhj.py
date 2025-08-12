@@ -719,7 +719,7 @@ def setup_logger(log_dir="logs", log_filename="buying_stocks_jhj.log", when="mid
     log_path = os.path.join(log_dir, log_filename)
 
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     if logger.hasHandlers():
         logger.handlers.clear()

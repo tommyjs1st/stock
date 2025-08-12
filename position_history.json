@@ -124,5 +124,20 @@
     ],
     "last_purchase_time": "2025-08-08T13:57:16.279987",
     "first_purchase_time": "2025-08-08T13:57:16.279987"
+  },
+  "077970": {
+    "total_quantity": 3,
+    "purchase_count": 1,
+    "purchases": [
+      {
+        "timestamp": "2025-08-12T10:28:24.650779",
+        "quantity": 3,
+        "price": 29000,
+        "strategy": "hybrid_strategy",
+        "order_type": "BUY"
+      }
+    ],
+    "last_purchase_time": "2025-08-12T10:28:24.650779",
+    "first_purchase_time": "2025-08-12T10:28:24.650779"
   }
 }

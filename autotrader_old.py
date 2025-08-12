@@ -12,7 +12,7 @@ import yaml
 import os
 from pathlib import Path
 import sys
-
+from logging.handlers import TimedRotatingFileHandler
 
 
 class PositionManager:
