@@ -150,7 +150,7 @@ class AutoTrader:
         # 알림 관리자 초기화
         notification_config = self.config_manager.get_notification_config()
         self.notifier = DiscordNotifier(
-            webhook_url=notification_config.get('discord_webhook', ''),
+            webhook_url=notification_config.get('discord_webhook_auto', ''),
             notify_on_trade=notification_config.get('notify_on_trade', True),
             notify_on_error=notification_config.get('notify_on_error', True),
             notify_on_daily_summary=notification_config.get('notify_on_daily_summary', True),
