@@ -1,5 +1,5 @@
 """
-하이브리드 전략 모듈 (일봉 분석 + 분봉 실행)
+하이브리드 전략 모듈 (일봉 분석 + 분봉 실행) - 종목명 로그 개선
 """
 import pandas as pd
 from datetime import datetime, timedelta
@@ -10,33 +10,41 @@ from .technical_indicators import TechnicalIndicators
 class HybridStrategy:
     """일봉 전략 + 분봉 실행 하이브리드 시스템"""
     
-    def __init__(self, api_client, order_manager, position_manager, notifier, logger):
+    def __init__(self, api_client, order_manager, position_manager, notifier, logger, 
+                       order_tracker=None, get_stock_name_func=None):
         self.api_client = api_client
         self.order_manager = order_manager
         self.position_manager = position_manager
         self.notifier = notifier
         self.logger = logger
+        self.get_stock_name = get_stock_name_func or (lambda code: code)
         
         self.pending_signals = {}
         self.daily_analysis_cache = {}
         self.last_daily_analysis = {}
+
+        self.order_tracker = order_tracker
         
     def analyze_daily_strategy(self, symbol: str) -> Dict:
         """일봉 기반 전략 분석 (하루 1-2회만 실행)"""
+        stock_name = self.get_stock_name(symbol)
         
         # 캐시 확인 (4시간 이내면 재사용)
         now = datetime.now()
         if symbol in self.last_daily_analysis:
             last_time = self.last_daily_analysis[symbol]
             if now - last_time < timedelta(hours=4):
-                return self.daily_analysis_cache.get(symbol, {'signal': 'HOLD', 'strength': 0})
+                cached_result = self.daily_analysis_cache.get(symbol, {'signal': 'HOLD', 'strength': 0})
+                self.logger.debug(f"📋 {stock_name}({symbol}) 일봉 분석 캐시 사용: {cached_result['signal']} (강도: {cached_result['strength']:.2f})")
+                return cached_result
         
-        self.logger.info(f"📅 {symbol} 일봉 전략 분석 실행")
+        self.logger.info(f"📅 {stock_name}({symbol}) 일봉 전략 분석 실행")
         
         # 일봉 데이터 조회 (6개월)
         df = self.api_client.get_daily_data(symbol, days=180)
         
         if df.empty or len(df) < 60:
+            self.logger.warning(f"⚠️ {stock_name}({symbol}) 일봉 데이터 부족: {len(df)}일")
             return {'signal': 'HOLD', 'strength': 0, 'current_price': 0}
         
         try:
@@ -56,12 +64,13 @@ class HybridStrategy:
             self.daily_analysis_cache[symbol] = signal_result
             self.last_daily_analysis[symbol] = now
             
-            self.logger.info(f"📊 {symbol} 일봉 분석 완료: {signal_result['signal']} (강도: {signal_result['strength']:.2f})")
+            self.logger.info(f"📊 {stock_name}({symbol}) 일봉 분석 완료: {signal_result['signal']} "
+                           f"(강도: {signal_result['strength']:.2f}, 현재가: {current_price:,}원)")
             
             return signal_result
             
         except Exception as e:
-            self.logger.error(f"일봉 분석 실패 ({symbol}): {e}")
+            self.logger.error(f"❌ {stock_name}({symbol}) 일봉 분석 실패: {e}")
             return {'signal': 'HOLD', 'strength': 0, 'current_price': 0}
     
     def calculate_daily_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -229,13 +238,15 @@ class HybridStrategy:
     
     def find_optimal_entry_timing(self, symbol: str, target_signal: str) -> Dict:
         """분봉 기반 최적 진입 타이밍 찾기"""
+        stock_name = self.get_stock_name(symbol)
         
-        self.logger.info(f"🎯 {symbol} {target_signal} 최적 타이밍 분석")
+        self.logger.info(f"🎯 {stock_name}({symbol}) {target_signal} 최적 타이밍 분석")
         
         # 최근 4시간 분봉 데이터
         minute_df = self.api_client.get_minute_data(symbol, minutes=240)
         
         if minute_df.empty or len(minute_df) < 20:
+            self.logger.warning(f"⚠️ {stock_name}({symbol}) 분봉 데이터 부족: {len(minute_df)}개")
             return {'execute': False, 'reason': '분봉 데이터 부족'}
         
         try:
@@ -251,12 +262,21 @@ class HybridStrategy:
             latest_minute = minute_df.iloc[-1]
             
             if target_signal == 'BUY':
-                return self.evaluate_buy_timing(minute_df, latest_minute, current_price, symbol)
+                result = self.evaluate_buy_timing(minute_df, latest_minute, current_price, symbol)
             else:
-                return self.evaluate_sell_timing(minute_df, latest_minute, current_price, symbol)
+                result = self.evaluate_sell_timing(minute_df, latest_minute, current_price, symbol)
+            
+            # 타이밍 결과 로그
+            if result['execute']:
+                self.logger.info(f"✅ {stock_name}({symbol}) 타이밍 적절: 점수 {result['timing_score']}/5 "
+                               f"({', '.join(result.get('reasons', []))})")
+            else:
+                self.logger.info(f"⏰ {stock_name}({symbol}) 타이밍 부적절: 점수 {result.get('timing_score', 0)}/5")
+            
+            return result
                 
         except Exception as e:
-            self.logger.error(f"분봉 타이밍 분석 실패 ({symbol}): {e}")
+            self.logger.error(f"❌ {stock_name}({symbol}) 분봉 타이밍 분석 실패: {e}")
             return {'execute': False, 'reason': f'분석 오류: {str(e)}'}
 
     def evaluate_buy_timing(self, df: pd.DataFrame, latest: pd.Series, 
@@ -363,18 +383,22 @@ class HybridStrategy:
     
     def execute_hybrid_trade(self, symbol: str, positions: Dict) -> bool:
         """하이브리드 매매 실행"""
+        stock_name = self.get_stock_name(symbol)
         
         # 1. 일봉 전략 분석
         daily_analysis = self.analyze_daily_strategy(symbol)
         
         if daily_analysis['signal'] == 'HOLD' or daily_analysis['strength'] < 3.0:
+            self.logger.debug(f"📊 {stock_name}({symbol}) 일봉 신호 미충족: {daily_analysis['signal']} "
+                            f"(강도: {daily_analysis['strength']:.2f})")
             return False
         
         # 2. 분봉 타이밍 분석
         timing_analysis = self.find_optimal_entry_timing(symbol, daily_analysis['signal'])
         
         if not timing_analysis['execute']:
-            self.logger.info(f"⏰ {symbol} 타이밍 부적절: {timing_analysis.get('reason', '기준 미달')}")
+            reason = timing_analysis.get('reason', '기준 미달')
+            self.logger.info(f"⏰ {stock_name}({symbol}) 타이밍 부적절: {reason}")
             return False
         
         # 3. 실제 매매 실행
@@ -416,14 +440,24 @@ class HybridStrategy:
         self.logger.info(f"  수량: {quantity}주, 전략: {order_strategy}")
         
         # 주문 실행
-        result = self.order_manager.place_order_with_strategy(symbol, 'BUY', quantity, order_strategy)
-        
+        #result = self.order_manager.place_order_with_strategy(symbol, 'BUY', quantity, order_strategy)
+        result = self.order_manager.place_order_with_tracking(
+            symbol, 'BUY', quantity, order_strategy, self.order_tracker
+        )
+    
         if result['success']:
-            executed_price = result.get('limit_price', current_price)
-            self.position_manager.record_purchase(
-                symbol, quantity, executed_price, "hybrid_strategy"
-            )
+            limit_price = result.get('limit_price', 0)
             
+            if limit_price > 0:
+                # 지정가 주문 - 추적기가 체결 시 포지션에 자동 기록
+                self.logger.info(f"⏳ {symbol}({stock_name}) 지정가 주문 접수됨, 체결 대기 중")
+            else:
+                # 시장가 주문 - 즉시 포지션에 기록
+                executed_price = result.get('limit_price', current_price)
+                self.position_manager.record_purchase(
+                    symbol, quantity, executed_price, "hybrid_strategy"
+                )
+
             # 하이브리드 매수 알림
             self.notify_hybrid_trade(symbol, 'BUY', daily_analysis, timing_analysis, quantity, executed_price)
             
@@ -452,14 +486,24 @@ class HybridStrategy:
         self.logger.info(f"  일봉 신호: {daily_analysis['signal']} (강도: {daily_analysis['strength']:.2f})")
         self.logger.info(f"  분봉 타이밍: {timing_analysis['timing_score']}")
         
-        result = self.order_manager.place_order_with_strategy(symbol, 'SELL', quantity, order_strategy)
-        
+        #result = self.order_manager.place_order_with_strategy(symbol, 'SELL', quantity, order_strategy)
+        result = self.order_manager.place_order_with_tracking(
+            symbol, 'SELL', quantity, order_strategy, self.order_tracker
+        )
+
         if result['success']:
-            executed_price = result.get('limit_price', current_price)
-            self.position_manager.record_sale(
-                symbol, quantity, executed_price, "hybrid_strategy"
-            )
-            
+            limit_price = result.get('limit_price', 0)
+        
+            if limit_price > 0:
+                # 지정가 주문 - 추적기가 체결 시 포지션에 자동 기록
+                self.logger.info(f"⏳ {symbol}({stock_name}) 지정가 매도 주문 접수됨, 체결 대기 중")
+            else:
+                # 시장가 주문 - 즉시 포지션에 기록
+                executed_price = result.get('limit_price', current_price)
+                self.position_manager.record_sale(
+                    symbol, quantity, executed_price, "hybrid_strategy"
+                )
+        
             self.notify_hybrid_trade(symbol, 'SELL', daily_analysis, timing_analysis, quantity, executed_price)
             
             return True

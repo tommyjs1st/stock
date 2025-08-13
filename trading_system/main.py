@@ -25,6 +25,7 @@ required_files = [
     'data/kis_api_client.py', 
     'trading/position_manager.py',
     'trading/order_manager.py',
+    'trading/order_tracker.py',
     'strategy/hybrid_strategy.py',
     'notification/discord_notifier.py',
     'utils/logger.py',
@@ -65,6 +66,13 @@ try:
     print("✅ OrderManager 임포트 성공")
 except ImportError as e:
     print(f"❌ OrderManager 임포트 실패: {e}")
+    sys.exit(1)
+
+try:
+    from trading.order_tracker import OrderTracker
+    print("✅ OrderTracker 임포트 성공")
+except ImportError as e:
+    print(f"❌ OrderTracker 임포트 실패: {e}")
     sys.exit(1)
 
 try:
@@ -135,7 +143,8 @@ class AutoTrader:
         self.order_manager = OrderManager(
             api_client=self.api_client,
             logger=self.logger,
-            max_position_ratio=trading_config.get('max_position_ratio', 0.4)
+            max_position_ratio=trading_config.get('max_position_ratio', 0.4),
+            get_stock_name_func=self.get_stock_name
         )
         
         # 알림 관리자 초기화
@@ -148,13 +157,18 @@ class AutoTrader:
             logger=self.logger
         )
         
+        # 주문 추적기 초기화
+        self.order_tracker = OrderTracker(self.api_client, self.logger)
+
         # 하이브리드 전략 초기화
         self.hybrid_strategy = HybridStrategy(
             api_client=self.api_client,
             order_manager=self.order_manager,
             position_manager=self.position_manager,
             notifier=self.notifier,
-            logger=self.logger
+            logger=self.logger,
+            order_tracker=self.order_tracker, 
+            get_stock_name_func=self.get_stock_name
         )
         
         # 거래 관련 변수
@@ -461,6 +475,13 @@ class AutoTrader:
         
         try:
             while True:
+
+                # 매 사이클마다 미체결 주문 확인
+                self.order_tracker.check_all_pending_orders(
+                    self.position_manager, 
+                    self.get_stock_name
+                )
+
                 current_time = datetime.now()
                 market_info = self.get_market_status_info(current_time)
                 
@@ -470,6 +491,11 @@ class AutoTrader:
                 if market_info['is_trading_time']:
                     self.logger.info(f"📊 하이브리드 사이클 시작 - {current_time.strftime('%H:%M:%S')}")
                     
+                    # 🔄 미체결 주문 확인 (매 사이클마다)
+                    self.order_tracker.check_all_pending_orders(
+                        self.position_manager, 
+                        self.get_stock_name
+                    )
                     cycle_start_trades = self.trade_count
                     
                     try:
@@ -489,7 +515,7 @@ class AutoTrader:
                         
                         for i, symbol in enumerate(self.symbols, 1):
                             stock_name = self.get_stock_name(symbol)
-                            self.logger.info(f"🔍 [{i}/{len(self.symbols)}] {symbol} ({stock_name}) 하이브리드 분석 시작")
+                            self.logger.info(f"🔍 [{i}/{len(self.symbols)}] {stock_name}({symbol}) 하이브리드 분석 시작")
                             
                             try:
                                 trade_executed = self.hybrid_strategy.execute_hybrid_trade(symbol, self.positions)
@@ -497,14 +523,14 @@ class AutoTrader:
                                 if trade_executed:
                                     daily_trades += 1
                                     self.trade_count += 1
-                                    self.logger.info(f"✅ {symbol} ({stock_name}) 하이브리드 매매 실행됨")
+                                    self.logger.info(f"✅ {stock_name}({symbol}) 하이브리드 매매 실행됨")
                                 else:
-                                    self.logger.info(f"⏸️ {symbol} ({stock_name}) 매매 조건 미충족")
+                                    self.logger.info(f"⏸️ {stock_name}({symbol}) 매매 조건 미충족")
                                     
                                 time.sleep(2)
                                 
                             except Exception as e:
-                                self.logger.error(f"❌ {symbol} ({stock_name}) 하이브리드 실행 오류: {e}")
+                                self.logger.error(f"❌ {stock_name}({symbol}) 하이브리드 실행 오류: {e}")
                         
                         # 기존 포지션 손익 관리
                         self.logger.info("💼 기존 포지션 손익 관리 중...")

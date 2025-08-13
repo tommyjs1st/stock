@@ -139,5 +139,50 @@
     ],
     "last_purchase_time": "2025-08-12T10:28:24.650779",
     "first_purchase_time": "2025-08-12T10:28:24.650779"
+  },
+  "017800": {
+    "total_quantity": 2,
+    "purchase_count": 1,
+    "purchases": [
+      {
+        "timestamp": "2025-08-13T10:20:33.462846",
+        "quantity": 2,
+        "price": 85200,
+        "strategy": "hybrid_strategy",
+        "order_type": "BUY"
+      }
+    ],
+    "last_purchase_time": "2025-08-13T10:20:33.462846",
+    "first_purchase_time": "2025-08-13T10:20:33.462846"
+  },
+  "000990": {
+    "total_quantity": 4,
+    "purchase_count": 1,
+    "purchases": [
+      {
+        "timestamp": "2025-08-13T12:35:37.539719",
+        "quantity": 4,
+        "price": 47000,
+        "strategy": "hybrid_strategy",
+        "order_type": "BUY"
+      }
+    ],
+    "last_purchase_time": "2025-08-13T12:35:37.539719",
+    "first_purchase_time": "2025-08-13T12:35:37.539719"
+  },
+  "034220": {
+    "total_quantity": 11,
+    "purchase_count": 1,
+    "purchases": [
+      {
+        "timestamp": "2025-08-13T12:44:25.439608",
+        "quantity": 11,
+        "price": 12700,
+        "strategy": "hybrid_strategy",
+        "order_type": "BUY"
+      }
+    ],
+    "last_purchase_time": "2025-08-13T12:44:25.439608",
+    "first_purchase_time": "2025-08-13T12:44:25.439608"
   }
 }

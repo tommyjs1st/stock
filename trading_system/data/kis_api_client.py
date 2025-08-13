@@ -241,42 +241,78 @@ class KISAPIClient:
             return {}
     
     def get_current_bid_ask(self, symbol: str) -> Dict:
-        """현재 호가 정보 조회"""
-        url = f"{self.base_url}/uapi/domestic-stock/v1/quotations/inquire-asking-price-exp-ccn"
-        headers = {
-            "content-type": "application/json",
-            "authorization": f"Bearer {self.get_access_token()}",
-            "appkey": self.app_key,
-            "appsecret": self.app_secret,
-            "tr_id": "FHKST01010200"
-        }
-        params = {
-            "fid_cond_mrkt_div_code": "J",
-            "fid_input_iscd": symbol
-        }
-        
-        try:
-            response = requests.get(url, headers=headers, params=params, timeout=10)
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('rt_cd') == '0' and data.get('output1'):
-                    output = data['output1']
+            """현재 호가 정보 조회 (버그 수정 버전)"""
+            url = f"{self.base_url}/uapi/domestic-stock/v1/quotations/inquire-asking-price-exp-ccn"
+            headers = {
+                "content-type": "application/json",
+                "authorization": f"Bearer {self.get_access_token()}",
+                "appkey": self.app_key,
+                "appsecret": self.app_secret,
+                "tr_id": "FHKST01010200"
+            }
+            params = {
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": symbol
+            }
+            
+            try:
+                response = requests.get(url, headers=headers, params=params, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
                     
-                    bid_ask_info = {
-                        'current_price': int(output.get('stck_prpr', 0)),
-                        'bid_price': int(output.get('bidp1', 0)),
-                        'ask_price': int(output.get('askp1', 0)),
-                        'bid_quantity': int(output.get('bidp_rsqn1', 0)),
-                        'ask_quantity': int(output.get('askp_rsqn1', 0)),
-                        'spread': int(output.get('askp1', 0)) - int(output.get('bidp1', 0))
-                    }
+                    # 응답 구조 디버깅
+                    #print(f"🔍 {symbol} 호가 응답 디버깅:")
+                    #print(f"  rt_cd: {data.get('rt_cd')}")
+                    #print(f"  response keys: {list(data.keys())}")
                     
-                    return bid_ask_info
-                    
-        except Exception:
-            pass
-        
-        return {}
+                    if data.get('rt_cd') == '0' and data.get('output1'):
+                        output = data['output1']
+                        
+                        # 필드 존재 여부 확인
+                        #print(f"  output1 keys: {list(output.keys())}")
+                        #print(f"  askp1: {output.get('askp1')} (type: {type(output.get('askp1'))})")
+                        #print(f"  bidp1: {output.get('bidp1')} (type: {type(output.get('bidp1'))})")
+                        #print(f"  stck_prpr: {output.get('stck_prpr')} (type: {type(output.get('stck_prpr'))})")
+                        
+                        # 안전한 숫자 변환
+                        def safe_int_convert(value, default=0):
+                            try:
+                                if isinstance(value, str):
+                                    # 문자열에서 숫자만 추출
+                                    clean_value = ''.join(c for c in value if c.isdigit() or c == '.')
+                                    return int(float(clean_value)) if clean_value else default
+                                elif isinstance(value, (int, float)):
+                                    return int(value)
+                                else:
+                                    return default
+                            except (ValueError, TypeError):
+                                return default
+                        
+                        current_price = safe_int_convert(output.get('stck_prpr', 0))
+                        bid_price = safe_int_convert(output.get('bidp1', 0))
+                        ask_price = safe_int_convert(output.get('askp1', 0))
+                        bid_quantity = safe_int_convert(output.get('bidp_rsqn1', 0))
+                        ask_quantity = safe_int_convert(output.get('askp_rsqn1', 0))
+                        
+                        # 계산된 값들 출력
+                        print(f"  변환 후 - 현재가: {current_price}, 매수호가: {bid_price}, 매도호가: {ask_price}")
+                        
+                        bid_ask_info = {
+                            'current_price': current_price,
+                            'bid_price': bid_price,
+                            'ask_price': ask_price,
+                            'bid_quantity': bid_quantity,
+                            'ask_quantity': ask_quantity,
+                            'spread': ask_price - bid_price if ask_price > 0 and bid_price > 0 else 0
+                        }
+                        
+                        print(f"  최종 결과: {bid_ask_info}")
+                        return bid_ask_info
+                        
+            except Exception as e:
+                print(f"❌ {symbol} 호가 조회 오류: {e}")
+            
+            return {}
     
     def get_account_balance(self) -> Dict:
         """계좌 잔고 조회"""
