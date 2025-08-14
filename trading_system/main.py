@@ -466,7 +466,8 @@ class AutoTrader:
         self.logger.info(f"⏰ 체크 간격: {check_interval_minutes}분")
         
         # 시작 알림
-        symbol_list_with_names = [f"{s}({self.get_stock_name(s)})" for s in self.symbols]
+        #symbol_list_with_names = [f"{s}({self.get_stock_name(s)})" for s in self.symbols]
+        symbol_list_with_names = [f"{self.get_stock_name(s)}({s})" for s in self.symbols]
         self.notifier.notify_system_start("하이브리드 전략", check_interval_minutes, symbol_list_with_names)
         
         daily_trades = 0
