@@ -505,8 +505,8 @@ class AutoTrader:
                             self.update_all_positions()
                             last_position_update = current_time
                         
-                        # 백테스트 파일 업데이트 확인 (6시간마다)
-                        if current_time.hour % 6 == 0 and current_time.minute < 30:
+                        # 백테스트 파일 업데이트 확인 (1시간마다)
+                        if current_time.hour % 1 == 0 and current_time.minute < 30:
                             if self.check_backtest_update():
                                 self.reload_symbols_from_backtest()
                         
