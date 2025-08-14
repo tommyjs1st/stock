@@ -255,11 +255,11 @@ def get_daily_price_data_with_realtime(access_token, app_key, app_secret, stock_
     
     # MACD 계산 가능 여부 확인
     if len(df) < 35:
-        logger.info("⚠️ {stock_code}: 데이터 부족 ({len(df)}일) - MACD 분석에는 최소 35일 필요")
+        logger.info(f"⚠️ {stock_code}: 데이터 부족 ({len(df)}일) - MACD 분석에는 최소 35일 필요")
     elif len(df) < 50:
-        logger.info("⚠️ {stock_code}: 데이터 부족 ({len(df)}일) - MACD 정확도를 위해 50일 이상 권장")
+        logger.info(f"⚠️ {stock_code}: 데이터 부족 ({len(df)}일) - MACD 정확도를 위해 50일 이상 권장")
     else:
-        logger.debug("✅ {stock_code}: {len(df)}일 데이터로 MACD 분석 가능")
+        logger.debug(f"✅ {stock_code}: {len(df)}일 데이터로 MACD 분석 가능")
     
     # 실시간 현재가 조회해서 최신 데이터 업데이트
     current_price, current_volume = get_current_price(access_token, app_key, app_secret, stock_code)
@@ -272,7 +272,7 @@ def get_daily_price_data_with_realtime(access_token, app_key, app_secret, stock_
             # 오늘 데이터를 실시간 가격으로 업데이트
             df.loc[df.index[-1], "stck_clpr"] = current_price
             df.loc[df.index[-1], "acml_vol"] = current_volume
-            logger.debug("📈 {stock_code}: 오늘 데이터를 실시간 가격으로 업데이트")
+            logger.debug(f"📈 {stock_code}: 오늘 데이터를 실시간 가격으로 업데이트")
         else:
             # 오늘 데이터 새로 추가
             new_row = {
@@ -283,7 +283,7 @@ def get_daily_price_data_with_realtime(access_token, app_key, app_secret, stock_
                 "acml_vol": current_volume
             }
             df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-            logger.debug("📈 {stock_code}: 오늘 실시간 데이터 추가")
+            logger.debug(f"📈 {stock_code}: 오늘 실시간 데이터 추가")
     
     return df
 
@@ -445,21 +445,36 @@ def get_current_price(access_token, app_key, app_secret, stock_code):
         return None, None
 
 
-def is_institution_consecutive_buying(stock_code, app_key, app_secret, access_token, days=3):
+def is_institution_consecutive_buying(stock_code, app_key, app_secret, access_token, days=5):
     """
-    기관이 N일 연속 순매수했는지 확인
+    기관의 긍정적 매수 추세 확인 (유연한 기준)
     """
     try:
         netbuy_list, trend = get_institution_netbuy_trend_kis(
             stock_code, app_key, app_secret, access_token, days
         )
         
-        # 3일 연속 모두 순매수인 경우
-        return trend == "steady_buying" and len(netbuy_list) == days
+        # 유연한 기준: steady_buying(100% 순매수) 또는 accumulating(60% 이상 순매수)
+        return trend == "steady_buying"
     except Exception as e:
-        logger.error(f"❌ {stock_code}: 기관 연속 매수 확인 중 오류: {e}")
+        logger.error(f"❌ {stock_code}: 기관 매수 추세 확인 중 오류: {e}")
         return False
 
+def is_institution_positive_trend(stock_code, app_key, app_secret, access_token, days=3):
+    """
+    기관의 긍정적 매수 추세 확인
+    - steady_buying: 모든 날짜에서 순매수 (100%)
+    - accumulating: 60% 이상 날짜에서 순매수
+    """
+    try:
+        netbuy_list, trend = get_institution_netbuy_trend_kis(
+            stock_code, app_key, app_secret, access_token, days
+        )
+        
+        return trend in ("steady_buying", "accumulating")
+    except Exception as e:
+        logger.error(f"❌ {stock_code}: 기관 매수 추세 확인 중 오류: {e}")
+        return False
 
 def get_foreign_netbuy_trend_kis(stock_code, app_key, app_secret, access_token, days=5):
     """
@@ -1060,7 +1075,8 @@ def calculate_buy_signal_score(df, name, code, app_key, app_secret, access_token
             "컵앤핸들": is_cup_handle_pattern(df),
             "MACD골든크로스": is_macd_golden_cross(df),
             "외국인매수추세": foreign_trend == "steady_buying",
-            "기관연속매수": is_institution_consecutive_buying(code, app_key, app_secret, access_token) if app_key else False 
+            #"기관3일연속매수": is_institution_consecutive_buying(code, app_key, app_secret, access_token) if app_key else False 
+            "기관매수추세": is_institution_positive_trend(code, app_key, app_secret, access_token) if app_key else False 
         }
 
         score = sum(signals.values())
@@ -1257,8 +1273,11 @@ if __name__ == "__main__":
                     signal_lists["MACD골든크로스"].append(f"- {name} ({code})")
                 if trend == "steady_buying":
                     signal_lists["외국인매수추세"].append(f"- {name} ({code})")
-                if is_institution_consecutive_buying(code, app_key, app_secret, access_token):
-                    signal_lists["기관연속매수"].append(f"- {name} ({code})") 
+                #if is_institution_consecutive_buying(code, app_key, app_secret, access_token):
+                #    signal_lists["기관연속매수"].append(f"- {name} ({code})") 
+                if is_institution_positive_trend(code, app_key, app_secret, access_token):
+                    signal_lists["기관매수추세"].append(f"- {name} ({code})")
+
                 
                 # 다중신호 등급 분류
                 stock_info = {

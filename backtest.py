@@ -762,7 +762,11 @@ class KISBacktester:
         best_strategies = {}
         for stock_code in results_df['stock_code'].unique():
             stock_results = results_df[results_df['stock_code'] == stock_code]
-            best_row = stock_results.loc[stock_results['total_return'].idxmax()]
+            valid_results = stock_results[stock_results['total_trades'] >= 3]
+            if valid_results.empty:
+                best_row = stock_results.loc[stock_results['total_return'].idxmax()]
+            else:
+                best_row = valid_results.loc[valid_results['total_return'].idxmax()]
             
             best_strategies[stock_code] = {
                 'symbol': stock_code,
@@ -926,7 +930,8 @@ class KISBacktester:
 
             # 종목별 최고 성과
             print(f"\n⭐ 종목별 최고 성과:")
-            best_by_stock = results_df.loc[results_df.groupby('stock_code')['total_return'].idxmax()]
+            #best_by_stock = results_df.loc[results_df.groupby('stock_code')['total_return'].idxmax()]
+            best_by_stock = results_df.loc[results_df.groupby('stock_code')['total_return'].idxmax()].sort_values(by='total_return', ascending=False)
             for _, row in best_by_stock.iterrows():
                 stock_name = stock_names.get(row['stock_code'], row['stock_code'])
                 print(f"{row['stock_code']}({stock_name}): {row['strategy']} - 수익률 {row['total_return']:.2%}")

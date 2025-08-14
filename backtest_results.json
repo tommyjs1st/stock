@@ -1,42 +1,30 @@
 {
-  "generated_at": "2025-08-14 14:00:04",
-  "backtest_period": "36 days",
+  "generated_at": "2025-08-14 15:27:16",
+  "backtest_period": "42 days",
   "verified_symbols": [
-    {
-      "symbol": "034220",
-      "name": "LG디스플레이",
-      "strategy": "momentum",
-      "return": 8.69,
-      "win_rate": 0.333,
-      "sharpe_ratio": 0.995,
-      "max_drawdown": -0.096,
-      "total_trades": 3,
-      "priority": 2,
-      "last_updated": "2025-08-14 14:00:04"
-    },
     {
       "symbol": "062040",
       "name": "산일전기",
       "strategy": "scalping",
-      "return": 5.58,
+      "return": 6.13,
       "win_rate": 0.8,
-      "sharpe_ratio": 5.313,
+      "sharpe_ratio": 5.639,
       "max_drawdown": -0.003,
       "total_trades": 5,
-      "priority": 3,
-      "last_updated": "2025-08-14 14:00:04"
+      "priority": 2,
+      "last_updated": "2025-08-14 15:27:16"
     },
     {
-      "symbol": "302440",
-      "name": "SK바이오사이언스",
-      "strategy": "mean_reversion",
-      "return": 2.73,
-      "win_rate": 0.6,
-      "sharpe_ratio": 1.004,
-      "max_drawdown": -0.052,
-      "total_trades": 10,
-      "priority": 4,
-      "last_updated": "2025-08-14 14:00:04"
+      "symbol": "005380",
+      "name": "현대차",
+      "strategy": "momentum + breakout",
+      "return": -3.03,
+      "win_rate": 0.0,
+      "sharpe_ratio": -5.033,
+      "max_drawdown": -0.03,
+      "total_trades": 4,
+      "priority": 7,
+      "last_updated": "2025-08-14 15:27:16"
     },
     {
       "symbol": "001450",
@@ -47,38 +35,62 @@
       "sharpe_ratio": 0.326,
       "max_drawdown": -0.111,
       "total_trades": 28,
-      "priority": 5,
-      "last_updated": "2025-08-14 14:00:04"
+      "priority": 4,
+      "last_updated": "2025-08-14 15:27:16"
     },
     {
       "symbol": "278470",
       "name": "에이피알",
       "strategy": "momentum",
-      "return": 16.22,
+      "return": 16.09,
       "win_rate": 0.6,
-      "sharpe_ratio": 2.664,
+      "sharpe_ratio": 2.644,
       "max_drawdown": -0.093,
       "total_trades": 10,
       "priority": 1,
-      "last_updated": "2025-08-14 14:00:04"
+      "last_updated": "2025-08-14 15:27:16"
     },
     {
-      "symbol": "005380",
-      "name": "현대차",
+      "symbol": "092790",
+      "name": "넥스틸",
       "strategy": "mean_reversion",
-      "return": 0.0,
-      "win_rate": 0.0,
-      "sharpe_ratio": 0.0,
-      "max_drawdown": 0.0,
-      "total_trades": 0,
+      "return": 0.82,
+      "win_rate": 0.438,
+      "sharpe_ratio": 0.103,
+      "max_drawdown": -0.183,
+      "total_trades": 16,
+      "priority": 5,
+      "last_updated": "2025-08-14 15:27:16"
+    },
+    {
+      "symbol": "415640",
+      "name": "KB발해인프라",
+      "strategy": "mean_reversion",
+      "return": 0.13,
+      "win_rate": 0.583,
+      "sharpe_ratio": 0.116,
+      "max_drawdown": -0.027,
+      "total_trades": 12,
       "priority": 6,
-      "last_updated": "2025-08-14 14:00:04"
+      "last_updated": "2025-08-14 15:27:16"
+    },
+    {
+      "symbol": "302440",
+      "name": "SK바이오사이언스",
+      "strategy": "mean_reversion",
+      "return": 1.86,
+      "win_rate": 0.6,
+      "sharpe_ratio": 0.702,
+      "max_drawdown": -0.052,
+      "total_trades": 10,
+      "priority": 3,
+      "last_updated": "2025-08-14 15:27:16"
     }
   ],
   "summary": {
-    "total_symbols": 6,
-    "avg_return": 5.8,
+    "total_symbols": 7,
+    "avg_return": 3.8,
     "best_symbol": "278470",
-    "best_return": 16.22
+    "best_return": 16.09
   }
 }
