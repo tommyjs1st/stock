@@ -785,7 +785,7 @@ class KISBacktester:
         for i, (symbol, data) in enumerate(sorted_symbols):
             best_strategies[symbol]['priority'] = i + 1
         
-        # 전체 결과 구성 (이 부분이 누락되어 있었습니다)
+        # 전체 결과 구성
         backtest_data = {
             'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'backtest_period': f"{len(results_df)} days",

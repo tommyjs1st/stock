@@ -126,7 +126,7 @@
     "first_purchase_time": "2025-08-08T13:57:16.279987"
   },
   "077970": {
-    "total_quantity": 3,
+    "total_quantity": 0,
     "purchase_count": 1,
     "purchases": [
       {
@@ -135,10 +135,18 @@
         "price": 29000,
         "strategy": "hybrid_strategy",
         "order_type": "BUY"
+      },
+      {
+        "timestamp": "2025-08-14T14:19:11.882609",
+        "quantity": 3,
+        "price": 36300,
+        "reason": "익절매",
+        "order_type": "SELL"
       }
     ],
     "last_purchase_time": "2025-08-12T10:28:24.650779",
-    "first_purchase_time": "2025-08-12T10:28:24.650779"
+    "first_purchase_time": "2025-08-12T10:28:24.650779",
+    "position_closed_time": "2025-08-14T14:19:11.882609"
   },
   "017800": {
     "total_quantity": 2,

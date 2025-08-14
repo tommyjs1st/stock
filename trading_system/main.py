@@ -16,8 +16,8 @@ if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
 # 디버그: 경로 확인
-print(f"현재 디렉토리: {current_dir}")
-print(f"Python 경로: {sys.path[:3]}")
+#print(f"현재 디렉토리: {current_dir}")
+#print(f"Python 경로: {sys.path[:3]}")
 
 # 파일 존재 여부 확인
 required_files = [
@@ -34,71 +34,71 @@ required_files = [
 
 for file_path in required_files:
     full_path = os.path.join(current_dir, file_path)
-    if os.path.exists(full_path):
-        print(f"✅ {file_path}")
-    else:
+    if not os.path.exists(full_path):
+        #print(f"✅ {file_path}")
+    #else:
         print(f"❌ {file_path} - 파일이 없습니다!")
 
 # 프로젝트 모듈 임포트
 try:
     from config.config_manager import ConfigManager
-    print("✅ ConfigManager 임포트 성공")
+    #print("✅ ConfigManager 임포트 성공")
 except ImportError as e:
     print(f"❌ ConfigManager 임포트 실패: {e}")
     sys.exit(1)
 
 try:
     from data.kis_api_client import KISAPIClient
-    print("✅ KISAPIClient 임포트 성공")
+    #print("✅ KISAPIClient 임포트 성공")
 except ImportError as e:
     print(f"❌ KISAPIClient 임포트 실패: {e}")
     sys.exit(1)
 
 try:
     from trading.position_manager import PositionManager
-    print("✅ PositionManager 임포트 성공")
+    #print("✅ PositionManager 임포트 성공")
 except ImportError as e:
     print(f"❌ PositionManager 임포트 실패: {e}")
     sys.exit(1)
 
 try:
     from trading.order_manager import OrderManager
-    print("✅ OrderManager 임포트 성공")
+    #print("✅ OrderManager 임포트 성공")
 except ImportError as e:
     print(f"❌ OrderManager 임포트 실패: {e}")
     sys.exit(1)
 
 try:
     from trading.order_tracker import OrderTracker
-    print("✅ OrderTracker 임포트 성공")
+    #print("✅ OrderTracker 임포트 성공")
 except ImportError as e:
     print(f"❌ OrderTracker 임포트 실패: {e}")
     sys.exit(1)
 
 try:
     from strategy.hybrid_strategy import HybridStrategy
-    print("✅ HybridStrategy 임포트 성공")
+    #print("✅ HybridStrategy 임포트 성공")
 except ImportError as e:
     print(f"❌ HybridStrategy 임포트 실패: {e}")
     sys.exit(1)
 
 try:
     from notification.discord_notifier import DiscordNotifier
-    print("✅ DiscordNotifier 임포트 성공")
+    #print("✅ DiscordNotifier 임포트 성공")
 except ImportError as e:
     print(f"❌ DiscordNotifier 임포트 실패: {e}")
     sys.exit(1)
 
 try:
     from utils.logger import setup_logger
-    print("✅ setup_logger 임포트 성공")
+    #print("✅ setup_logger 임포트 성공")
 except ImportError as e:
     print(f"❌ setup_logger 임포트 실패: {e}")
     sys.exit(1)
 
 try:
     from utils.helpers import create_logs_directory, check_dependencies
-    print("✅ helpers 임포트 성공")
+    #print("✅ helpers 임포트 성공")
 except ImportError as e:
     print(f"❌ helpers 임포트 실패: {e}")
     sys.exit(1)
@@ -125,7 +125,7 @@ class AutoTrader:
         
         # 거래 설정
         trading_config = self.config_manager.get_trading_config()
-        self.max_symbols = trading_config.get('max_symbols', 3)
+        self.max_symbols = trading_config.get('max_symbols', 5)
         self.stop_loss_pct = trading_config.get('stop_loss_pct', 0.08)
         self.take_profit_pct = trading_config.get('take_profit_pct', 0.25)
         
@@ -191,68 +191,56 @@ class AutoTrader:
         
         self.logger.info("✅ 자동매매 시스템 초기화 완료")
     
-    def load_symbols_and_names(self):
-        """종목 및 종목명 로드"""
+
+    def run_hybrid_strategy(self, check_interval_minutes=30):
+        """하이브리드 전략 실행"""
+        self.logger.info("🚀 하이브리드 전략 시작")
+        self.logger.info(f"📊 일봉 분석 + 분봉 실행 시스템")
+        self.logger.info(f"⏰ 체크 간격: {check_interval_minutes}분")
+        
+        # 시작 알림
+        symbol_list_with_names = [f"{self.get_stock_name(s)}({s})" for s in self.symbols]
+        self.notifier.notify_system_start("하이브리드 전략", check_interval_minutes, symbol_list_with_names)
+        
+        # 🆕 시작 시 초기 포지션 로드
+        self.logger.info("📊 시작 시 포지션 정보 로드 중...")
+        self.update_all_positions()
+        
+        daily_trades = 0
+        last_daily_summary = datetime.now().date()
+        last_position_update = datetime.now()
+        
         try:
-            # 설정에서 직접 지정된 종목 확인
-            trading_config = self.config_manager.get_trading_config()
-            if 'symbols' in trading_config:
-                self.symbols = trading_config['symbols']
-                self.logger.info(f"설정 파일에서 {len(self.symbols)}개 종목 로드")
-                return
-            
-            # 백테스트 결과에서 로드
-            if os.path.exists(self.backtest_results_file):
-                with open(self.backtest_results_file, 'r', encoding='utf-8') as f:
-                    backtest_data = json.load(f)
-                
-                verified_symbols = backtest_data.get('verified_symbols', [])
-                filtered_symbols = [
-                    item for item in verified_symbols 
-                    if item['return'] >= self.min_return_threshold
-                ]
-                
-                filtered_symbols.sort(key=lambda x: x['priority'])
-                selected = filtered_symbols[:self.max_symbols]
-                
-                self.symbols = [item['symbol'] for item in selected]
-                self.stock_names = {item['symbol']: item.get('name', item['symbol']) for item in selected}
-                
-                self.logger.info(f"백테스트 결과에서 {len(self.symbols)}개 종목 로드")
-            else:
-                # 기본 종목
-                self.symbols = ['278470', '062040', '042660']
-                self.logger.warning(f"백테스트 파일 없음, 기본 종목 사용: {self.symbols}")
-                
-        except Exception as e:
-            self.logger.error(f"종목 로드 실패: {e}")
-            self.symbols = ['278470', '062040', '042660']
+            while True:
+                # 매 사이클마다 미체결 주문 확인
+                self.order_tracker.check_all_pending_orders(
+                    self.position_manager, 
+                    self.get_stock_name
+                )
     
-    def load_stock_names(self):
-        """종목명 파일에서 로드"""
-        try:
-            if os.path.exists('stock_names.json'):
-                with open('stock_names.json', 'r', encoding='utf-8') as f:
-                    saved_names = json.load(f)
-                    self.stock_names.update(saved_names)
-                self.logger.info(f"종목명 {len(saved_names)}개 로드")
-        except Exception as e:
-            self.logger.warning(f"종목명 로드 실패: {e}")
-    
-    def get_stock_name(self, code: str) -> str:
-        """종목명 조회"""
-        return self.stock_names.get(code, code)
-    
-    def get_backtest_file_modified_time(self) -> float:
-        """백테스트 결과 파일의 수정 시간 반환"""
-        try:
-            if os.path.exists(self.backtest_results_file):
-                return os.path.getmtime(self.backtest_results_file)
-        except Exception:
-            pass
-        return 0
-    
-    def check_backtest_update(self) -> bool:
+                current_time = datetime.now()
+                market_info = self.get_market_status_info(current_time)
+                
+                self.logger.info(f"🕐 현재 시간: {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
+                self.logger.info(f"📊 시장 상태: {market_info['status']} - {market_info['message']}")
+                
+                if market_info['is_trading_time']:
+                    self.logger.info(f"📊 하이브리드 사이클 시작 - {current_time.strftime('%H:%M:%S')}")
+                    
+                    cycle_start_trades = self.trade_count
+                    
+                    try:
+                        # 포지션 업데이트 (첫 사이클 또는 10분마다)
+                        if (current_time - last_position_update > timedelta(minutes=10) or 
+                            not hasattr(self, '_initial_position_loaded')):
+                            self.logger.info("🔄 포지션 정보 업데이트 중...")
+                            self.update_all_positions()
+                            last_position_update = current_time
+                            self._initial_position_loaded = True
+                        
+                        # 백테스트 파일 업데이트 확인 (1시간마다)
+                        if current_time.hour % 1 == 0 and current_time.minute < 30:
+                            if self.def check_backtest_update(self) -> bool:
         """백테스트 결과 파일이 업데이트되었는지 확인"""
         current_time = self.get_backtest_file_modified_time()
         
@@ -307,35 +295,45 @@ class AutoTrader:
             self.logger.error(f"포지션 업데이트 실패: {e}")
     
     def process_sell_signals(self):
-        """매도 신호 처리"""
+        """매도 신호 처리 - 로그 개선 버전"""
         if not self.all_positions:
             return
         
         positions_to_process = dict(self.all_positions)
         
-        for symbol, position in positions_to_process.items():
+        for i, (symbol, position) in enumerate(positions_to_process.items(), 1):
+            stock_name = self.get_stock_name(symbol)
+            self.logger.info(f"🔍 [매도 {i}/{len(positions_to_process)}] {stock_name}({symbol}) 매도 분석 시작")
+            
             try:
                 if symbol not in self.all_positions:
+                    self.logger.info(f"⏭️ {stock_name}({symbol}) 포지션 없음 - 매도 분석 제외")
                     continue
                     
                 self.process_sell_for_symbol(symbol, position)
                 time.sleep(0.5)
             except Exception as e:
-                self.logger.error(f"{symbol} 매도 처리 오류: {e}")
+                self.logger.error(f"❌ {stock_name}({symbol}) 매도 처리 오류: {e}")
     
     def process_sell_for_symbol(self, symbol: str, position: dict):
-        """개별 종목 매도 처리"""
+        """개별 종목 매도 처리 - 로그 개선 버전"""
+        stock_name = self.get_stock_name(symbol)
+        
         try:
             if symbol not in self.all_positions:
+                self.logger.info(f"⏭️ {stock_name}({symbol}) 포지션 이미 청산됨")
                 return
                 
             quantity = position['quantity']
             profit_loss_pct = position['profit_loss']
             profit_loss_decimal = profit_loss_pct / 100
+            current_price = position.get('current_price', 0)
+            
+            self.logger.info(f"📊 {stock_name}({symbol}) 현재 수익률: {profit_loss_pct:+.2f}% ({quantity}주, {current_price:,}원)")
             
             # 1순위: 손절 (무조건 실행)
             if profit_loss_decimal <= -self.stop_loss_pct:
-                self.logger.warning(f"🛑 {symbol} 손절 조건 충족! ({profit_loss_pct:+.2f}%)")
+                self.logger.warning(f"🛑 {stock_name}({symbol}) 손절 조건 충족! ({profit_loss_pct:+.2f}% <= -{self.stop_loss_pct:.1%})")
                 self.execute_sell(symbol, quantity, "urgent", "손절매")
                 return
             
@@ -344,26 +342,38 @@ class AutoTrader:
                 can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
                 
                 if can_sell:
-                    self.logger.info(f"🎯 {symbol} 익절 조건 충족! ({profit_loss_pct:+.2f}%)")
+                    self.logger.info(f"🎯 {stock_name}({symbol}) 익절 조건 충족! ({profit_loss_pct:+.2f}% >= +{self.take_profit_pct:.1%})")
                     self.execute_sell(symbol, quantity, "patient_limit", "익절매")
                     return
                 else:
-                    self.logger.info(f"💎 {symbol} 익절 조건이지만 보유 지속: {sell_reason}")
+                    self.logger.info(f"💎 {stock_name}({symbol}) 익절 조건이지만 보유 지속: {sell_reason}")
             
             # 3순위: 매도 신호 확인 (거래 대상 종목만)
             if symbol in self.symbols:
+                self.logger.info(f"📅 {stock_name}({symbol}) 일봉 매도 신호 분석 시작")
                 daily_analysis = self.hybrid_strategy.analyze_daily_strategy(symbol)
                 
                 if daily_analysis['signal'] == 'SELL' and daily_analysis['strength'] >= 3.0:
                     can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
                     
                     if can_sell:
-                        self.logger.info(f"📉 {symbol} 일봉 매도 신호 감지")
+                        self.logger.info(f"📉 {stock_name}({symbol}) 일봉 매도 신호 감지 (강도: {daily_analysis['strength']:.1f})")
                         self.execute_sell(symbol, quantity, "aggressive_limit", "일봉 매도신호")
                         return
+                    else:
+                        self.logger.info(f"⏰ {stock_name}({symbol}) 일봉 매도신호이지만 보유 지속: {sell_reason}")
+                else:
+                    signal_text = daily_analysis.get('signal', 'UNKNOWN')
+                    strength = daily_analysis.get('strength', 0)
+                    self.logger.info(f"📈 {stock_name}({symbol}) 일봉 매도신호 없음 ({signal_text}, 강도: {strength:.1f})")
+            else:
+                self.logger.info(f"⚪ {stock_name}({symbol}) 거래대상 외 종목 - 일봉 분석 제외")
+            
+            # 매도 조건 미충족
+            self.logger.info(f"✋ {stock_name}({symbol}) 매도 조건 미충족 - 보유 지속")
             
         except Exception as e:
-            self.logger.error(f"{symbol} 매도 처리 중 오류: {e}")
+            self.logger.error(f"❌ {stock_name}({symbol}) 매도 처리 중 오류: {e}")
     
     def execute_sell(self, symbol: str, quantity: int, order_strategy: str, reason: str):
         """매도 실행"""
@@ -459,148 +469,6 @@ class AutoTrader:
                 'is_trading_time': False
             }
     
-    def run_hybrid_strategy(self, check_interval_minutes=30):
-        """하이브리드 전략 실행"""
-        self.logger.info("🚀 하이브리드 전략 시작")
-        self.logger.info(f"📊 일봉 분석 + 분봉 실행 시스템")
-        self.logger.info(f"⏰ 체크 간격: {check_interval_minutes}분")
-        
-        # 시작 알림
-        #symbol_list_with_names = [f"{s}({self.get_stock_name(s)})" for s in self.symbols]
-        symbol_list_with_names = [f"{self.get_stock_name(s)}({s})" for s in self.symbols]
-        self.notifier.notify_system_start("하이브리드 전략", check_interval_minutes, symbol_list_with_names)
-        
-        daily_trades = 0
-        last_daily_summary = datetime.now().date()
-        last_position_update = datetime.now()
-        
-        try:
-            while True:
-
-                # 매 사이클마다 미체결 주문 확인
-                self.order_tracker.check_all_pending_orders(
-                    self.position_manager, 
-                    self.get_stock_name
-                )
-
-                current_time = datetime.now()
-                market_info = self.get_market_status_info(current_time)
-                
-                self.logger.info(f"🕐 현재 시간: {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
-                self.logger.info(f"📊 시장 상태: {market_info['status']} - {market_info['message']}")
-                
-                if market_info['is_trading_time']:
-                    self.logger.info(f"📊 하이브리드 사이클 시작 - {current_time.strftime('%H:%M:%S')}")
-                    
-                    # 🔄 미체결 주문 확인 (매 사이클마다)
-                    self.order_tracker.check_all_pending_orders(
-                        self.position_manager, 
-                        self.get_stock_name
-                    )
-                    cycle_start_trades = self.trade_count
-                    
-                    try:
-                        # 포지션 업데이트 (10분마다)
-                        if current_time - last_position_update > timedelta(minutes=10):
-                            self.logger.info("🔄 포지션 정보 업데이트 중...")
-                            self.update_all_positions()
-                            last_position_update = current_time
-                        
-                        # 백테스트 파일 업데이트 확인 (1시간마다)
-                        if current_time.hour % 1 == 0 and current_time.minute < 30:
-                            if self.check_backtest_update():
-                                self.reload_symbols_from_backtest()
-                        
-                        # 각 종목별 하이브리드 매매 실행
-                        self.logger.info(f"🎯 종목별 하이브리드 분석 시작 (총 {len(self.symbols)}개)")
-                        
-                        for i, symbol in enumerate(self.symbols, 1):
-                            stock_name = self.get_stock_name(symbol)
-                            self.logger.info(f"🔍 [{i}/{len(self.symbols)}] {stock_name}({symbol}) 하이브리드 분석 시작")
-                            
-                            try:
-                                trade_executed = self.hybrid_strategy.execute_hybrid_trade(symbol, self.positions)
-                                
-                                if trade_executed:
-                                    daily_trades += 1
-                                    self.trade_count += 1
-                                    self.logger.info(f"✅ {stock_name}({symbol}) 하이브리드 매매 실행됨")
-                                else:
-                                    self.logger.info(f"⏸️ {stock_name}({symbol}) 매매 조건 미충족")
-                                    
-                                time.sleep(2)
-                                
-                            except Exception as e:
-                                self.logger.error(f"❌ {stock_name}({symbol}) 하이브리드 실행 오류: {e}")
-                        
-                        # 기존 포지션 손익 관리
-                        self.logger.info("💼 기존 포지션 손익 관리 중...")
-                        self.process_sell_signals()
-                        
-                        cycle_end_trades = self.trade_count
-                        cycle_trades = cycle_end_trades - cycle_start_trades
-                        self.logger.info(f"✅ 하이브리드 사이클 완료 (이번 사이클 거래: {cycle_trades}회)")
-                        
-                    except Exception as e:
-                        self.logger.error(f"❌ 하이브리드 실행 중 오류: {e}")
-                        self.notifier.notify_error("하이브리드 실행 오류", str(e))
-                
-                else:
-                    self.logger.info(f"⏰ 장 외 시간: {market_info['message']}")
-                
-                # 일일 요약 (장 마감 후 한 번만)
-                if (current_time.date() != last_daily_summary and 
-                    current_time.hour >= 16):
-                    
-                    self.logger.info(f"📈 일일 거래 요약 전송 중...")
-                    self.notifier.notify_daily_summary(daily_trades, self.daily_pnl, daily_trades, symbol_list_with_names)
-                    daily_trades = 0
-                    self.daily_pnl = 0
-                    last_daily_summary = current_time.date()
-                
-                # 대기 시간 계산
-                if market_info['is_trading_time']:
-                    sleep_time = check_interval_minutes * 60
-                    next_run = current_time + timedelta(minutes=check_interval_minutes)
-                    self.logger.info(f"⏰ 다음 하이브리드 체크: {next_run.strftime('%H:%M:%S')} ({check_interval_minutes}분 후)")
-                else:
-                    if current_time.weekday() >= 5:  # 주말
-                        sleep_minutes = 120  # 2시간
-                    else:
-                        sleep_minutes = 60   # 1시간
-                    
-                    sleep_time = sleep_minutes * 60
-                    next_run = current_time + timedelta(minutes=sleep_minutes)
-                    self.logger.info(f"⏰ 다음 상태 체크: {next_run.strftime('%H:%M:%S')} ({sleep_minutes}분 후)")
-                
-                # 실제 대기
-                self.logger.debug(f"😴 {sleep_time//60:.0f}분 대기 중...")
-                
-                # 긴 대기 시간을 작은 단위로 나누어 중간에 상태 확인
-                sleep_chunk = 60  # 1분씩 나누어 대기
-                remaining_sleep = sleep_time
-                
-                while remaining_sleep > 0:
-                    chunk_sleep = min(sleep_chunk, remaining_sleep)
-                    time.sleep(chunk_sleep)
-                    remaining_sleep -= chunk_sleep
-                    
-                    # 5분마다 상태 로그
-                    if remaining_sleep > 0 and int(remaining_sleep) % 300 == 0:
-                        remaining_minutes = remaining_sleep // 60
-                        self.logger.debug(f"⏳ 대기 중... (남은 시간: {remaining_minutes:.0f}분)")
-                
-                self.logger.debug("⏰ 대기 완료, 다음 사이클 시작")
-                
-        except KeyboardInterrupt:
-            self.logger.info("🛑 사용자가 하이브리드 전략을 종료했습니다.")
-            self.notifier.notify_system_stop("사용자 종료")
-        except Exception as e:
-            self.logger.error(f"❌ 하이브리드 전략 실행 중 치명적 오류: {e}")
-            self.notifier.notify_error("하이브리드 전략 치명적 오류", str(e))
-        finally:
-            self.logger.info("🔚 하이브리드 전략 프로그램 종료")
-
 
 def main():
     """메인 함수"""

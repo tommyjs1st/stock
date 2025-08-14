@@ -1212,9 +1212,9 @@ if __name__ == "__main__":
                 foreign_net_buy = get_foreign_net_buy_kis(code, app_key, app_secret, access_token, days=3)
                 netbuy_list, trend = get_foreign_netbuy_trend_kis(code, app_key, app_secret, access_token)
                 
-                if trend == "distributing":
-                    logger.info(f"❌ {name}: 외국인 매수 추세 아님:{netbuy_list}:{trend}")
-                    continue
+                #if trend == "distributing":
+                #    logger.info(f"❌ {name}: 외국인 매수 추세 아님:{netbuy_list}:{trend}")
+                #    continue
 
                 # 실시간 데이터 포함한 분석
                 df = get_daily_price_data_with_realtime(access_token, app_key, app_secret, code)
@@ -1359,8 +1359,8 @@ if __name__ == "__main__":
         # 5. backtest_list.json 파일 저장
         try:
 
-            # score 기준으로 내림차순 정렬 후 상위 5개만 선택
-            backtest_candidates = sorted(backtest_candidates, key=lambda x: x['score'], reverse=True)[:5]
+            # score 기준으로 내림차순 정렬 후 상위 10개만 선택
+            backtest_candidates = sorted(backtest_candidates, key=lambda x: x['score'], reverse=True)[:10]
     
             logger.debug("저장할 데이터:", backtest_candidates)
             logger.debug(f"데이터 타입: {type(backtest_candidates)}")
