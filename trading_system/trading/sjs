@@ -1,0 +1,44 @@
+    
+    def get_position_multiplier(self, price_position: float) -> float:
+        """
+        가격 위치에 따른 포지션 배수 - 저점에서 더 크게 투자
+        """
+        if price_position <= 0.2:      # 하위 20% - 최대 투자
+            return 1.5
+        elif price_position <= 0.4:    # 하위 40%
+            return 1.2  
+        elif price_position <= 0.6:    # 중간
+            return 0.8
+        elif price_position <= 0.8:    # 상위 20%
+            return 0.5
+        else:                           # 상위 20% - 최소 투자
+            return 0.3
+    
+    def get_volatility_multiplier(self, volatility: float) -> float:
+        """
+        변동성에 따른 포지션 조정 - 변동성 높으면 포지션 축소
+        """
+        if volatility < 0.02:          # 2% 미만 - 안정적
+            return 1.2
+        elif volatility < 0.04:        # 4% 미만 - 보통
+            return 1.0
+        elif volatility < 0.06:        # 6% 미만 - 높음
+            return 0.8
+        else:                          # 6% 이상 - 매우 높음
+            return 0.6
+    
+    def get_strength_multiplier_conservative(self, signal_strength: float) -> float:
+        """
+        보수적인 신호 강도 배수
+        """
+        if signal_strength < 1.0:
+            return 0.3
+        elif signal_strength < 2.0:
+            return 0.5
+        elif signal_strength < 3.0:
+            return 0.7
+        elif signal_strength < 4.0:
+            return 0.9
+        else:
+            return 1.0  # 기존 대비 보수적
+    

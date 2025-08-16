@@ -13,74 +13,111 @@ class OrderManager:
         self.max_position_ratio = max_position_ratio
         self.get_stock_name = get_stock_name_func or (lambda code: code)
     
-    def calculate_position_size(self, current_price: float, signal_strength: float, symbol: str = None) -> int:
-        """포지션 크기 계산"""
+
+    def calculate_position_size(self, current_price: float, signal_strength: float, 
+                                       price_position: float, volatility: float, symbol: str = None) -> int:
+        """
+        개선된 포지션 크기 계산 - 리스크 기반 사이징
+        """
         try:
             account_data = self.api_client.get_account_balance()
             if not account_data:
-                if symbol:
-                    stock_name = self.get_stock_name(symbol)
-                    self.logger.error(f"❌ {stock_name}({symbol}) 계좌 정보 조회 실패")
                 return 0
-
+    
             output = account_data.get('output', {})
             available_cash = float(output.get('ord_psbl_cash', 0))
             
             if available_cash == 0:
-                if symbol:
-                    stock_name = self.get_stock_name(symbol)
-                    self.logger.warning(f"⚠️ {stock_name}({symbol}) 매수 가능 현금 없음")
                 return 0
-                
-            # 최대 투자 가능 금액
-            max_investment = available_cash * self.max_position_ratio
             
-            # 신호 강도에 따른 조정
-            if signal_strength < 0.5:
-                return 0
-            elif signal_strength < 1.0:
-                position_ratio = 0.2
-            elif signal_strength < 2.0:
-                position_ratio = 0.4
-            elif signal_strength < 3.0:
-                position_ratio = 0.6
-            elif signal_strength < 4.0:
-                position_ratio = 0.8
-            else:
-                position_ratio = 1.0
-
-            adjusted_investment = max_investment * position_ratio
+            # 1. 기본 투자 가능 금액
+            base_investment = available_cash * self.max_position_ratio
             
-            # 최소 투자 금액 체크
-            min_investment = 100000
-            if adjusted_investment < min_investment:
-                if available_cash >= min_investment:
-                    adjusted_investment = min_investment
-                else:
-                    if symbol:
-                        stock_name = self.get_stock_name(symbol)
-                        self.logger.warning(f"⚠️ {stock_name}({symbol}) 최소 투자금액 부족: {available_cash:,}원")
-                    return 0
-
+            # 2. 가격 위치에 따른 조정 (핵심 개선)
+            position_multiplier = self.get_position_multiplier(price_position)
+            
+            # 3. 변동성에 따른 조정
+            volatility_multiplier = self.get_volatility_multiplier(volatility)
+            
+            # 4. 신호 강도에 따른 조정 (기존보다 보수적)
+            strength_multiplier = self.get_strength_multiplier_conservative(signal_strength)
+            
+            # 5. 최종 투자 금액 계산
+            adjusted_investment = (base_investment * 
+                                 position_multiplier * 
+                                 volatility_multiplier * 
+                                 strength_multiplier)
+            
+            # 6. 최소/최대 제한
+            min_investment = 50000   # 최소 5만원
+            max_investment = available_cash * 0.15  # 한 종목 최대 15%
+            
+            adjusted_investment = max(min_investment, 
+                                    min(adjusted_investment, max_investment))
+            
             quantity = int(adjusted_investment / current_price)
             
-            # 종목명 포함 로그
             if symbol:
                 stock_name = self.get_stock_name(symbol)
-                self.logger.info(f"📊 {stock_name}({symbol}) 포지션 계산: {quantity}주 "
-                               f"(투자금액: {adjusted_investment:,}원, 신호강도: {signal_strength:.2f})")
-            else:
-                self.logger.info(f"📊 포지션 계산: {quantity}주 (투자금액: {adjusted_investment:,}원)")
+                self.logger.info(f"📊 {stock_name}({symbol}) 포지션 계산:")
+                self.logger.info(f"  기본투자: {base_investment:,.0f}원")
+                self.logger.info(f"  가격위치 조정: x{position_multiplier:.2f}")
+                self.logger.info(f"  변동성 조정: x{volatility_multiplier:.2f}")
+                self.logger.info(f"  신호강도 조정: x{strength_multiplier:.2f}")
+                self.logger.info(f"  최종투자: {adjusted_investment:,.0f}원 → {quantity}주")
             
             return max(quantity, 0)
-
+    
         except Exception as e:
             if symbol:
                 stock_name = self.get_stock_name(symbol)
-                self.logger.error(f"❌ {stock_name}({symbol}) 포지션 크기 계산 실패: {e}")
-            else:
-                self.logger.error(f"포지션 크기 계산 실패: {e}")
+                self.logger.error(f"❌ {stock_name}({symbol}) 포지션 계산 실패: {e}")
             return 0
+
+    
+    def get_position_multiplier(self, price_position: float) -> float:
+        """
+        가격 위치에 따른 포지션 배수 - 저점에서 더 크게 투자
+        """
+        if price_position <= 0.2:      # 하위 20% - 최대 투자
+            return 1.5
+        elif price_position <= 0.4:    # 하위 40%
+            return 1.2  
+        elif price_position <= 0.6:    # 중간
+            return 0.8
+        elif price_position <= 0.8:    # 상위 20%
+            return 0.5
+        else:                           # 상위 20% - 최소 투자
+            return 0.3
+    
+    def get_volatility_multiplier(self, volatility: float) -> float:
+        """
+        변동성에 따른 포지션 조정 - 변동성 높으면 포지션 축소
+        """
+        if volatility < 0.02:          # 2% 미만 - 안정적
+            return 1.2
+        elif volatility < 0.04:        # 4% 미만 - 보통
+            return 1.0
+        elif volatility < 0.06:        # 6% 미만 - 높음
+            return 0.8
+        else:                          # 6% 이상 - 매우 높음
+            return 0.6
+    
+    def get_strength_multiplier_conservative(self, signal_strength: float) -> float:
+        """
+        보수적인 신호 강도 배수
+        """
+        if signal_strength < 1.0:
+            return 0.3
+        elif signal_strength < 2.0:
+            return 0.5
+        elif signal_strength < 3.0:
+            return 0.7
+        elif signal_strength < 4.0:
+            return 0.9
+        else:
+            return 1.0  # 기존 대비 보수적
+    
     
     def adjust_to_price_unit(self, price: float) -> int:
         """한국 주식 호가단위에 맞게 가격 조정"""

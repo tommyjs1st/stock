@@ -1,0 +1,398 @@
+    # trading_system/main.py 매도 로직 개선
+    
+    def process_sell_for_symbol_improved(self, symbol: str, position: dict):
+        """
+        개선된 개별 종목 매도 처리 - 더 엄격한 손절과 유연한 익절
+        """
+        try:
+            if symbol not in self.all_positions:
+                return
+                
+            quantity = position['quantity']
+            avg_price = position['avg_price']
+            current_price = position['current_price']
+            profit_loss_pct = position['profit_loss']
+            profit_loss_decimal = profit_loss_pct / 100
+            stock_name = self.get_stock_name(symbol)
+            
+            # 보유 기간 계산
+            position_summary = self.position_manager.get_position_summary(symbol)
+            holding_days = self.calculate_holding_days(position_summary.get('first_purchase_time'))
+            
+            # 1순위: 엄격한 손절 (무조건 실행)
+            stop_loss_threshold = self.get_dynamic_stop_loss(symbol, holding_days, profit_loss_decimal)
+            
+            if profit_loss_decimal <= stop_loss_threshold:
+                self.logger.warning(f"🛑 {stock_name}({symbol}) 손절 실행! "
+                                  f"({profit_loss_pct:+.2f}% <= {stop_loss_threshold:.1%})")
+                self.execute_sell(symbol, quantity, "urgent", f"손절매({stop_loss_threshold:.1%})")
+                return
+            
+            # 2순위: 동적 익절 시스템
+            take_profit_result = self.check_dynamic_take_profit(symbol, position, holding_days)
+            if take_profit_result['should_sell']:
+                can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
+                
+                if can_sell:
+                    self.logger.info(f"🎯 {stock_name}({symbol}) {take_profit_result['reason']} "
+                                   f"({profit_loss_pct:+.2f}%)")
+                    self.execute_sell(symbol, quantity, take_profit_result['urgency'], 
+                                    take_profit_result['reason'])
+                    return
+                else:
+                    self.logger.info(f"💎 {stock_name}({symbol}) 익절 조건이지만 보유 지속: {sell_reason}")
+            
+            # 3순위: 기술적 매도 신호 (거래 대상 종목만)
+            if symbol in self.symbols:
+                technical_sell = self.check_technical_sell_signal(symbol, position)
+                if technical_sell['should_sell']:
+                    can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
+                    
+                    if can_sell:
+                        self.logger.info(f"📉 {stock_name}({symbol}) 기술적 매도: {technical_sell['reason']}")
+                        self.execute_sell(symbol, quantity, "aggressive_limit", technical_sell['reason'])
+                        return
+            
+            # 4순위: 리밸런싱 매도 (포트폴리오 비중 조정)
+            rebalance_sell = self.check_rebalancing_sell(symbol, position)
+            if rebalance_sell['should_sell']:
+                partial_quantity = min(quantity, rebalance_sell['quantity'])
+                self.logger.info(f"⚖️ {stock_name}({symbol}) 리밸런싱 매도: {rebalance_sell['reason']}")
+                self.execute_sell(symbol, partial_quantity, "patient_limit", rebalance_sell['reason'])
+            
+        except Exception as e:
+            self.logger.error(f"{symbol} 매도 처리 중 오류: {e}")
+    
+    
+    def get_dynamic_stop_loss(self, symbol: str, holding_days: int, current_pnl: float) -> float:
+        """
+        동적 손절 기준 - 보유 기간과 수익률에 따라 조정
+        """
+        base_stop_loss = -0.08  # 기본 8% 손절
+        
+        # 보유 기간에 따른 조정
+        if holding_days <= 1:        # 1일 이내 - 엄격
+            time_adjustment = 0.02   # 6% 손절
+        elif holding_days <= 3:      # 3일 이내 - 보통
+            time_adjustment = 0.0    # 8% 손절
+        elif holding_days <= 7:      # 1주 이내 - 여유
+            time_adjustment = -0.02  # 10% 손절
+        else:                        # 장기 보유 - 더 여유
+            time_adjustment = -0.04  # 12% 손절
+        
+        # 현재 수익률에 따른 조정 (이익 보호)
+        if current_pnl > 0.1:        # 10% 이상 이익 - 보호
+            profit_adjustment = 0.05  # 3% 손절로 강화
+        elif current_pnl > 0.05:     # 5% 이상 이익 - 일부 보호
+            profit_adjustment = 0.03  # 5% 손절로 강화
+        else:
+            profit_adjustment = 0.0
+        
+        final_stop_loss = base_stop_loss + time_adjustment + profit_adjustment
+        
+        return max(final_stop_loss, -0.15)  # 최대 15% 손절 한도
+    
+    
+    def check_dynamic_take_profit(self, symbol: str, position: dict, holding_days: int) -> Dict:
+        """
+        동적 익절 시스템 - 추세와 변동성에 따라 조정
+        """
+        profit_loss_decimal = position['profit_loss'] / 100
+        current_price = position['current_price']
+        
+        # 기본 익절 기준
+        base_take_profit = 0.25  # 25%
+        
+        try:
+            # 최근 데이터로 추세 분석
+            df = self.api_client.get_daily_data(symbol, days=30)
+            if df.empty:
+                return {'should_sell': False, 'reason': '데이터없음'}
+            
+            # 추세 강도 분석
+            trend_strength = self.analyze_trend_strength(df, current_price)
+            
+            # 변동성 분석
+            volatility = self.calculate_recent_volatility(df)
+            
+            # 동적 익절 기준 조정
+            if trend_strength > 0.7:      # 강한 상승 추세 - 익절 연기
+                adjusted_take_profit = base_take_profit + 0.1  # 35%까지 연기
+                urgency = "patient_limit"
+            elif trend_strength > 0.3:    # 보통 상승 추세
+                adjusted_take_profit = base_take_profit + 0.05  # 30%
+                urgency = "patient_limit"
+            elif trend_strength < -0.3:   # 하락 추세 - 빠른 익절
+                adjusted_take_profit = base_take_profit - 0.1   # 15%로 조기 익절
+                urgency = "aggressive_limit"
+            else:                         # 횡보 - 기본 기준
+                adjusted_take_profit = base_take_profit
+                urgency = "limit"
+            
+            # 변동성 조정
+            if volatility > 0.06:         # 고변동성 - 보수적 익절
+                adjusted_take_profit -= 0.05
+                urgency = "aggressive_limit"
+            
+            # 보유 기간 조정
+            if holding_days >= 14:        # 2주 이상 - 점진적 익절
+                adjusted_take_profit -= 0.05
+            
+            # 익절 조건 확인
+            should_sell = profit_loss_decimal >= adjusted_take_profit
+            
+            return {
+                'should_sell': should_sell,
+                'reason': f"동적익절({adjusted_take_profit:.1%})",
+                'urgency': urgency,
+                'threshold': adjusted_take_profit,
+                'trend_strength': trend_strength
+            }
+            
+        except Exception as e:
+            # 오류 시 기본 익절 기준 사용
+            should_sell = profit_loss_decimal >= base_take_profit
+            return {
+                'should_sell': should_sell,
+                'reason': f"기본익절({base_take_profit:.1%})",
+                'urgency': "limit"
+            }
+    
+    
+    def check_technical_sell_signal(self, symbol: str, position: dict) -> Dict:
+        """
+        기술적 매도 신호 확인 - 더 엄격한 기준
+        """
+        try:
+            # 일봉 분석
+            daily_analysis = self.hybrid_strategy.analyze_daily_strategy(symbol)
+            
+            # 강한 매도 신호만 반응
+            if (daily_analysis['signal'] == 'SELL' and 
+                daily_analysis['strength'] >= 4.0):  # 기존 3.0 → 4.0으로 상향
+                
+                return {
+                    'should_sell': True,
+                    'reason': f"강한기술적매도신호({daily_analysis['strength']:.1f})"
+                }
+            
+            # 추가: 급락 감지 시스템
+            current_price = position['current_price']
+            minute_df = self.api_client.get_minute_data(symbol, minutes=60)
+            
+            if not minute_df.empty:
+                # 1시간 내 5% 이상 급락
+                hour_ago_price = minute_df['stck_prpr'].iloc[0] if len(minute_df) > 0 else current_price
+                hour_change = (current_price - hour_ago_price) / hour_ago_price
+                
+                if hour_change < -0.05:  # 5% 이상 급락
+                    return {
+                        'should_sell': True,
+                        'reason': f"급락감지({hour_change:.1%})"
+                    }
+            
+            return {'should_sell': False, 'reason': '기술적신호없음'}
+            
+        except Exception as e:
+            return {'should_sell': False, 'reason': f'분석오류: {e}'}
+    
+    
+    def check_rebalancing_sell(self, symbol: str, position: dict) -> Dict:
+        """
+        포트폴리오 리밸런싱 매도 확인
+        """
+        try:
+            total_portfolio_value = sum(pos.get('total_value', 0) for pos in self.all_positions.values())
+            position_value = position.get('total_value', 0)
+            
+            if total_portfolio_value == 0:
+                return {'should_sell': False, 'reason': '포트폴리오값없음'}
+            
+            position_weight = position_value / total_portfolio_value
+            max_single_position = 0.4  # 단일 종목 최대 40%
+            
+            if position_weight > max_single_position:
+                # 초과 비중만큼 매도
+                excess_value = position_value - (total_portfolio_value * max_single_position)
+                excess_quantity = int(excess_value / position['current_price'])
+                
+                return {
+                    'should_sell': True,
+                    'reason': f"비중조정({position_weight:.1%}→{max_single_position:.1%})",
+                    'quantity': max(excess_quantity, 1)
+                }
+            
+            return {'should_sell': False, 'reason': '비중적정'}
+            
+        except Exception as e:
+            return {'should_sell': False, 'reason': f'리밸런싱분석오류: {e}'}
+    
+    
+    def analyze_trend_strength(self, df: pd.DataFrame, current_price: float) -> float:
+        """
+        추세 강도 분석 (-1: 강한 하락, 0: 횡보, 1: 강한 상승)
+        """
+        try:
+            if len(df) < 20:
+                return 0
+            
+            # 이동평균선 배열
+            ma5 = df['stck_prpr'].rolling(5).mean().iloc[-1]
+            ma10 = df['stck_prpr'].rolling(10).mean().iloc[-1]
+            ma20 = df['stck_prpr'].rolling(20).mean().iloc[-1]
+            
+            # 가격 위치 점수
+            price_score = 0
+            if current_price > ma5 > ma10 > ma20:
+                price_score = 1.0
+            elif current_price > ma5 > ma10:
+                price_score = 0.6
+            elif current_price > ma5:
+                price_score = 0.3
+            elif current_price < ma20 < ma10 < ma5:
+                price_score = -1.0
+            elif current_price < ma10 < ma5:
+                price_score = -0.6
+            elif current_price < ma5:
+                price_score = -0.3
+            
+            # 최근 가격 변화 추세
+            recent_changes = df['stck_prpr'].pct_change().tail(5).sum()
+            change_score = max(-0.5, min(0.5, recent_changes * 10))
+            
+            # 거래량 추세
+            vol_ma = df['acml_vol'].rolling(10).mean()
+            recent_vol = df['acml_vol'].iloc[-1]
+            vol_score = 0.2 if recent_vol > vol_ma.iloc[-1] * 1.2 else -0.1
+            
+            # 종합 점수
+            total_score = (price_score * 0.6) + (change_score * 0.3) + (vol_score * 0.1)
+            
+            return max(-1.0, min(1.0, total_score))
+            
+        except Exception:
+            return 0
+    
+    
+    def calculate_recent_volatility(self, df: pd.DataFrame, days: int = 10) -> float:
+        """
+        최근 변동성 계산
+        """
+        try:
+            if len(df) < days:
+                return 0.04
+            
+            recent_returns = df['stck_prpr'].pct_change().tail(days)
+            volatility = recent_returns.std()
+            
+            return volatility if not pd.isna(volatility) else 0.04
+            
+        except Exception:
+            return 0.04
+    
+    
+    def calculate_holding_days(self, first_purchase_time: str) -> int:
+        """
+        보유 일수 계산
+        """
+        try:
+            if not first_purchase_time:
+                return 0
+            
+            purchase_time = datetime.fromisoformat(first_purchase_time)
+            holding_period = datetime.now() - purchase_time
+            
+            return holding_period.days
+            
+        except Exception:
+            return 0
+    
+    
+    # 추가 개선: 트레일링 스톱 시스템
+    class TrailingStopManager:
+        """
+        트레일링 스톱 관리 클래스
+        """
+        
+        def __init__(self, logger):
+            self.logger = logger
+            self.trailing_stops = {}  # {symbol: {'highest_price': float, 'stop_price': float}}
+        
+        def update_trailing_stop(self, symbol: str, current_price: float, 
+                               trailing_percent: float = 0.1) -> Dict:
+            """
+            트레일링 스톱 업데이트
+            """
+            if symbol not in self.trailing_stops:
+                self.trailing_stops[symbol] = {
+                    'highest_price': current_price,
+                    'stop_price': current_price * (1 - trailing_percent)
+                }
+                return {'should_sell': False, 'stop_price': self.trailing_stops[symbol]['stop_price']}
+            
+            stop_data = self.trailing_stops[symbol]
+            
+            # 신고가 갱신 시 스톱 가격 상향 조정
+            if current_price > stop_data['highest_price']:
+                stop_data['highest_price'] = current_price
+                new_stop_price = current_price * (1 - trailing_percent)
+                
+                # 스톱 가격은 하향 조정되지 않음 (트레일링 특성)
+                if new_stop_price > stop_data['stop_price']:
+                    stop_data['stop_price'] = new_stop_price
+                    self.logger.info(f"📈 {symbol} 트레일링 스톱 상향: {new_stop_price:,.0f}원")
+            
+            # 스톱 조건 확인
+            should_sell = current_price <= stop_data['stop_price']
+            
+            return {
+                'should_sell': should_sell,
+                'stop_price': stop_data['stop_price'],
+                'highest_price': stop_data['highest_price']
+            }
+        
+        def remove_trailing_stop(self, symbol: str):
+            """
+            트레일링 스톱 제거 (매도 완료 시)
+            """
+            if symbol in self.trailing_stops:
+                del self.trailing_stops[symbol]
+    
+    
+    # main.py에 트레일링 스톱 적용
+    def process_sell_with_trailing_stop(self, symbol: str, position: dict):
+        """
+        트레일링 스톱을 포함한 매도 처리
+        """
+        try:
+            current_price = position['current_price']
+            profit_loss_decimal = position['profit_loss'] / 100
+            
+            # 수익 10% 이상 시 트레일링 스톱 활성화
+            if profit_loss_decimal >= 0.1:
+                if not hasattr(self, 'trailing_stop_manager'):
+                    self.trailing_stop_manager = TrailingStopManager(self.logger)
+                
+                trailing_result = self.trailing_stop_manager.update_trailing_stop(
+                    symbol, current_price, trailing_percent=0.08  # 8% 트레일링
+                )
+                
+                if trailing_result['should_sell']:
+                    stock_name = self.get_stock_name(symbol)
+                    quantity = position['quantity']
+                    
+                    self.logger.info(f"🎯 {stock_name}({symbol}) 트레일링 스톱 발동! "
+                                   f"현재가: {current_price:,.0f}원, "
+                                   f"스톱가: {trailing_result['stop_price']:,.0f}원")
+                    
+                    self.execute_sell(symbol, quantity, "urgent", "트레일링스톱")
+                    self.trailing_stop_manager.remove_trailing_stop(symbol)
+                    return
+            
+            # 기존 매도 로직 실행
+            self.process_sell_for_symbol_improved(symbol, position)
+            
+        except Exception as e:
+            self.logger.error(f"{symbol} 트레일링 스톱 처리 오류: {e}")
+            # 오류 시 기본 매도 로직으로 폴백
+            self.process_sell_for_symbol_improved(symbol, position)
