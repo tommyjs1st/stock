@@ -1,36 +1,36 @@
 {
-  "generated_at": "2025-08-18 09:05:08",
+  "generated_at": "2025-08-18 11:00:02",
   "backtest_period": "12 days",
   "verified_symbols": [
     {
       "symbol": "062040",
       "name": "산일전기",
       "strategy": "scalping",
-      "return": 8.74,
+      "return": 7.99,
       "win_rate": 0.833,
-      "sharpe_ratio": 6.324,
+      "sharpe_ratio": 6.453,
       "max_drawdown": -0.003,
       "total_trades": 6,
       "priority": 1,
-      "last_updated": "2025-08-18 09:05:08"
+      "last_updated": "2025-08-18 11:00:02"
     },
     {
       "symbol": "278470",
       "name": "에이피알",
       "strategy": "momentum",
-      "return": 1.2,
-      "win_rate": 0.429,
-      "sharpe_ratio": 0.346,
+      "return": 2.88,
+      "win_rate": 0.571,
+      "sharpe_ratio": 0.837,
       "max_drawdown": -0.093,
       "total_trades": 7,
       "priority": 2,
-      "last_updated": "2025-08-18 09:05:08"
+      "last_updated": "2025-08-18 11:00:02"
     }
   ],
   "summary": {
     "total_symbols": 2,
-    "avg_return": 4.97,
+    "avg_return": 5.44,
     "best_symbol": "062040",
-    "best_return": 8.74
+    "best_return": 7.99
   }
 }

@@ -171,7 +171,7 @@ class HybridStrategy:
     
     
 
-    def generate_daily_signal(self, df: pd.DataFrame, latest: pd.Series, trend_analysis: Dict) -> Dict:
+    def generate_daily_signal(self, df: pd.DataFrame, latest: pd.Series, current_price: float) -> Dict:
         """
         개선된 일봉 기반 신호 생성 - 가격 위치 우선
         """
@@ -179,9 +179,25 @@ class HybridStrategy:
         strength = 0
         reasons = []
         
-        current_price = trend_analysis['current_price']
-        trend_score = trend_analysis['trend_score']
-        
+        #다양한 기간 수익률 계산
+        returns = {}
+        for days in [5, 10, 20, 40, 60, 120]:
+            if len(df) > days:
+                past_price = df['stck_prpr'].iloc[-(days+1)]
+                returns[f'{days}d'] = (current_price - past_price) / past_price
+    
+        # 추세 강도 계산
+        trend_score = 0
+        if returns.get('5d', 0) > 0.02:
+            trend_score += 1
+        if returns.get('10d', 0) > 0.05:
+            trend_score += 1
+        if returns.get('20d', 0) > 0.1:
+            trend_score += 2
+    
+        # 매수 조건 평가
+        buy_score = 0
+
         # 1. 가격 위치 체크 (최우선)
         high_52w = df['stck_prpr'].tail(252).max() if len(df) >= 252 else df['stck_prpr'].max()
         price_position_52w = current_price / high_52w
@@ -244,8 +260,9 @@ class HybridStrategy:
             sell_score += 2.0
         if current_price < latest['ma20']:
             sell_score += 2.0
-        if trend_analysis['returns'].get('10d', 0) < -0.1:
+        if returns.get('10d', 0) < -0.1:
             sell_score += 2.0
+            reasons.append("급락추세")
         
         if sell_score >= 3.0:
             signal = 'SELL'
@@ -392,105 +409,6 @@ class HybridStrategy:
             'returns': returns,
             'ma_alignment': ma_alignment,
             'current_price': current_price
-        }
-    
-    def generate_daily_signal(self, df: pd.DataFrame, latest: pd.Series, trend_analysis: Dict) -> Dict:
-        """일봉 기반 신호 생성"""
-        
-        signal = 'HOLD'
-        strength = 0
-        reasons = []
-        
-        current_price = trend_analysis['current_price']
-        trend_score = trend_analysis['trend_score']
-        
-        # 매수 조건 평가
-        buy_score = 0
-        
-        # 1. 장기 추세 (가중치 높음)
-        if trend_score >= 6:
-            buy_score += 3.0
-            reasons.append("강한상승추세")
-        elif trend_score >= 4:
-            buy_score += 2.0
-            reasons.append("상승추세")
-        elif trend_score >= 2:
-            buy_score += 1.0
-            reasons.append("약한상승추세")
-        
-        # 2. MACD
-        macd_analysis = TechnicalIndicators.detect_macd_golden_cross(df)
-        if macd_analysis['golden_cross'] and macd_analysis['signal_age'] <= 10:
-            buy_score += 2.5
-            reasons.append(f"MACD골든크로스({macd_analysis['signal_age']}일전)")
-        elif macd_analysis.get('macd_above_zero', False):
-            buy_score += 1.0
-            reasons.append("MACD상승권")
-        
-        # 3. RSI
-        rsi = latest['rsi']
-        if 30 <= rsi <= 50:
-            buy_score += 1.5
-            reasons.append("RSI매수권")
-        elif 50 < rsi <= 65:
-            buy_score += 0.5
-            reasons.append("RSI중립")
-        
-        # 4. 스토캐스틱
-        if latest['stoch_k'] < 30 and latest['stoch_d'] < 30:
-            buy_score += 1.0
-            reasons.append("스토캐스틱과매도")
-        
-        # 5. 볼린저 밴드
-        bb_position = ((current_price - latest['bb_lower']) / 
-                      (latest['bb_upper'] - latest['bb_lower']))
-        if bb_position < 0.3:
-            buy_score += 1.0
-            reasons.append("볼린저하단")
-        
-        # 6. 이동평균 돌파
-        if current_price > latest['ma20'] > latest['ma60']:
-            buy_score += 1.0
-            reasons.append("이평선돌파")
-        
-        # 매도 조건 평가
-        sell_score = 0
-        
-        if rsi > 75:
-            sell_score += 2.0
-            reasons.append("RSI과매수")
-        
-        if bb_position > 0.8:
-            sell_score += 1.5
-            reasons.append("볼린저상단")
-        
-        if current_price < latest['ma20']:
-            sell_score += 2.0
-            reasons.append("20일선이탈")
-        
-        if trend_analysis['returns'].get('10d', 0) < -0.1:
-            sell_score += 2.0
-            reasons.append("급락추세")
-        
-        # 최종 신호 결정
-        if buy_score >= 5.0:
-            signal = 'BUY'
-            strength = min(buy_score, 5.0)
-        elif sell_score >= 3.0:
-            signal = 'SELL'
-            strength = min(sell_score, 5.0)
-        
-        return {
-            'signal': signal,
-            'strength': strength,
-            'current_price': current_price,
-            'reasons': reasons,
-            'trend_score': trend_score,
-            'rsi': float(rsi),
-            'bb_position': bb_position,
-            'buy_score': buy_score,
-            'sell_score': sell_score,
-            'macd_analysis': macd_analysis
         }
     
     def find_optimal_entry_timing(self, symbol: str, target_signal: str) -> Dict:
