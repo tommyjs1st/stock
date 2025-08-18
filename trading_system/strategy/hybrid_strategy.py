@@ -511,7 +511,7 @@ class HybridStrategy:
         daily_analysis = self.analyze_daily_strategy(symbol)
         
         # 매수 신호 강도 기준 상향 조정
-        if daily_analysis['signal'] == 'HOLD' or daily_analysis['strength'] < 3.5:  # 기존 3.0 → 3.5
+        if daily_analysis['signal'] == 'HOLD' or daily_analysis['strength'] < 3.0:  
             self.logger.debug(f"📊 {stock_name}({symbol}) 일봉 신호 미충족: {daily_analysis['signal']} "
                             f"(강도: {daily_analysis['strength']:.2f})")
             return False

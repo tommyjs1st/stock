@@ -15,637 +15,6 @@ import numpy as np
 load_dotenv()
 TOKEN_FILE = "token.json"
 
-def get_early_signal_analysis(df, name, code, app_key, app_secret, access_token):
-    """
-    고점 매수를 방지하는 조기 신호 분석
-    """
-    try:
-        if df is None or df.empty or len(df) < 60:
-            return 0, []
-            
-        current_price = df.iloc[-1]["stck_clpr"]
-        
-        # 1. 가격 위치 분석 (핵심 개선)
-        price_position_score = analyze_price_position(df, current_price)
-        
-        # 2. 조기 기술적 신호
-        early_technical_score = analyze_early_technical_signals(df)
-        
-        # 3. 시장 대비 상대적 강도
-        relative_strength_score = analyze_relative_strength(df)
-        
-        # 4. 거래량 패턴 (사전 징후)
-        volume_pattern_score = analyze_early_volume_patterns(df)
-        
-        # 5. 기관/외국인 흐름 (누적 기준)
-        institutional_flow_score = analyze_institutional_accumulation(
-            code, app_key, app_secret, access_token
-        )
-        
-        total_score = (
-            price_position_score * 0.35 +      # 가격 위치가 가장 중요
-            early_technical_score * 0.25 +
-            relative_strength_score * 0.15 +
-            volume_pattern_score * 0.15 +
-            institutional_flow_score * 0.10
-        )
-        
-        signals = []
-        if price_position_score >= 3: signals.append("저점권진입")
-        if early_technical_score >= 3: signals.append("조기기술신호")
-        if relative_strength_score >= 3: signals.append("상대적강세")
-        if volume_pattern_score >= 3: signals.append("거래량선행")
-        if institutional_flow_score >= 3: signals.append("기관누적매수")
-        
-        return total_score, signals
-        
-    except Exception as e:
-        logger.error(f"❌ {name}: 조기 신호 분석 오류: {e}")
-        return 0, []
-
-
-
-def analyze_price_position(df, current_price):
-    """
-    가격 위치 분석 - 고점 매수 방지의 핵심
-    """
-    score = 0
-    
-    # 최근 52주 고점/저점 대비 위치
-    high_52w = df["stck_hgpr"].tail(252).max() if len(df) >= 252 else df["stck_hgpr"].max()
-    low_52w = df["stck_lwpr"].tail(252).min() if len(df) >= 252 else df["stck_lwpr"].min()
-    
-    if high_52w > low_52w:
-        position_ratio = (current_price - low_52w) / (high_52w - low_52w)
-        
-        # 저점권에서 가산점 (고점 매수 방지)
-        if position_ratio <= 0.3:  # 하위 30% 구간
-            score += 4
-        elif position_ratio <= 0.5:  # 하위 50% 구간  
-            score += 3
-        elif position_ratio <= 0.7:  # 중간 구간
-            score += 1
-        else:  # 상위 30% 구간 - 감점
-            score -= 3  # 강한 감점으로 고점 매수 방지
-    
-    # 최근 조정폭 분석
-    recent_high = df["stck_hgpr"].tail(20).max()
-    if recent_high > 0:
-        correction_ratio = (recent_high - current_price) / recent_high
-        
-        # 적절한 조정 후 매수
-        if 0.1 <= correction_ratio <= 0.25:  # 10-25% 조정
-            score += 3
-        elif 0.05 <= correction_ratio < 0.1:   # 5-10% 조정
-            score += 2
-        elif correction_ratio > 0.25:          # 25% 이상 조정
-            score += 1
-        elif correction_ratio < 0.02:          # 2% 미만 조정 - 고점 위험
-            score -= 2
-    
-    return max(score, 0)  # 음수 방지
-
-
-
-def analyze_early_technical_signals(df):
-    """
-    조기 기술적 신호 - 후행지표 대신 선행지표 중심
-    """
-    score = 0
-    
-    # 1. 스토캐스틱 %K가 과매도에서 반등 시작
-    if len(df) >= 14:
-        # 스토캐스틱 계산
-        low_14 = df["stck_lwpr"].rolling(14).min()
-        high_14 = df["stck_hgpr"].rolling(14).max()
-        k_percent = 100 * (df["stck_clpr"] - low_14) / (high_14 - low_14)
-        
-        recent_k = k_percent.tail(3).tolist()
-        if len(recent_k) >= 3:
-            # 과매도에서 반등 시작
-            if recent_k[-3] < 25 and recent_k[-1] > recent_k[-2] > recent_k[-3]:
-                score += 3
-    
-    # 2. 볼린저밴드 하단에서 반등
-    if len(df) >= 20:
-        bb_middle = df["stck_clpr"].rolling(20).mean()
-        bb_std = df["stck_clpr"].rolling(20).std()
-        bb_lower = bb_middle - (2 * bb_std)
-        
-        # 하단 터치 후 상승
-        if (df["stck_lwpr"].iloc[-2] <= bb_lower.iloc[-2] and 
-            df["stck_clpr"].iloc[-1] > bb_lower.iloc[-1]):
-            score += 3
-    
-    # 3. RSI 30 아래에서 35 위로 반등
-    if len(df) >= 14:
-        delta = df["stck_clpr"].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-        rs = gain / loss
-        rsi = 100 - (100 / (1 + rs))
-        
-        if rsi.iloc[-2] < 30 and rsi.iloc[-1] > 35:
-            score += 2
-    
-    # 4. 이격도 분석 (과도한 하락 후 반등)
-    if len(df) >= 20:
-        ma20 = df["stck_clpr"].rolling(20).mean()
-        deviation = (df["stck_clpr"] / ma20 - 1) * 100
-        
-        # -15% 이하 이격 후 반등
-        if deviation.iloc[-2] < -15 and deviation.iloc[-1] > deviation.iloc[-2]:
-            score += 2
-    
-    return min(score, 5)
-
-
-def analyze_early_volume_patterns(df):
-    """
-    거래량 선행 패턴 분석
-    """
-    score = 0
-    
-    if len(df) < 20:
-        return 0
-    
-    # 1. 저점에서 거래량 증가 (먼저 거래량이 증가하고 가격이 따라옴)
-    vol_ma20 = df["acml_vol"].rolling(20).mean()
-    recent_vol = df["acml_vol"].iloc[-1]
-    prev_vol = df["acml_vol"].iloc[-2]
-    
-    # 평균 대비 거래량 증가이면서 가격은 아직 큰 상승 없음
-    price_change = (df["stck_clpr"].iloc[-1] / df["stck_clpr"].iloc[-5] - 1) * 100
-    
-    if (recent_vol > vol_ma20.iloc[-1] * 1.5 and 
-        recent_vol > prev_vol * 1.2 and 
-        -5 <= price_change <= 5):  # 가격은 횡보
-        score += 4
-    
-    # 2. 연속된 거래량 증가 패턴
-    vol_trend = []
-    for i in range(3):
-        vol_trend.append(df["acml_vol"].iloc[-(i+1)])
-    
-    if vol_trend[0] > vol_trend[1] > vol_trend[2]:  # 3일 연속 증가
-        score += 2
-    
-    # 3. 상대적 거래량 강도
-    vol_60_avg = df["acml_vol"].tail(60).mean()
-    if recent_vol > vol_60_avg * 2:
-        score += 1
-    
-    return min(score, 5)
-
-
-def analyze_institutional_accumulation(code, app_key, app_secret, access_token):
-    """
-    기관/외국인 누적 매수 분석 (단기 흐름이 아닌 장기 누적)
-    """
-    score = 0
-    
-    try:
-        # 최근 10일 누적 데이터
-        foreign_list, foreign_trend = get_foreign_netbuy_trend_kis(
-            code, app_key, app_secret, access_token, days=10
-        )
-        institution_list, institution_trend = get_institution_netbuy_trend_kis(
-            code, app_key, app_secret, access_token, days=10
-        )
-        
-        # 장기 누적 매수 여부 (단순 연속이 아닌 누적)
-        if len(foreign_list) >= 10:
-            foreign_accumulation = sum(foreign_list)
-            if foreign_accumulation > 0:
-                score += 2
-        
-        if len(institution_list) >= 10:
-            institution_accumulation = sum(institution_list)
-            if institution_accumulation > 0:
-                score += 2
-        
-        # 최근 3일 연속 매수는 여전히 의미있음
-        if foreign_trend == "steady_buying":
-            score += 1
-        if institution_trend == "steady_buying":
-            score += 1
-            
-    except Exception as e:
-        logger.error(f"기관 누적 분석 오류: {e}")
-        
-    return min(score, 5)
-
-
-def improved_timing_analysis(df, symbol, target_signal):
-    """
-    개선된 타이밍 분석 - 고점 매수 방지
-    """
-    try:
-        if df.empty or len(df) < 20:
-            return {'execute': False, 'reason': '분봉 데이터 부족'}
-        
-        current_price = float(df['stck_prpr'].iloc[-1])
-        
-        # 1. 과매수 상태 체크 (고점 매수 방지)
-        if len(df) >= 14:
-            delta = df['stck_prpr'].diff()
-            gain = (delta.where(delta > 0, 0)).rolling(14).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-            rsi = 100 - (100 / (1 + gain / loss))
-            
-            current_rsi = rsi.iloc[-1]
-            
-            # RSI 70 이상이면 과매수로 매수 금지
-            if current_rsi > 70:
-                return {'execute': False, 'reason': f'과매수 상태 RSI: {current_rsi:.1f}'}
-        
-        # 2. 급등 직후 매수 금지
-        price_change_5min = (current_price / df['stck_prpr'].iloc[-6] - 1) * 100
-        if price_change_5min > 3:  # 5분간 3% 이상 급등
-            return {'execute': False, 'reason': f'급등 직후 {price_change_5min:.1f}%'}
-        
-        # 3. 적절한 매수 타이밍 조건
-        timing_score = 0
-        reasons = []
-        
-        # 단기 조정 후 반등
-        if -2 <= price_change_5min <= 1:
-            timing_score += 2
-            reasons.append("적절한조정")
-        
-        # 거래량 확인
-        if len(df) >= 20:
-            vol_avg = df['cntg_vol'].rolling(20).mean().iloc[-1]
-            current_vol = df['cntg_vol'].iloc[-1]
-            
-            if current_vol > vol_avg * 1.2:
-                timing_score += 1
-                reasons.append("거래량증가")
-        
-        # RSI 적정 수준
-        if 'current_rsi' in locals() and 40 <= current_rsi <= 60:
-            timing_score += 2
-            reasons.append("RSI적정")
-        
-        execute = timing_score >= 3
-        
-        return {
-            'execute': execute,
-            'timing_score': timing_score,
-            'reasons': reasons,
-            'current_price': current_price,
-            'rsi': current_rsi if 'current_rsi' in locals() else None,
-            'price_change': price_change_5min
-        }
-        
-    except Exception as e:
-        return {'execute': False, 'reason': f'분석 오류: {str(e)}'}
-
-
-
-def calculate_buy_signal_score_improved(df, name, code, app_key, app_secret, access_token, foreign_trend=None):
-    """
-    개선된 매수 신호 점수 계산 - 고점 매수 방지
-    """
-    try:
-        if df is None or df.empty:
-            return 0, []
-            
-        current_price = df.iloc[-1]["stck_clpr"]
-        
-        # 1. 가격 위치 분석 (가장 중요 - 40% 가중치)
-        price_position_score = analyze_price_position(df, current_price)
-        
-        # 2. 기존 기술적 신호들 (30% 가중치)
-        original_score, original_signals = calculate_buy_signal_score(
-            df, name, code, app_key, app_secret, access_token, foreign_trend
-        )
-        
-        # 3. 조기 기술적 신호 (30% 가중치)
-        early_signals = []
-        early_score = 0
-        
-        # RSI 과매도 반등
-        if is_rsi_oversold_recovery(df):
-            early_score += 2
-            early_signals.append("RSI과매도반등")
-        
-        # 볼린저밴드 반등
-        if is_bollinger_rebound(df):
-            early_score += 2
-            early_signals.append("볼린저반등")
-        
-        # 스토캐스틱 과매도 반등
-        if is_stochastic_oversold_recovery(df):
-            early_score += 1
-            early_signals.append("스토캐스틱반등")
-        
-        # 최종 점수 계산
-        final_score = (price_position_score * 0.4) + (original_score * 0.3) + (early_score * 0.3)
-        
-        # 고점 필터링 - 강화
-        recent_high = df["stck_hgpr"].tail(20).max()
-        if current_price > recent_high * 0.9:  # 최근 고점 90% 이상이면 강한 감점
-            final_score *= 0.3  # 70% 감점
-            early_signals.append("고점위험")
-        
-        # 급등 필터링 - 추가
-        if len(df) >= 5:
-            price_change_5d = (current_price / df["stck_clpr"].iloc[-6] - 1) * 100
-            if price_change_5d > 10:  # 5일간 10% 이상 급등
-                final_score *= 0.5
-                early_signals.append("급등위험")
-        
-        all_signals = original_signals + early_signals
-        
-        return final_score, all_signals
-        
-    except Exception as e:
-        logger.error(f"❌ {name}: 개선된 매수 신호 계산 오류: {e}")
-        return 0, []
-
-
-def get_early_signal_analysis(df, name, code, app_key, app_secret, access_token):
-    """
-    고점 매수를 방지하는 조기 신호 분석
-    """
-    try:
-        if df is None or df.empty or len(df) < 60:
-            return 0, []
-            
-        current_price = df.iloc[-1]["stck_clpr"]
-        
-        # 1. 가격 위치 분석 (핵심 개선)
-        price_position_score = analyze_price_position(df, current_price)
-        
-        # 2. 조기 기술적 신호
-        early_technical_score = analyze_early_technical_signals(df)
-        
-        # 3. 시장 대비 상대적 강도
-        relative_strength_score = analyze_relative_strength(df)
-        
-        # 4. 거래량 패턴 (사전 징후)
-        volume_pattern_score = analyze_early_volume_patterns(df)
-        
-        # 5. 기관/외국인 흐름 (누적 기준)
-        institutional_flow_score = analyze_institutional_accumulation(
-            code, app_key, app_secret, access_token
-        )
-        
-        total_score = (
-            price_position_score * 0.35 +      # 가격 위치가 가장 중요
-            early_technical_score * 0.25 +
-            relative_strength_score * 0.15 +
-            volume_pattern_score * 0.15 +
-            institutional_flow_score * 0.10
-        )
-        
-        signals = []
-        if price_position_score >= 3: signals.append("저점권진입")
-        if early_technical_score >= 3: signals.append("조기기술신호")
-        if relative_strength_score >= 3: signals.append("상대적강세")
-        if volume_pattern_score >= 3: signals.append("거래량선행")
-        if institutional_flow_score >= 3: signals.append("기관누적매수")
-        
-        return total_score, signals
-        
-    except Exception as e:
-        logger.error(f"❌ {name}: 조기 신호 분석 오류: {e}")
-        return 0, []
-
-
-def analyze_price_position(df, current_price):
-    """
-    가격 위치 분석 - 고점 매수 방지의 핵심
-    """
-    score = 0
-    
-    # 최근 52주 고점/저점 대비 위치
-    high_52w = df["stck_hgpr"].tail(252).max() if len(df) >= 252 else df["stck_hgpr"].max()
-    low_52w = df["stck_lwpr"].tail(252).min() if len(df) >= 252 else df["stck_lwpr"].min()
-    
-    if high_52w > low_52w:
-        position_ratio = (current_price - low_52w) / (high_52w - low_52w)
-        
-        # 저점권에서 가산점 (고점 매수 방지)
-        if position_ratio <= 0.3:  # 하위 30% 구간
-            score += 4
-        elif position_ratio <= 0.5:  # 하위 50% 구간  
-            score += 3
-        elif position_ratio <= 0.7:  # 중간 구간
-            score += 1
-        else:  # 상위 30% 구간 - 감점
-            score -= 2
-    
-    # 최근 조정폭 분석
-    recent_high = df["stck_hgpr"].tail(20).max()
-    if recent_high > 0:
-        correction_ratio = (recent_high - current_price) / recent_high
-        
-        # 적절한 조정 후 매수
-        if 0.1 <= correction_ratio <= 0.25:  # 10-25% 조정
-            score += 3
-        elif 0.05 <= correction_ratio < 0.1:   # 5-10% 조정
-            score += 2
-        elif correction_ratio > 0.25:          # 25% 이상 조정
-            score += 1
-    
-    return min(score, 5)
-
-
-def analyze_early_technical_signals(df):
-    """
-    조기 기술적 신호 - 후행지표 대신 선행지표 중심
-    """
-    score = 0
-    
-    # 1. 스토캐스틱 %K가 과매도에서 반등 시작
-    if len(df) >= 14:
-        # 스토캐스틱 계산
-        low_14 = df["stck_lwpr"].rolling(14).min()
-        high_14 = df["stck_hgpr"].rolling(14).max()
-        k_percent = 100 * (df["stck_clpr"] - low_14) / (high_14 - low_14)
-        
-        recent_k = k_percent.tail(3).tolist()
-        if len(recent_k) >= 3:
-            # 과매도에서 반등 시작
-            if recent_k[-3] < 25 and recent_k[-1] > recent_k[-2] > recent_k[-3]:
-                score += 3
-    
-    # 2. 볼린저밴드 하단에서 반등
-    if len(df) >= 20:
-        bb_middle = df["stck_clpr"].rolling(20).mean()
-        bb_std = df["stck_clpr"].rolling(20).std()
-        bb_lower = bb_middle - (2 * bb_std)
-        
-        # 하단 터치 후 상승
-        if (df["stck_lwpr"].iloc[-2] <= bb_lower.iloc[-2] and 
-            df["stck_clpr"].iloc[-1] > bb_lower.iloc[-1]):
-            score += 3
-    
-    # 3. RSI 30 아래에서 35 위로 반등
-    if len(df) >= 14:
-        delta = df["stck_clpr"].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-        rs = gain / loss
-        rsi = 100 - (100 / (1 + rs))
-        
-        if rsi.iloc[-2] < 30 and rsi.iloc[-1] > 35:
-            score += 2
-    
-    # 4. 이격도 분석 (과도한 하락 후 반등)
-    if len(df) >= 20:
-        ma20 = df["stck_clpr"].rolling(20).mean()
-        deviation = (df["stck_clpr"] / ma20 - 1) * 100
-        
-        # -15% 이하 이격 후 반등
-        if deviation.iloc[-2] < -15 and deviation.iloc[-1] > deviation.iloc[-2]:
-            score += 2
-    
-    return min(score, 5)
-
-
-def analyze_early_volume_patterns(df):
-    """
-    거래량 선행 패턴 분석
-    """
-    score = 0
-    
-    if len(df) < 20:
-        return 0
-    
-    # 1. 저점에서 거래량 증가 (먼저 거래량이 증가하고 가격이 따라옴)
-    vol_ma20 = df["acml_vol"].rolling(20).mean()
-    recent_vol = df["acml_vol"].iloc[-1]
-    prev_vol = df["acml_vol"].iloc[-2]
-    
-    # 평균 대비 거래량 증가이면서 가격은 아직 큰 상승 없음
-    price_change = (df["stck_clpr"].iloc[-1] / df["stck_clpr"].iloc[-5] - 1) * 100
-    
-    if (recent_vol > vol_ma20.iloc[-1] * 1.5 and 
-        recent_vol > prev_vol * 1.2 and 
-        -5 <= price_change <= 5):  # 가격은 횡보
-        score += 4
-    
-    # 2. 연속된 거래량 증가 패턴
-    vol_trend = []
-    for i in range(3):
-        vol_trend.append(df["acml_vol"].iloc[-(i+1)])
-    
-    if vol_trend[0] > vol_trend[1] > vol_trend[2]:  # 3일 연속 증가
-        score += 2
-    
-    # 3. 상대적 거래량 강도
-    vol_60_avg = df["acml_vol"].tail(60).mean()
-    if recent_vol > vol_60_avg * 2:
-        score += 1
-    
-    return min(score, 5)
-
-
-def analyze_institutional_accumulation(code, app_key, app_secret, access_token):
-    """
-    기관/외국인 누적 매수 분석 (단기 흐름이 아닌 장기 누적)
-    """
-    score = 0
-    
-    try:
-        # 최근 10일 누적 데이터
-        foreign_list, foreign_trend = get_foreign_netbuy_trend_kis(
-            code, app_key, app_secret, access_token, days=10
-        )
-        institution_list, institution_trend = get_institution_netbuy_trend_kis(
-            code, app_key, app_secret, access_token, days=10
-        )
-        
-        # 장기 누적 매수 여부 (단순 연속이 아닌 누적)
-        if len(foreign_list) >= 10:
-            foreign_accumulation = sum(foreign_list)
-            if foreign_accumulation > 0:
-                score += 2
-        
-        if len(institution_list) >= 10:
-            institution_accumulation = sum(institution_list)
-            if institution_accumulation > 0:
-                score += 2
-        
-        # 최근 3일 연속 매수는 여전히 의미있음
-        if foreign_trend == "steady_buying":
-            score += 1
-        if institution_trend == "steady_buying":
-            score += 1
-            
-    except Exception as e:
-        logger.error(f"기관 누적 분석 오류: {e}")
-        
-    return min(score, 5)
-
-
-def improved_timing_analysis(df, symbol, target_signal):
-    """
-    개선된 타이밍 분석 - 고점 매수 방지
-    """
-    try:
-        if df.empty or len(df) < 20:
-            return {'execute': False, 'reason': '분봉 데이터 부족'}
-        
-        current_price = float(df['stck_prpr'].iloc[-1])
-        
-        # 1. 과매수 상태 체크 (고점 매수 방지)
-        if len(df) >= 14:
-            delta = df['stck_prpr'].diff()
-            gain = (delta.where(delta > 0, 0)).rolling(14).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-            rsi = 100 - (100 / (1 + gain / loss))
-            
-            current_rsi = rsi.iloc[-1]
-            
-            # RSI 70 이상이면 과매수로 매수 금지
-            if current_rsi > 70:
-                return {'execute': False, 'reason': f'과매수 상태 RSI: {current_rsi:.1f}'}
-        
-        # 2. 급등 직후 매수 금지
-        price_change_5min = (current_price / df['stck_prpr'].iloc[-6] - 1) * 100
-        if price_change_5min > 3:  # 5분간 3% 이상 급등
-            return {'execute': False, 'reason': f'급등 직후 {price_change_5min:.1f}%'}
-        
-        # 3. 적절한 매수 타이밍 조건
-        timing_score = 0
-        reasons = []
-        
-        # 단기 조정 후 반등
-        if -2 <= price_change_5min <= 1:
-            timing_score += 2
-            reasons.append("적절한조정")
-        
-        # 거래량 확인
-        if len(df) >= 20:
-            vol_avg = df['cntg_vol'].rolling(20).mean().iloc[-1]
-            current_vol = df['cntg_vol'].iloc[-1]
-            
-            if current_vol > vol_avg * 1.2:
-                timing_score += 1
-                reasons.append("거래량증가")
-        
-        # RSI 적정 수준
-        if 'current_rsi' in locals() and 40 <= current_rsi <= 60:
-            timing_score += 2
-            reasons.append("RSI적정")
-        
-        execute = timing_score >= 3
-        
-        return {
-            'execute': execute,
-            'timing_score': timing_score,
-            'reasons': reasons,
-            'current_price': current_price,
-            'rsi': current_rsi if 'current_rsi' in locals() else None,
-            'price_change': price_change_5min
-        }
-        
-    except Exception as e:
-        return {'execute': False, 'reason': f'분석 오류: {str(e)}'}
 
 def get_institution_netbuy_trend_kis(stock_code, app_key, app_secret, access_token, days=3):
     """
@@ -1687,38 +1056,36 @@ def is_cup_handle_pattern(df, cup_depth=0.1, handle_depth=0.05, min_periods=30):
         logger.error(f"❌ 컵앤핸들 패턴 계산 오류: {e}")
         return False
 
+def calculate_buy_signal_score(df, name, code, app_key, app_secret, access_token, foreign_trend=None):
+    """종합 매수 신호 점수 계산 (에러 처리 강화)"""
+    try:
+        if df is None or df.empty:
+            return 0, []
+            
+        signals = {
+            "골든크로스": is_golden_cross(df),
+            "볼린저밴드복귀": is_bollinger_rebound(df),
+            "MACD상향돌파": is_macd_signal_cross(df),
+            "RSI과매도회복": is_rsi_oversold_recovery(df),
+            "스토캐스틱회복": is_stochastic_oversold_recovery(df),
+            "거래량급증": is_volume_breakout(df),
+            "Williams%R회복": is_williams_r_oversold_recovery(df),
+            "이중바닥": is_double_bottom_pattern(df),
+            "일목균형표": is_ichimoku_bullish_signal(df),
+            "컵앤핸들": is_cup_handle_pattern(df),
+            "MACD골든크로스": is_macd_golden_cross(df),
+            "외국인매수추세": foreign_trend == "steady_buying",
+            #"기관3일연속매수": is_institution_consecutive_buying(code, app_key, app_secret, access_token) if app_key else False 
+            "기관매수추세": is_institution_positive_trend(code, app_key, app_secret, access_token) if app_key else False 
+        }
 
-def calculate_buy_signal_score(df, name, code, app_key, app_secret, access_token):
-    """
-    개선된 매수 신호 점수 계산 - 고점 매수 방지
-    """
-    if df is None or df.empty:
+        score = sum(signals.values())
+        active_signals = [key for key, value in signals.items() if value]
+
+        return score, active_signals
+    except Exception as e:
+        logger.error(f"❌ {name}: 매수 신호 점수 계산 오류: {e}")
         return 0, []
-    
-    # 기존 후행지표들은 가중치 축소
-    legacy_score, legacy_signals = calculate_buy_signal_score(
-        df, name, code, app_key, app_secret, access_token
-    )
-    
-    # 새로운 조기 신호 분석
-    early_score, early_signals = get_early_signal_analysis(
-        df, name, code, app_key, app_secret, access_token
-    )
-    
-    # 조합 점수 (조기 신호에 더 높은 가중치)
-    final_score = (legacy_score * 0.3) + (early_score * 0.7)
-    
-    # 고점 필터링
-    current_price = df.iloc[-1]["stck_clpr"]
-    recent_high = df["stck_hgpr"].tail(20).max()
-    
-    if current_price > recent_high * 0.95:  # 최근 고점 95% 이상이면 감점
-        final_score *= 0.5
-        early_signals.append("고점권주의")
-    
-    all_signals = legacy_signals + early_signals
-    
-    return final_score, all_signals
 
 def send_discord_message(message, webhook_url):
     """디스코드 메시지 전송 (에러 처리 강화)"""
@@ -1813,13 +1180,10 @@ if __name__ == "__main__":
         access_token = load_token()
         webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
         logger = setup_logger()
-
-        #from market_schedule_checker import check_market_schedule_and_exit
-        #check_market_schedule_and_exit()
         
         logger.info("📊 시가총액 상위 200개 종목 분석 시작...")
         stock_list = get_top_200_stocks()
-        backtest_candidates = []  # score 2 이상 종목들을 저장할 리스트
+        backtest_candidates = []  # score 3 이상 종목들을 저장할 리스트
         
         if not stock_list:
             logger.error("❌ 종목 리스트를 가져올 수 없습니다.")
@@ -1858,23 +1222,25 @@ if __name__ == "__main__":
         analyzed_count = 0
         error_count = 0
 
-
         for name, code in stock_list.items():
             try:
                 # 외국인 순매수 확인
                 foreign_net_buy = get_foreign_net_buy_kis(code, app_key, app_secret, access_token, days=3)
                 netbuy_list, trend = get_foreign_netbuy_trend_kis(code, app_key, app_secret, access_token)
                 
-                # 외국인 매도 추세면 제외
-                if trend == "distributing":
-                    continue
+                #if trend == "distributing":
+                #    logger.info(f"❌ {name}: 외국인 매수 추세 아님:{netbuy_list}:{trend}")
+                #    continue
 
+                # 실시간 데이터 포함한 분석
                 df = get_daily_price_data_with_realtime(access_token, app_key, app_secret, code)
                 if df is None or df.empty:
+                    logger.warning(f"⚠️ {name}: 가격 데이터를 가져올 수 없습니다.")
+                    error_count += 1
                     continue
 
-                # 개선된 종합 점수 계산 사용
-                score, active_signals = calculate_buy_signal_score_improved(
+                # 종합 점수 계산
+                score, active_signals = calculate_buy_signal_score(
                     df, name, code, app_key, app_secret, access_token, foreign_trend=trend
                 )
                 
@@ -1893,8 +1259,8 @@ if __name__ == "__main__":
                     signal_lists["RSI과매도회복"].append(f"- {name} ({code})")
                 if is_stochastic_oversold_recovery(df):
                     signal_lists["스토캐스틱회복"].append(f"- {name} ({code})")
-                #if is_volume_breakout(df):
-                    #signal_lists["거래량급증"].append(f"- {name} ({code})")
+                if is_volume_breakout(df):
+                    signal_lists["거래량급증"].append(f"- {name} ({code})")
                 if is_williams_r_oversold_recovery(df):
                     signal_lists["Williams%R회복"].append(f"- {name} ({code})")
                 if is_double_bottom_pattern(df):
@@ -1913,39 +1279,42 @@ if __name__ == "__main__":
                     signal_lists["기관매수추세"].append(f"- {name} ({code})")
 
                 
+                # 다중신호 등급 분류
+                stock_info = {
+                    "name": name, "code": code, "score": score, 
+                    "signals": active_signals, "price": current_price, "volume": volume,
+                    "foreign": netbuy_list 
+                }
+                
+                if score >= 5:
+                    multi_signal_stocks["ultra_strong"].append(stock_info)
+                elif score == 4:
+                    multi_signal_stocks["strong"].append(stock_info)
+                elif score == 3:
+                    multi_signal_stocks["moderate"].append(stock_info)
+                elif score == 2:
+                    multi_signal_stocks["weak"].append(stock_info)
+                elif score == 1:
+                    multi_signal_stocks["single"].append(stock_info)
+                
+                # 신호 조합 패턴 분석
+                if score >= 2:
+                    combo_key = " + ".join(sorted(active_signals))
+                    if combo_key not in signal_combinations:
+                        signal_combinations[combo_key] = []
+                    signal_combinations[combo_key].append(f"{name}({code})")
 
-                if score >= 3.0:  # 기존보다 높은 기준
-                    current_price = df.iloc[-1]["stck_clpr"]
-                    volume = df.iloc[-1]["acml_vol"]
-                    
-                    stock_info = {
-                        "name": name, "code": code, "score": score, 
-                        "signals": active_signals, "price": current_price, "volume": volume,
-                        "foreign": netbuy_list 
-                    }
-                    
-                    # 점수별 분류도 더 엄격하게
-                    if score >= 6:
-                        multi_signal_stocks["ultra_strong"].append(stock_info)
-                    elif score >= 5:
-                        multi_signal_stocks["strong"].append(stock_info)
-                    elif score >= 4:
-                        multi_signal_stocks["moderate"].append(stock_info)
-                    else:
-                        multi_signal_stocks["weak"].append(stock_info)
-                    
-                    # 백테스트 후보도 더 엄격하게
-                    if score >= 4.0:  # 기존 3.0 → 4.0
-                        backtest_candidates.append({
-                            "code": code,
-                            "name": name,
-                            "score": score,
-                            "signals": active_signals,
-                            "price": current_price,
-                            "volume": volume,
-                            "foreign_netbuy": netbuy_list,
-                            "analysis_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        })
+                if score >= 3:
+                    backtest_candidates.append({
+                        "code": code,
+                        "name": name,
+                        "score": score,
+                        "signals": active_signals,
+                        "price": current_price,
+                        "volume": volume,
+                        "foreign_netbuy": netbuy_list,
+                        "analysis_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    })
 
                 analyzed_count += 1
                 if analyzed_count % 50 == 0:
@@ -2010,7 +1379,7 @@ if __name__ == "__main__":
         try:
 
             # score 기준으로 내림차순 정렬 후 상위 10개만 선택
-            backtest_candidates = sorted(backtest_candidates, key=lambda x: x['score'], reverse=True)[:20]
+            backtest_candidates = sorted(backtest_candidates, key=lambda x: x['score'], reverse=True)[:10]
     
             logger.debug("저장할 데이터:", backtest_candidates)
             logger.debug(f"데이터 타입: {type(backtest_candidates)}")

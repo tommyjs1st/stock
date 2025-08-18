@@ -28,7 +28,7 @@ try:
     from notification.discord_notifier import DiscordNotifier
     from utils.logger import setup_logger
     from utils.helpers import create_logs_directory, check_dependencies
-    print("✅ 모든 모듈 임포트 성공")
+    #print("✅ 모든 모듈 임포트 성공")
 except ImportError as e:
     print(f"❌ 모듈 임포트 실패: {e}")
     sys.exit(1)
@@ -70,7 +70,7 @@ class AutoTrader:
         # 백테스트 관련 (종목 로드 전에 필요)
         backtest_config = self.config_manager.get_backtest_config()
         self.backtest_results_file = backtest_config.get('results_file', 'backtest_results.json')
-        self.min_return_threshold = backtest_config.get('min_return_threshold', 4.0)  # 개선: 5.0 → 4.0
+        self.min_return_threshold = backtest_config.get('min_return_threshold', 3.0)  # 개선: 5.0 → 4.0
         self.last_backtest_update = self.get_backtest_file_modified_time()
         
         # 종목 및 종목명 로드 (다른 초기화 전에 먼저)
@@ -473,10 +473,17 @@ class AutoTrader:
                             if self.check_backtest_update():
                                 self.reload_symbols_from_backtest()
                         
+                        # 🆕 매도 분석 전에 포지션 업데이트 실행
+                        self.logger.info("🔄 포지션 업데이트 중...")
+                        self.update_all_positions()
+
                         # 개선된 매도 로직 먼저 실행
                         self.logger.info("💼 개선된 손절/익절 시스템 실행...")
+                        self.logger.info(f"📊 현재 보유 종목: {len(self.all_positions)}개")
                         for symbol, position in list(self.all_positions.items()):
                             try:
+                                stock_name = self.get_stock_name(symbol)
+                                self.logger.info(f"🔍 {stock_name}({symbol}) 매도 분석: {position['profit_loss']:+.2f}%")
                                 self.process_sell_for_symbol(symbol, position)
                                 time.sleep(0.2)
                             except Exception as e:
@@ -583,15 +590,15 @@ def main():
         # 의존성 확인
         if not check_dependencies():
             sys.exit(1)
-        print("✅ 의존성 확인 완료")
+        #print("✅ 의존성 확인 완료")
 
-        print("2️⃣ 로그 디렉토리 생성 중...")
+        #print("2️⃣ 로그 디렉토리 생성 중...")
         create_logs_directory()
-        print("✅ 로그 디렉토리 생성 완료")
+        #print("✅ 로그 디렉토리 생성 완료")
 
-        print("3️⃣ 개선된 시스템 초기화 중...")
+        #print("3️⃣ 개선된 시스템 초기화 중...")
         trader = AutoTrader()
-        print("✅ 개선된 시스템 초기화 완료")
+        #print("✅ 개선된 시스템 초기화 완료")
 
         # 실행 모드
         test_mode = '--test' in sys.argv
