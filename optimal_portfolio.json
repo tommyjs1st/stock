@@ -1,0 +1,100 @@
+{
+  "created_at": "2025-08-18 18:21:21",
+  "portfolio_summary": {
+    "total_stocks": 8,
+    "expected_return": 54.9,
+    "expected_sharpe": 0.72,
+    "max_expected_drawdown": 10.8,
+    "risk_level": "MEDIUM"
+  },
+  "holdings": [
+    {
+      "rank": 1,
+      "symbol": "071970",
+      "name": "HD현대마린엔진",
+      "strategy": "simple_momentum",
+      "weight_percent": 20,
+      "expected_return": 176.66,
+      "win_rate": 71.4,
+      "sharpe_ratio": 0.983,
+      "max_drawdown": -10.75
+    },
+    {
+      "rank": 2,
+      "symbol": "034730",
+      "name": "SK",
+      "strategy": "simple_momentum",
+      "weight_percent": 11.9,
+      "expected_return": 52.37,
+      "win_rate": 50.0,
+      "sharpe_ratio": 0.59,
+      "max_drawdown": -9.81
+    },
+    {
+      "rank": 3,
+      "symbol": "251270",
+      "name": "넷마블",
+      "strategy": "simple_momentum",
+      "weight_percent": 11.8,
+      "expected_return": 51.83,
+      "win_rate": 66.7,
+      "sharpe_ratio": 0.942,
+      "max_drawdown": -8.06
+    },
+    {
+      "rank": 4,
+      "symbol": "000660",
+      "name": "SK하이닉스",
+      "strategy": "simple_momentum",
+      "weight_percent": 11.6,
+      "expected_return": 50.93,
+      "win_rate": 66.7,
+      "sharpe_ratio": 0.942,
+      "max_drawdown": -8.05
+    },
+    {
+      "rank": 5,
+      "symbol": "032830",
+      "name": "삼성생명",
+      "strategy": "simple_momentum",
+      "weight_percent": 10.4,
+      "expected_return": 45.89,
+      "win_rate": 66.7,
+      "sharpe_ratio": 0.839,
+      "max_drawdown": -10.11
+    },
+    {
+      "rank": 6,
+      "symbol": "051910",
+      "name": "LG화학",
+      "strategy": "simple_breakout",
+      "weight_percent": 8,
+      "expected_return": 22.25,
+      "win_rate": 50.0,
+      "sharpe_ratio": 0.378,
+      "max_drawdown": -4.26
+    },
+    {
+      "rank": 7,
+      "symbol": "003670",
+      "name": "포스코홀딩스",
+      "strategy": "simple_breakout",
+      "weight_percent": 8,
+      "expected_return": 19.99,
+      "win_rate": 60.0,
+      "sharpe_ratio": 0.562,
+      "max_drawdown": -4.07
+    },
+    {
+      "rank": 8,
+      "symbol": "302440",
+      "name": "SK바이오사이언스",
+      "strategy": "simple_momentum",
+      "weight_percent": 8,
+      "expected_return": 19.44,
+      "win_rate": 50.0,
+      "sharpe_ratio": 0.556,
+      "max_drawdown": -8.85
+    }
+  ]
+}
