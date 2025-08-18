@@ -452,6 +452,7 @@ def check_market_schedule_and_exit():
         
         # 프로그램 종료
         logger.info("프로그램을 종료합니다.")
+        print("장 운영시간이 아닙니다. 프로그램을 종료합니다.")
         exit(0)
     else:
         logger.info("✅ 프로그램 실행 조건 충족")

@@ -1051,16 +1051,23 @@ class EnhancedStockAnalyzer:
 
 # 실행 함수들
 def convert_numpy_types(obj):
-    """numpy 타입을 JSON 직렬화 가능한 타입으로 변환"""
-    if isinstance(obj, np.integer):
+    """개선된 numpy 타입 변환 함수"""
+    import numpy as np
+    import pandas as pd
+    
+    if isinstance(obj, (np.integer, np.int64, np.int32, np.int16, np.int8)):
         return int(obj)
-    elif isinstance(obj, np.floating):
+    elif isinstance(obj, (np.floating, np.float64, np.float32, np.float16)):
         return float(obj)
+    elif isinstance(obj, np.bool_):
+        return bool(obj)
     elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, pd.Series):
         return obj.tolist()
     elif isinstance(obj, dict):
         return {key: convert_numpy_types(value) for key, value in obj.items()}
-    elif isinstance(obj, list):
+    elif isinstance(obj, (list, tuple)):
         return [convert_numpy_types(item) for item in obj]
     else:
         return obj

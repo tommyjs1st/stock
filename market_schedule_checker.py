@@ -451,6 +451,7 @@ def check_market_schedule_and_exit():
         
         # 프로그램 종료
         logger.info("프로그램을 종료합니다.")
+        print("프로그램을 종료합니다.")
         exit(0)
     else:
         logger.info("✅ 프로그램 실행 조건 충족")
