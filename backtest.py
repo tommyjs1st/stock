@@ -1036,6 +1036,9 @@ if __name__ == "__main__":
     APP_SECRET = os.getenv("KIS_APP_SECRET")
     webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
 
+    #from market_schedule_checker import check_market_schedule_and_exit
+    #check_market_schedule_and_exit()
+
     # 백테스터 초기화 (모의투자 환경)
     backtester = KISBacktester(APP_KEY, APP_SECRET)
 

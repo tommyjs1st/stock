@@ -1813,6 +1813,9 @@ if __name__ == "__main__":
         access_token = load_token()
         webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
         logger = setup_logger()
+
+        #from market_schedule_checker import check_market_schedule_and_exit
+        #check_market_schedule_and_exit()
         
         logger.info("📊 시가총액 상위 200개 종목 분석 시작...")
         stock_list = get_top_200_stocks()

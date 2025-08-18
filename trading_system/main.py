@@ -118,10 +118,42 @@ class AutoTrader:
             order_tracker=self.order_tracker, 
             get_stock_name_func=self.get_stock_name
         )
+
+        # 자동 종료 설정 추가
+        system_config = self.config_manager.get_system_config()
+        self.auto_shutdown_enabled = system_config.get('auto_shutdown_enabled', True)
+        self.weekend_shutdown_enabled = system_config.get('weekend_shutdown_enabled', True)
+        self.shutdown_delay_hours = system_config.get('shutdown_delay_hours', 1)
+
         
         self.logger.info("✅ 개선된 자동매매 시스템 초기화 완료")
 
-    # 나머지 메서드들은 기존과 동일하되, 개선된 매도 로직 적용
+
+    def check_market_close_shutdown(self, current_time=None):
+        """장 마감 시 자동 종료 확인"""
+        if current_time is None:
+            current_time = datetime.now()
+        
+        market_info = self.get_market_status_info(current_time)
+        
+        # 장 마감 후 자동 종료 조건
+        if self.auto_shutdown_enabled and market_info['status'] == 'CLOSED':
+            hour = current_time.hour
+            weekday = current_time.weekday()
+            
+            # 평일 장 마감 후 (15:30 + shutdown_delay_hours 이후)
+            shutdown_hour = 15 + self.shutdown_delay_hours
+            if weekday < 5 and hour >= shutdown_hour:
+                self.logger.info("🏁 장 마감 후 자동 종료 조건 충족")
+                return True, "평일 장 마감"
+            
+            # 주말 자동 종료
+            if self.weekend_shutdown_enabled and weekday >= 5 and hour >= 18:
+                self.logger.info("🏁 주말 자동 종료 조건 충족")
+                return True, "주말 자동 종료"
+
+        return False, None
+
     def process_sell_for_symbol(self, symbol: str, position: dict):
         """개선된 개별 종목 매도 처리"""
         try:
@@ -396,14 +428,16 @@ class AutoTrader:
                 'is_trading_time': False
             }
 
+
     def run_hybrid_strategy(self, check_interval_minutes=30):
-        """개선된 하이브리드 전략 실행"""
-        self.logger.info("🚀 개선된 하이브리드 전략 시작")
+        """개선된 하이브리드 전략 실행 - 자동 종료 기능 추가"""
+        self.logger.info("🚀 개선된 하이브리드 전략 시작 (자동 종료 기능 포함)")
         self.logger.info(f"📊 고점 매수 방지 + 빠른 손절 시스템")
         self.logger.info(f"⏰ 체크 간격: {check_interval_minutes}분")
+        self.logger.info(f"🏁 자동 종료: {'활성화' if self.auto_shutdown_enabled else '비활성화'}")
         
         symbol_list_with_names = [f"{self.get_stock_name(s)}({s})" for s in self.symbols]
-        self.notifier.notify_system_start("개선된 하이브리드", check_interval_minutes, symbol_list_with_names)
+        self.notifier.notify_system_start("개선된 하이브리드 (자동종료)", check_interval_minutes, symbol_list_with_names)
         
         daily_trades = 0
         last_daily_summary = datetime.now().date()
@@ -411,9 +445,17 @@ class AutoTrader:
         
         try:
             while True:
+                current_time = datetime.now()
+                
+                # 🆕 시작 시 자동 종료 조건 확인
+                should_shutdown, shutdown_reason = self.check_market_close_shutdown(current_time)
+                if should_shutdown:
+                    self.logger.info(f"🏁 자동 종료 실행: {shutdown_reason}")
+                    self.notifier.notify_system_stop(f"자동 종료 - {shutdown_reason}")
+                    break
+                
                 self.order_tracker.check_all_pending_orders(self.position_manager, self.get_stock_name)
 
-                current_time = datetime.now()
                 market_info = self.get_market_status_info(current_time)
                 
                 self.logger.info(f"🕐 {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -472,6 +514,13 @@ class AutoTrader:
                 
                 else:
                     self.logger.info(f"⏰ 장 외 시간: {market_info['message']}")
+                    
+                    # 🆕 장 외 시간에도 자동 종료 조건 확인
+                    should_shutdown, shutdown_reason = self.check_market_close_shutdown(current_time)
+                    if should_shutdown:
+                        self.logger.info(f"🏁 장 외 자동 종료 실행: {shutdown_reason}")
+                        self.notifier.notify_system_stop(f"자동 종료 - {shutdown_reason}")
+                        break
                 
                 # 일일 요약
                 if (current_time.date() != last_daily_summary and current_time.hour >= 16):
@@ -480,25 +529,35 @@ class AutoTrader:
                     self.daily_pnl = 0
                     last_daily_summary = current_time.date()
                 
-                # 대기 시간
+                # 대기 시간 계산
                 if market_info['is_trading_time']:
                     sleep_time = check_interval_minutes * 60
                     next_run = current_time + timedelta(minutes=check_interval_minutes)
                     self.logger.info(f"⏰ 다음 체크: {next_run.strftime('%H:%M:%S')}")
                 else:
-                    sleep_minutes = 120 if current_time.weekday() >= 5 else 60
+                    # 🆕 장 외 시간 대기 시간 단축 (자동 종료 체크를 위해)
+                    sleep_minutes = 30 if current_time.weekday() >= 5 else 30  # 기존 120분 → 30분으로 단축
                     sleep_time = sleep_minutes * 60
                     next_run = current_time + timedelta(minutes=sleep_minutes)
-                    self.logger.info(f"⏰ 다음 체크: {next_run.strftime('%H:%M:%S')}")
+                    self.logger.info(f"⏰ 다음 체크: {next_run.strftime('%H:%M:%S')} (자동 종료 체크 포함)")
                 
-                # 분할 대기
-                sleep_chunk = 60
+                # 분할 대기 (자동 종료 체크를 위해 더 자주 확인)
+                sleep_chunk = 60  # 1분마다 체크
                 remaining_sleep = sleep_time
                 
                 while remaining_sleep > 0:
                     chunk_sleep = min(sleep_chunk, remaining_sleep)
                     time.sleep(chunk_sleep)
                     remaining_sleep -= chunk_sleep
+                    
+                    # 🆕 대기 중에도 자동 종료 체크
+                    if remaining_sleep > 0:
+                        current_time_check = datetime.now()
+                        should_shutdown, shutdown_reason = self.check_market_close_shutdown(current_time_check)
+                        if should_shutdown:
+                            self.logger.info(f"🏁 대기 중 자동 종료 실행: {shutdown_reason}")
+                            self.notifier.notify_system_stop(f"자동 종료 - {shutdown_reason}")
+                            return  # while 루프 종료
                     
                     if remaining_sleep > 0 and int(remaining_sleep) % 300 == 0:
                         remaining_minutes = remaining_sleep // 60
@@ -514,6 +573,7 @@ class AutoTrader:
             self.logger.info("🔚 개선된 하이브리드 시스템 종료")
 
 
+
 def main():
     """메인 함수"""
     print("🚀 개선된 자동매매 시스템 시작")
@@ -521,17 +581,14 @@ def main():
 
     try:
         # 의존성 확인
-        print("1️⃣ 의존성 확인 중...")
         if not check_dependencies():
             sys.exit(1)
         print("✅ 의존성 확인 완료")
 
-        # 로그 디렉토리 생성
         print("2️⃣ 로그 디렉토리 생성 중...")
         create_logs_directory()
         print("✅ 로그 디렉토리 생성 완료")
 
-        # 개선된 시스템 초기화
         print("3️⃣ 개선된 시스템 초기화 중...")
         trader = AutoTrader()
         print("✅ 개선된 시스템 초기화 완료")
@@ -557,4 +614,7 @@ def main():
 
 
 if __name__ == "__main__":
+    from market_schedule_checker import check_market_schedule_and_exit
+    check_market_schedule_and_exit()
+
     main()

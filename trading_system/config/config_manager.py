@@ -46,6 +46,18 @@ class ConfigManager:
         """백테스트 설정 반환"""
         return self.config.get('backtest', {})
     
+    def get_openapi_config(self) -> Dict[str, Any]:
+        """백테스트 설정 반환"""
+        return self.config.get('openapi', {})
+    
+    def get_system_config(self) -> Dict[str, Any]:
+        """시스템 설정 반환"""
+        return self.config.get('system', {
+            'auto_shutdown_enabled': True,
+            'weekend_shutdown_enabled': True,
+            'shutdown_delay_hours': 1
+        })
+
     def get_daily_strategy_config(self) -> Dict[str, Any]:
         """일봉 전략 설정 반환"""
         return self.config.get('daily_strategy', {})
