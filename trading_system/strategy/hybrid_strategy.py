@@ -25,22 +25,34 @@ class HybridStrategy:
 
         self.order_tracker = order_tracker
         
-
     def evaluate_buy_timing(self, df: pd.DataFrame, latest: pd.Series, 
                            current_price: float, symbol: str = None) -> Dict:
         """
-        개선된 매수 타이밍 평가 - 고점 매수 방지
+        개선된 매수 타이밍 평가 - 20일 평균선 기준으로 변경
         """
         timing_score = 0
         reasons = []
         stock_name = self.get_stock_name(symbol) if symbol else "Unknown"
         
-        # 1. 고점 매수 방지 필터 (가장 중요)
+        # 1. 개선된 고점 매수 방지 필터 (20일 평균선 기준)
         if len(df) >= 20:
+            ma20 = df['stck_prpr'].rolling(20).mean().iloc[-1]
             high_20 = df['stck_prpr'].rolling(20).max().iloc[-1]
-            price_position = current_price / high_20
             
-            if price_position > 0.95:  # 20일 고점 95% 이상
+            # 방법 A: 20일 평균선 기준 (추천)
+            if current_price > ma20 * 1.05:  # 20일선 대비 5% 이상 위
+                self.logger.info(f"❌ {stock_name} 평균선 상회 매수 위험: 현재가 {current_price:,} vs 20일선 {ma20:,}")
+                return {
+                    'execute': False,
+                    'timing_score': 0,
+                    'reasons': ['평균선상회위험'],
+                    'current_price': current_price,
+                    'ma20_ratio': current_price / ma20
+                }
+            
+            # 또는 방법 B: 20일 고점 기준 완화 (85%로 완화)
+            price_position = current_price / high_20
+            if price_position > 0.85:  # 기존 95% → 85%로 완화
                 self.logger.info(f"❌ {stock_name} 고점 매수 위험: {price_position:.1%}")
                 return {
                     'execute': False,
@@ -50,7 +62,7 @@ class HybridStrategy:
                     'price_position': price_position
                 }
         
-        # 2. 과매수 상태 체크
+        # 2. 과매수 상태 체크 (기존 유지)
         minute_rsi = latest.get('rsi', 50)
         if minute_rsi > 70:
             self.logger.info(f"❌ {stock_name} 과매수 상태: RSI {minute_rsi:.1f}")
@@ -62,7 +74,7 @@ class HybridStrategy:
                 'minute_rsi': minute_rsi
             }
         
-        # 3. 급등 직후 매수 금지
+        # 3. 급등 직후 매수 금지 (기존 유지)
         if len(df) >= 5:
             price_change_5 = (current_price / df['stck_prpr'].iloc[-6] - 1) * 100
             if price_change_5 > 3:  # 5분봉 3% 이상 급등
@@ -74,16 +86,26 @@ class HybridStrategy:
                     'current_price': current_price
                 }
         
-        # 4. 적절한 가격 위치에서 가점
-        if 'price_position' in locals():
-            if price_position <= 0.7:  # 20일 고점 대비 70% 이하
+        # 4. 개선된 가격 위치 평가
+        if len(df) >= 20:
+            ma20 = df['stck_prpr'].rolling(20).mean().iloc[-1]
+            ma20_ratio = current_price / ma20
+            
+            # 20일선 기준 점수
+            if ma20_ratio <= 0.95:  # 20일선 5% 이하
+                timing_score += 4
+                reasons.append("평균선이하진입")
+            elif ma20_ratio <= 0.98:  # 20일선 2% 이하
                 timing_score += 3
-                reasons.append("저점권진입")
-            elif price_position <= 0.85:
+                reasons.append("평균선근처")
+            elif ma20_ratio <= 1.02:  # 20일선 2% 이내
                 timing_score += 2
-                reasons.append("적정가격대")
+                reasons.append("평균선상하")
+            else:
+                timing_score += 1
+                reasons.append("평균선상회")
         
-        # 5. RSI 적정 수준
+        # 5. RSI 적정 수준 (기존 유지)
         if 30 <= minute_rsi <= 60:
             timing_score += 2
             reasons.append("RSI적정")
@@ -91,16 +113,16 @@ class HybridStrategy:
             timing_score += 3
             reasons.append("RSI과매도")
         
-        # 6. 거래량 확인
+        # 6. 거래량 확인 (기존 유지)
         if len(df) >= 20:
             vol_avg = df['cntg_vol'].rolling(20).mean().iloc[-1]
             current_vol = df['cntg_vol'].iloc[-1]
             vol_ratio = current_vol / vol_avg if vol_avg > 0 else 1
             
-            if vol_ratio > 5:  # 5배 이상 거래량 폭증은 위험
+            if vol_ratio > 5:
                 timing_score -= 2
                 reasons.append("거래량폭증위험")
-            elif 1.5 <= vol_ratio <= 3:  # 적정 거래량 증가
+            elif 1.5 <= vol_ratio <= 3:
                 timing_score += 1
                 reasons.append("거래량적정증가")
         
@@ -118,11 +140,9 @@ class HybridStrategy:
             'reasons': reasons,
             'current_price': current_price,
             'minute_rsi': minute_rsi,
-            'price_position': price_position if 'price_position' in locals() else 1.0
+            'ma20_ratio': ma20_ratio if 'ma20_ratio' in locals() else 1.0
         }
 
-    
-    
     def analyze_daily_strategy(self, symbol: str) -> Dict:
         """
         개선된 일봉 전략 분석 - 조기 신호 중심
