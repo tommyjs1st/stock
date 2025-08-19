@@ -320,28 +320,35 @@ class AutoTrader:
             self.logger.warning(f"종목명 로드 실패: {e}")
 
     def get_stock_name(self, code: str) -> str:
-        """종목명 조회 - 캐시 우선, 없으면 API 조회"""
+        """종목명 조회 - 캐시 우선, 없으면 종목기본정보 API 조회"""
         # 이미 캐시된 종목명이 있으면 사용
         if code in self.stock_names:
             return self.stock_names[code]
         
-        # API로 종목명 조회
+        # 종목기본정보 API로 종목명 조회
         try:
-            price_data = self.api_client.get_current_price(code)
-            if price_data and price_data.get('output'):
-                stock_name = price_data['output'].get('hts_kor_isnm', '')
-                if stock_name and stock_name.strip():
-                    # 캐시에 저장
-                    self.stock_names[code] = stock_name.strip()
-                    self.save_stock_names()  # 파일에도 저장
-                    self.logger.debug(f"📝 {code} 종목명 조회: {stock_name.strip()}")
-                    return stock_name.strip()
+            basic_info = self.api_client.get_stock_basic_info(code)
+            
+            if basic_info and basic_info.get('output'):
+                output = basic_info['output']
+                
+                # prdt_abrv_name 필드에서 종목명 가져오기
+                if 'prdt_abrv_name' in output and output['prdt_abrv_name']:
+                    stock_name = str(output['prdt_abrv_name']).strip()
+                
+                    if stock_name:
+                        # 캐시에 저장
+                        self.stock_names[code] = stock_name
+                        self.save_stock_names()
+                        self.logger.info(f"✅ {code} 종목명 조회 성공: {stock_name}")
+                        return stock_name
+                
         except Exception as e:
-            self.logger.debug(f"❌ {code} 종목명 조회 오류: {e}")
+            self.logger.warning(f"❌ {code} 종목기본정보 조회 오류: {e}")
         
         # 조회 실패 시 코드 반환
         return code
-    
+
     def save_stock_names(self):
         """종목명을 파일에 저장"""
         try:
@@ -351,22 +358,46 @@ class AutoTrader:
             self.logger.debug(f"종목명 저장 실패: {e}")
 
     
+    def check_symbol_list_update(self) -> bool:
+        """종목 리스트 업데이트 확인"""
+        try:
+            current_time = time.time()
+            if hasattr(self, 'last_symbol_check'):
+                if current_time - self.last_symbol_check < 3600:  # 1시간 이내 체크했으면 스킵
+                    return False
+        
+            self.last_symbol_check = current_time
+        
+            if not hasattr(self, 'last_symbol_update'):
+                self.last_symbol_update = 0
+            
+            if os.path.exists("trading_list.json"):
+                file_mtime = os.path.getmtime("trading_list.json")
+                
+                # 파일이 업데이트되었는지 확인
+                if file_mtime > self.last_symbol_update:
+                    self.logger.info("📋 trading_list.json 업데이트 감지")
+                    return True
+            
+            return False
+        
+        except Exception as e:
+            self.logger.error(f"종목 리스트 업데이트 확인 오류: {e}")
+            return False
+
     def update_all_positions(self):
         """모든 보유 종목 포지션 업데이트"""
         try:
-            all_holdings = self.api_client.get_all_holdings()
+            self.all_positions = self.api_client.get_all_holdings()
             
-            self.positions = {}
-            for symbol in self.symbols:
-                if symbol in all_holdings:
-                    self.positions[symbol] = all_holdings[symbol]
-            
-            self.all_positions = all_holdings
-            self.logger.info(f"💼 포지션 업데이트: 거래대상 {len(self.positions)}개, 전체 {len(self.all_positions)}개")
+            # 매수후보 종목 중 보유 개수 확인
+            candidate_holdings = sum(1 for symbol in self.symbols if symbol in self.all_positions)
+        
+            self.logger.info(f"💼 포지션 업데이트: 매수후보 {len(self.symbols)}개 중 보유 {candidate_holdings}개, 전체보유 {len(self.all_positions)}개")
             
         except Exception as e:
             self.logger.error(f"포지션 업데이트 실패: {e}")
-    
+
     def execute_sell(self, symbol: str, quantity: int, order_strategy: str, reason: str):
         """매도 실행 - 알림 개선"""
         stock_name = self.get_stock_name(symbol)
@@ -522,9 +553,11 @@ class AutoTrader:
                             self.update_all_positions()
                             last_position_update = current_time
                         
-                        if current_time.hour % 1 == 0 and current_time.minute < 30:
-                            if self.check_symbol_list_update():
-                                self.reload_symbols_from_discovery()
+                        if (current_time.hour % 2 == 0 and 
+                            0 <= current_time.minute <= 5 and 
+                            self.check_symbol_list_update()):
+                            self.logger.info("🔄 종목 리스트 업데이트 시작")
+                            self.reload_symbols_from_discovery()
                         
                         # 🆕 매도 분석 전에 포지션 업데이트 실행
                         self.logger.info("🔄 포지션 업데이트 중...")

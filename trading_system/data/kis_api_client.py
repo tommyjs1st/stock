@@ -469,3 +469,28 @@ class KISAPIClient:
 
         except Exception as e:
             return {'success': False, 'error': str(e)}
+
+    def get_stock_basic_info(self, symbol: str) -> Dict:
+        """종목 기본정보 조회 (종목명 포함)"""
+        url = f"{self.base_url}/uapi/domestic-stock/v1/quotations/search-stock-info"
+        headers = {
+            "content-type": "application/json",
+            "authorization": f"Bearer {self.get_access_token()}",
+            "appkey": self.app_key,
+            "appsecret": self.app_secret,
+            "tr_id": "CTPF1002R"
+        }
+        
+        params = {
+            "PRDT_TYPE_CD": "300",  # 주식
+            "PDNO": symbol
+        }
+        
+        try:
+            response = requests.get(url, headers=headers, params=params, timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f"종목기본정보 조회 오류: {e}")
+            return {}
+    
