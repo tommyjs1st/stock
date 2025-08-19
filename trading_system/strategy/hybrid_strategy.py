@@ -597,8 +597,6 @@ class HybridStrategy:
             # 강제 알림 전송
             if self.notifier and self.notifier.webhook_url:
                 self.notifier.notify_trade_success('BUY', symbol, quantity, executed_price, order_no, stock_name)
-
-                                     quantity, result.get('limit_price', current_price))
         
             # 개선된 매매 알림도 전송
             self.notify_improved_trade(symbol, 'BUY', daily_analysis, timing_analysis, quantity, executed_price)

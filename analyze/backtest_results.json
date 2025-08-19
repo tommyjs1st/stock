@@ -1,156 +1,36 @@
 {
-  "generated_at": "2025-08-18 20:10:49",
-  "backtest_period": "72 days",
+  "generated_at": "2025-08-19 10:09:41",
+  "backtest_period": "12 days",
   "verified_symbols": [
     {
-      "symbol": "035720",
-      "name": "카카오",
+      "symbol": "062040",
+      "name": "산일전기",
       "strategy": "scalping",
-      "return": 6.8,
-      "win_rate": 0.5,
-      "sharpe_ratio": 1.249,
-      "max_drawdown": -0.156,
-      "total_trades": 24,
-      "priority": 3,
-      "last_updated": "2025-08-18 20:10:49"
-    },
-    {
-      "symbol": "329180",
-      "name": "HD현대중공업",
-      "strategy": "scalping",
-      "return": 8.32,
-      "win_rate": 0.48,
-      "sharpe_ratio": 1.908,
-      "max_drawdown": -0.084,
+      "return": 23.61,
+      "win_rate": 0.64,
+      "sharpe_ratio": 3.374,
+      "max_drawdown": -0.088,
       "total_trades": 25,
-      "priority": 2,
-      "last_updated": "2025-08-18 20:10:49"
-    },
-    {
-      "symbol": "003570",
-      "name": "SNT다이내믹스",
-      "strategy": "mean_reversion",
-      "return": -2.23,
-      "win_rate": 0.375,
-      "sharpe_ratio": -0.452,
-      "max_drawdown": -0.14,
-      "total_trades": 8,
-      "priority": 10,
-      "last_updated": "2025-08-18 20:10:49"
-    },
-    {
-      "symbol": "009900",
-      "name": "명신산업",
-      "strategy": "mean_reversion",
-      "return": -1.8,
-      "win_rate": 0.5,
-      "sharpe_ratio": -1.539,
-      "max_drawdown": -0.037,
-      "total_trades": 4,
-      "priority": 9,
-      "last_updated": "2025-08-18 20:10:49"
-    },
-    {
-      "symbol": "302440",
-      "name": "SK바이오사이언스",
-      "strategy": "mean_reversion",
-      "return": 10.96,
-      "win_rate": 0.7,
-      "sharpe_ratio": 5.285,
-      "max_drawdown": -0.016,
-      "total_trades": 10,
       "priority": 1,
-      "last_updated": "2025-08-18 20:10:49"
-    },
-    {
-      "symbol": "005380",
-      "name": "현대차",
-      "strategy": "momentum + breakout",
-      "return": -2.81,
-      "win_rate": 0.2,
-      "sharpe_ratio": -4.288,
-      "max_drawdown": -0.033,
-      "total_trades": 5,
-      "priority": 11,
-      "last_updated": "2025-08-18 20:10:49"
-    },
-    {
-      "symbol": "093370",
-      "name": "후성",
-      "strategy": "momentum",
-      "return": 2.42,
-      "win_rate": 0.333,
-      "sharpe_ratio": 0.473,
-      "max_drawdown": -0.132,
-      "total_trades": 9,
-      "priority": 7,
-      "last_updated": "2025-08-18 20:10:49"
-    },
-    {
-      "symbol": "249420",
-      "name": "일동제약",
-      "strategy": "momentum",
-      "return": -14.78,
-      "win_rate": 0.3,
-      "sharpe_ratio": -4.151,
-      "max_drawdown": -0.148,
-      "total_trades": 10,
-      "priority": 12,
-      "last_updated": "2025-08-18 20:10:49"
+      "last_updated": "2025-08-19 10:09:41"
     },
     {
       "symbol": "278470",
       "name": "에이피알",
       "strategy": "momentum",
-      "return": 2.88,
-      "win_rate": 0.571,
-      "sharpe_ratio": 0.837,
+      "return": 6.47,
+      "win_rate": 0.625,
+      "sharpe_ratio": 1.78,
       "max_drawdown": -0.093,
-      "total_trades": 7,
-      "priority": 6,
-      "last_updated": "2025-08-18 20:10:49"
-    },
-    {
-      "symbol": "377740",
-      "name": "바이오노트",
-      "strategy": "scalping",
-      "return": 4.82,
-      "win_rate": 0.5,
-      "sharpe_ratio": 2.798,
-      "max_drawdown": -0.032,
-      "total_trades": 18,
-      "priority": 4,
-      "last_updated": "2025-08-18 20:10:49"
-    },
-    {
-      "symbol": "415640",
-      "name": "KB발해인프라",
-      "strategy": "scalping",
-      "return": -0.96,
-      "win_rate": 0.55,
-      "sharpe_ratio": -0.631,
-      "max_drawdown": -0.046,
-      "total_trades": 20,
-      "priority": 8,
-      "last_updated": "2025-08-18 20:10:49"
-    },
-    {
-      "symbol": "062040",
-      "name": "산일전기",
-      "strategy": "scalping",
-      "return": 4.74,
-      "win_rate": 0.667,
-      "sharpe_ratio": 4.122,
-      "max_drawdown": -0.011,
-      "total_trades": 6,
-      "priority": 5,
-      "last_updated": "2025-08-18 20:10:49"
+      "total_trades": 8,
+      "priority": 2,
+      "last_updated": "2025-08-19 10:09:41"
     }
   ],
   "summary": {
-    "total_symbols": 12,
-    "avg_return": 3.33,
-    "best_symbol": "302440",
-    "best_return": 10.96
+    "total_symbols": 2,
+    "avg_return": 15.04,
+    "best_symbol": "062040",
+    "best_return": 23.61
   }
 }

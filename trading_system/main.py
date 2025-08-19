@@ -68,8 +68,8 @@ class AutoTrader:
         self.take_profit_pct = 0.20  # 개선: 25% → 20%
         
         # 종목 및 종목명 로드 (다른 초기화 전에 먼저)
-        self.load_symbols_and_names()
         self.load_stock_names()
+        self.load_symbols_and_names()
         
         # 포지션 관리자 초기화
         position_config = self.config_manager.get_position_config()
@@ -249,42 +249,64 @@ class AutoTrader:
             return {'should_sell': False, 'reason': f'오류:{e}'}
 
     def load_symbols_and_names(self):
-        """종목 및 종목명 로드 - trading_list.json 우선"""
+        """종목 및 종목명 로드 - 환경파일 + trading_list.json 합치기"""
         try:
-            # trading_list.json 우선 사용
+            all_symbols = []
+            all_stock_names = {}
+            
+            # 1. 환경파일에서 기본 종목 로드
+            trading_config = self.config_manager.get_trading_config()
+            config_symbols = trading_config.get('symbols', [])
+            
+            if config_symbols:
+                all_symbols.extend(config_symbols)
+                self.logger.info(f"설정 파일에서 {len(config_symbols)}개 종목 로드: {config_symbols}")
+            
+            # 2. trading_list.json에서 추가 종목 로드
             trading_list_file = "trading_list.json"
             if os.path.exists(trading_list_file):
                 with open(trading_list_file, 'r', encoding='utf-8') as f:
                     candidate_data = json.load(f)
                 
-                # 점수 기준으로 정렬하여 상위 종목 선택
                 if isinstance(candidate_data, list) and candidate_data:
                     sorted_candidates = sorted(candidate_data, key=lambda x: x.get('score', 0), reverse=True)
-                    selected = sorted_candidates[:self.max_symbols]
                     
-                    self.symbols = [item['code'] for item in selected]
-                    self.stock_names = {item['code']: item.get('name', item['code']) for item in selected}
+                    trading_list_symbols = []
+                    for item in sorted_candidates:
+                        code = item['code']
+                        if code not in all_symbols:
+                            trading_list_symbols.append(code)
+                            all_stock_names[code] = item.get('name', code)
                     
-                    self.logger.info(f"trading_list.json에서 {len(self.symbols)}개 종목 로드")
-                    self.logger.info(f"선택된 종목: {[f'{self.get_stock_name(s)}({s})' for s in self.symbols]}")
-                    return
-                else:
-                    self.logger.warning("trading_list.json 데이터가 비어있음")
+                    all_symbols.extend(trading_list_symbols)
+                    self.logger.info(f"trading_list.json에서 {len(trading_list_symbols)}개 종목 추가")
             
-            # trading_list.json이 없으면 설정 파일 확인
-            trading_config = self.config_manager.get_trading_config()
-            if 'symbols' in trading_config and trading_config['symbols']:
-                self.symbols = trading_config['symbols'][:self.max_symbols]  # max_symbols 제한 적용
-                self.logger.info(f"설정 파일에서 {len(self.symbols)}개 종목 로드")
-                return
+            # 3. max_symbols 제한 적용
+            if len(all_symbols) > self.max_symbols:
+                final_symbols = config_symbols[:self.max_symbols]
+                remaining_slots = self.max_symbols - len(final_symbols)
+                if remaining_slots > 0:
+                    trading_list_only = [s for s in all_symbols if s not in config_symbols]
+                    final_symbols.extend(trading_list_only[:remaining_slots])
+                self.symbols = final_symbols
+            else:
+                self.symbols = all_symbols
             
-            # 둘 다 없으면 기본 종목 사용
-            self.symbols = ['278470', '062040', '042660']
-            self.logger.warning(f"종목 파일 없음, 기본 종목 사용")
-                    
+            # 4. 종목명 설정 (trading_list의 name만 미리 설정)
+            self.stock_names.update(all_stock_names)
+            
+            self.logger.info(f"✅ 총 {len(self.symbols)}개 종목 선택 (최대: {self.max_symbols}개)")
+            # get_stock_name이 필요할 때마다 자동으로 API 조회함
+            self.logger.info(f"최종 선택 종목: {[f'{self.get_stock_name(s)}({s})' for s in self.symbols]}")
+            
+            if not self.symbols:
+                self.symbols = ['278470', '062040', '042660']
+                self.logger.warning("종목이 없어 기본 종목 사용")
+                        
         except Exception as e:
             self.logger.error(f"종목 로드 실패: {e}")
             self.symbols = ['278470', '062040', '042660']
+
     
     def load_stock_names(self):
         """종목명 파일에서 로드"""
@@ -296,10 +318,38 @@ class AutoTrader:
                 self.logger.info(f"종목명 {len(saved_names)}개 로드")
         except Exception as e:
             self.logger.warning(f"종목명 로드 실패: {e}")
-    
+
     def get_stock_name(self, code: str) -> str:
-        """종목명 조회"""
-        return self.stock_names.get(code, code)
+        """종목명 조회 - 캐시 우선, 없으면 API 조회"""
+        # 이미 캐시된 종목명이 있으면 사용
+        if code in self.stock_names:
+            return self.stock_names[code]
+        
+        # API로 종목명 조회
+        try:
+            price_data = self.api_client.get_current_price(code)
+            if price_data and price_data.get('output'):
+                stock_name = price_data['output'].get('hts_kor_isnm', '')
+                if stock_name and stock_name.strip():
+                    # 캐시에 저장
+                    self.stock_names[code] = stock_name.strip()
+                    self.save_stock_names()  # 파일에도 저장
+                    self.logger.debug(f"📝 {code} 종목명 조회: {stock_name.strip()}")
+                    return stock_name.strip()
+        except Exception as e:
+            self.logger.debug(f"❌ {code} 종목명 조회 오류: {e}")
+        
+        # 조회 실패 시 코드 반환
+        return code
+    
+    def save_stock_names(self):
+        """종목명을 파일에 저장"""
+        try:
+            with open('stock_names.json', 'w', encoding='utf-8') as f:
+                json.dump(self.stock_names, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            self.logger.debug(f"종목명 저장 실패: {e}")
+
     
     def update_all_positions(self):
         """모든 보유 종목 포지션 업데이트"""
