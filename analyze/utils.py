@@ -157,19 +157,19 @@ def save_backtest_candidates(candidates, logger):
         logger.debug(f"저장할 데이터 개수: {len(sorted_candidates)}")
         
         # 안전한 JSON 저장
-        success, error = safe_json_save(sorted_candidates, "backtest_list.json")
+        success, error = safe_json_save(sorted_candidates, "trading_list.json")
         
         if success:
-            logger.info(f"✅ backtest_list.json 저장 완료: {len(sorted_candidates)}개 종목")
+            logger.info(f"✅ trading_list.json 저장 완료: {len(sorted_candidates)}개 종목")
         else:
-            logger.error(f"❌ backtest_list.json 저장 실패: {error}")
+            logger.error(f"❌ trading_list.json 저장 실패: {error}")
             
             # 실패 시 대안: pickle로 저장
             try:
                 import pickle
-                with open("backtest_list.pkl", "wb") as f:
+                with open("trading_list.pkl", "wb") as f:
                     pickle.dump(sorted_candidates, f)
-                logger.info("✅ 대안으로 backtest_list.pkl에 저장 완료")
+                logger.info("✅ 대안으로 trading_list.pkl에 저장 완료")
             except Exception as pickle_error:
                 logger.error(f"❌ pickle 저장도 실패: {pickle_error}")
                 

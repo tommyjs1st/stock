@@ -67,12 +67,6 @@ class AutoTrader:
         self.stop_loss_pct = 0.06  # 개선: 8% → 6%
         self.take_profit_pct = 0.20  # 개선: 25% → 20%
         
-        # 백테스트 관련 (종목 로드 전에 필요)
-        backtest_config = self.config_manager.get_backtest_config()
-        self.backtest_results_file = backtest_config.get('results_file', 'backtest_results.json')
-        self.min_return_threshold = backtest_config.get('min_return_threshold', 3.0)  # 개선: 5.0 → 4.0
-        self.last_backtest_update = self.get_backtest_file_modified_time()
-        
         # 종목 및 종목명 로드 (다른 초기화 전에 먼저)
         self.load_symbols_and_names()
         self.load_stock_names()
@@ -154,6 +148,26 @@ class AutoTrader:
 
         return False, None
 
+    def reload_symbols_from_discovery(self) -> bool:
+        """종목발굴 결과에서 종목 다시 로드"""
+        try:
+            old_symbols = set(self.symbols)
+            self.load_symbols_and_names()
+            new_symbols_set = set(self.symbols)
+            
+            added_symbols = new_symbols_set - old_symbols
+            removed_symbols = old_symbols - new_symbols_set
+            
+            if added_symbols or removed_symbols:
+                self.notifier.notify_symbol_changes(added_symbols, removed_symbols, self.get_stock_name)
+            
+            self.last_symbol_update = time.time()
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"종목발굴 결과 재로드 실패: {e}")
+            return False
+
     def process_sell_for_symbol(self, symbol: str, position: dict):
         """개선된 개별 종목 매도 처리"""
         try:
@@ -234,40 +248,43 @@ class AutoTrader:
         except Exception as e:
             return {'should_sell': False, 'reason': f'오류:{e}'}
 
-    # 기존 메서드들 유지 (load_symbols_and_names, update_all_positions 등)
     def load_symbols_and_names(self):
-        """종목 및 종목명 로드"""
+        """종목 및 종목명 로드 - 백테스트 의존성 제거"""
         try:
+            # 설정 파일 우선
             trading_config = self.config_manager.get_trading_config()
             if 'symbols' in trading_config:
                 self.symbols = trading_config['symbols']
                 self.logger.info(f"설정 파일에서 {len(self.symbols)}개 종목 로드")
                 return
             
-            if os.path.exists(self.backtest_results_file):
-                with open(self.backtest_results_file, 'r', encoding='utf-8') as f:
-                    backtest_data = json.load(f)
+            # trading_list.json 사용 (백테스트 결과 아님)
+            trading_list_file = "trading_list.json"
+            if os.path.exists(trading_list_file):
+                with open(trading_list_file, 'r', encoding='utf-8') as f:
+                    candidate_data = json.load(f)
                 
-                verified_symbols = backtest_data.get('verified_symbols', [])
-                filtered_symbols = [
-                    item for item in verified_symbols 
-                    if item['return'] >= self.min_return_threshold
-                ]
-                
-                filtered_symbols.sort(key=lambda x: x['priority'])
-                selected = filtered_symbols[:self.max_symbols]
-                
-                self.symbols = [item['symbol'] for item in selected]
-                self.stock_names = {item['symbol']: item.get('name', item['symbol']) for item in selected}
-                
-                self.logger.info(f"백테스트 결과에서 {len(self.symbols)}개 종목 로드")
+                # 점수 기준으로 정렬하여 상위 종목 선택
+                if isinstance(candidate_data, list) and candidate_data:
+                    sorted_candidates = sorted(candidate_data, key=lambda x: x.get('score', 0), reverse=True)
+                    selected = sorted_candidates[:self.max_symbols]
+                    
+                    self.symbols = [item['code'] for item in selected]
+                    self.stock_names = {item['code']: item.get('name', item['code']) for item in selected}
+                    
+                    self.logger.info(f"종목발굴 결과에서 {len(self.symbols)}개 종목 로드")
+                    self.logger.info(f"선택된 종목: {[f'{self.get_stock_name(s)}({s})' for s in self.symbols]}")
+                else:
+                    raise Exception("종목발굴 데이터가 비어있음")
             else:
+                # 기본 종목 사용
                 self.symbols = ['278470', '062040', '042660']
-                self.logger.warning(f"백테스트 파일 없음, 기본 종목 사용")
+                self.logger.warning(f"종목발굴 파일 없음, 기본 종목 사용")
                 
         except Exception as e:
             self.logger.error(f"종목 로드 실패: {e}")
             self.symbols = ['278470', '062040', '042660']
+
     
     def load_stock_names(self):
         """종목명 파일에서 로드"""
@@ -283,43 +300,6 @@ class AutoTrader:
     def get_stock_name(self, code: str) -> str:
         """종목명 조회"""
         return self.stock_names.get(code, code)
-    
-    def get_backtest_file_modified_time(self) -> float:
-        """백테스트 결과 파일의 수정 시간 반환"""
-        try:
-            if os.path.exists(self.backtest_results_file):
-                return os.path.getmtime(self.backtest_results_file)
-        except Exception:
-            pass
-        return 0
-    
-    def check_backtest_update(self) -> bool:
-        """백테스트 결과 파일이 업데이트되었는지 확인"""
-        current_time = self.get_backtest_file_modified_time()
-        if current_time > self.last_backtest_update:
-            self.logger.info("🔄 백테스트 결과 파일 업데이트 감지")
-            return True
-        return False
-    
-    def reload_symbols_from_backtest(self) -> bool:
-        """백테스트 결과에서 종목 다시 로드"""
-        try:
-            old_symbols = set(self.symbols)
-            self.load_symbols_and_names()
-            new_symbols_set = set(self.symbols)
-            
-            added_symbols = new_symbols_set - old_symbols
-            removed_symbols = old_symbols - new_symbols_set
-            
-            if added_symbols or removed_symbols:
-                self.notifier.notify_symbol_changes(added_symbols, removed_symbols, self.get_stock_name)
-            
-            self.last_backtest_update = self.get_backtest_file_modified_time()
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"백테스트 결과 재로드 실패: {e}")
-            return False
     
     def update_all_positions(self):
         """모든 보유 종목 포지션 업데이트"""
@@ -470,8 +450,8 @@ class AutoTrader:
                             last_position_update = current_time
                         
                         if current_time.hour % 1 == 0 and current_time.minute < 30:
-                            if self.check_backtest_update():
-                                self.reload_symbols_from_backtest()
+                            if self.check_symbol_list_update():
+                                self.reload_symbols_from_discovery()
                         
                         # 🆕 매도 분석 전에 포지션 업데이트 실행
                         self.logger.info("🔄 포지션 업데이트 중...")
