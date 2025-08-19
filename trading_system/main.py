@@ -92,7 +92,7 @@ class AutoTrader:
         # 알림 관리자 초기화
         notification_config = self.config_manager.get_notification_config()
         self.notifier = DiscordNotifier(
-            webhook_url=notification_config.get('discord_webhook', ''),
+            webhook_url=notification_config.get('discord_webhook_auto', ''),
             notify_on_trade=notification_config.get('notify_on_trade', True),
             notify_on_error=notification_config.get('notify_on_error', True),
             notify_on_daily_summary=notification_config.get('notify_on_daily_summary', True),
@@ -249,16 +249,9 @@ class AutoTrader:
             return {'should_sell': False, 'reason': f'오류:{e}'}
 
     def load_symbols_and_names(self):
-        """종목 및 종목명 로드 - 백테스트 의존성 제거"""
+        """종목 및 종목명 로드 - trading_list.json 우선"""
         try:
-            # 설정 파일 우선
-            trading_config = self.config_manager.get_trading_config()
-            if 'symbols' in trading_config:
-                self.symbols = trading_config['symbols']
-                self.logger.info(f"설정 파일에서 {len(self.symbols)}개 종목 로드")
-                return
-            
-            # trading_list.json 사용 (백테스트 결과 아님)
+            # trading_list.json 우선 사용
             trading_list_file = "trading_list.json"
             if os.path.exists(trading_list_file):
                 with open(trading_list_file, 'r', encoding='utf-8') as f:
@@ -272,19 +265,26 @@ class AutoTrader:
                     self.symbols = [item['code'] for item in selected]
                     self.stock_names = {item['code']: item.get('name', item['code']) for item in selected}
                     
-                    self.logger.info(f"종목발굴 결과에서 {len(self.symbols)}개 종목 로드")
+                    self.logger.info(f"trading_list.json에서 {len(self.symbols)}개 종목 로드")
                     self.logger.info(f"선택된 종목: {[f'{self.get_stock_name(s)}({s})' for s in self.symbols]}")
+                    return
                 else:
-                    raise Exception("종목발굴 데이터가 비어있음")
-            else:
-                # 기본 종목 사용
-                self.symbols = ['278470', '062040', '042660']
-                self.logger.warning(f"종목발굴 파일 없음, 기본 종목 사용")
-                
+                    self.logger.warning("trading_list.json 데이터가 비어있음")
+            
+            # trading_list.json이 없으면 설정 파일 확인
+            trading_config = self.config_manager.get_trading_config()
+            if 'symbols' in trading_config and trading_config['symbols']:
+                self.symbols = trading_config['symbols'][:self.max_symbols]  # max_symbols 제한 적용
+                self.logger.info(f"설정 파일에서 {len(self.symbols)}개 종목 로드")
+                return
+            
+            # 둘 다 없으면 기본 종목 사용
+            self.symbols = ['278470', '062040', '042660']
+            self.logger.warning(f"종목 파일 없음, 기본 종목 사용")
+                    
         except Exception as e:
             self.logger.error(f"종목 로드 실패: {e}")
             self.symbols = ['278470', '062040', '042660']
-
     
     def load_stock_names(self):
         """종목명 파일에서 로드"""
@@ -318,12 +318,25 @@ class AutoTrader:
             self.logger.error(f"포지션 업데이트 실패: {e}")
     
     def execute_sell(self, symbol: str, quantity: int, order_strategy: str, reason: str):
-        """매도 실행"""
-        result = self.order_manager.place_order_with_strategy(symbol, 'SELL', quantity, order_strategy)
+        """매도 실행 - 알림 개선"""
+        stock_name = self.get_stock_name(symbol)
+        
+        # 주문 추적기 사용
+        result = self.order_manager.place_order_with_tracking(
+            symbol, 'SELL', quantity, order_strategy, self.order_tracker
+        )
         
         if result['success']:
             executed_price = result.get('limit_price', 0)
-            self.position_manager.record_sale(symbol, quantity, executed_price, reason)
+            order_no = result.get('order_no', 'Unknown')
+            
+            # 시장가 주문인 경우 즉시 포지션에 기록
+            if executed_price == 0:
+                current_price_data = self.api_client.get_current_price(symbol)
+                if current_price_data and current_price_data.get('output'):
+                    executed_price = float(current_price_data['output'].get('stck_prpr', 0))
+                
+                self.position_manager.record_sale(symbol, quantity, executed_price, reason)
             
             # 메모리에서 포지션 제거
             try:
@@ -334,12 +347,22 @@ class AutoTrader:
             except KeyError:
                 pass
             
-            stock_name = self.get_stock_name(symbol)
             self.logger.info(f"✅ {stock_name}({symbol}) 매도 완료: {quantity}주 @ {executed_price:,}원 - {reason}")
             
-            # 알림 전송
-            self.notifier.notify_trade_success('SELL', symbol, quantity, executed_price, 
-                                             result.get('order_no', ''), stock_name)
+            # 강제 알림 전송
+            if self.notifier.webhook_url:
+                self.notifier.notify_trade_success('SELL', symbol, quantity, executed_price, order_no, stock_name)
+            
+            return True
+        else:
+            error_msg = result.get('error', 'Unknown error')
+            self.logger.error(f"❌ {stock_name}({symbol}) 매도 실패: {error_msg}")
+            
+            # 실패 알림
+            if self.notifier.webhook_url:
+                self.notifier.notify_trade_failure('SELL', symbol, error_msg, stock_name)
+            
+            return False
     
     def is_market_open(self, current_time=None):
         """한국 증시 개장 시간 확인"""

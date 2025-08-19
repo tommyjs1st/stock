@@ -585,10 +585,33 @@ class HybridStrategy:
         )
         
         if result['success']:
-            # 알림 전송
-            self.notify_improved_trade(symbol, 'BUY', daily_analysis, timing_analysis, 
+            order_no = result.get('order_no', 'Unknown')
+            executed_price = result.get('limit_price', current_price)
+            stock_name = self.get_stock_name(symbol)
+        
+            # 시장가 주문인 경우 즉시 포지션에 기록
+            if executed_price == 0:
+                executed_price = current_price
+                self.position_manager.record_purchase(symbol, quantity, executed_price, "hybrid_strategy")
+        
+            # 강제 알림 전송
+            if self.notifier and self.notifier.webhook_url:
+                self.notifier.notify_trade_success('BUY', symbol, quantity, executed_price, order_no, stock_name)
+
                                      quantity, result.get('limit_price', current_price))
+        
+            # 개선된 매매 알림도 전송
+            self.notify_improved_trade(symbol, 'BUY', daily_analysis, timing_analysis, quantity, executed_price)
+        
             return True
+        else:
+            error_msg = result.get('error', 'Unknown error')
+            stock_name = self.get_stock_name(symbol)
+        
+            # 실패 알림
+            if self.notifier and self.notifier.webhook_url:
+                self.notifier.notify_trade_failure('BUY', symbol, error_msg, stock_name)
+  
         
         return False
     

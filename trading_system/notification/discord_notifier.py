@@ -116,29 +116,54 @@ class DiscordNotifier:
 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 """
         self.send_notification(title, message, 0xff0000)
-    
+
     def notify_system_start(self, strategy_type: str, check_interval: int, symbols: list = None):
-        """시스템 시작 알림"""
+        """시스템 시작 알림 - 강제 실행"""
         symbol_text = ""
         if symbols:
             symbol_text = f"\n대상 종목: {', '.join(symbols)}"
         
         title = "🚀 자동매매 시스템 시작"
         message = f"""
-전략: {strategy_type}
-체크 간격: {check_interval}분{symbol_text}
-시작 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-"""
-        self.send_notification(title, message, 0x00ff00)
+    전략: {strategy_type}
+    체크 간격: {check_interval}분{symbol_text}
+    시작 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+    """
+        # 웹훅 URL이 있으면 강제로 알림 전송
+        if self.webhook_url and self.webhook_url.strip():
+            result = self.send_notification(title, message, 0x00ff00)
+            if self.logger:
+                if result:
+                    self.logger.info("✅ Discord 시작 알림 전송 성공")
+                else:
+                    self.logger.error("❌ Discord 시작 알림 전송 실패")
+            return result
+        else:
+            if self.logger:
+                self.logger.warning("⚠️ Discord 웹훅 URL이 설정되지 않음")
+            return False
     
     def notify_system_stop(self, reason: str = "사용자 종료"):
-        """시스템 종료 알림"""
+        """시스템 종료 알림 - 강제 실행"""
         title = "⏹️ 자동매매 시스템 종료"
         message = f"""
-종료 사유: {reason}
-종료 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-"""
-        self.send_notification(title, message, 0xff6600)
+    종료 사유: {reason}
+    종료 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+    """
+        # 웹훅 URL이 있으면 강제로 알림 전송
+        if self.webhook_url and self.webhook_url.strip():
+            result = self.send_notification(title, message, 0xff6600)
+            if self.logger:
+                if result:
+                    self.logger.info("✅ Discord 종료 알림 전송 성공")
+                else:
+                    self.logger.error("❌ Discord 종료 알림 전송 실패")
+            return result
+        else:
+            if self.logger:
+                self.logger.warning("⚠️ Discord 웹훅 URL이 설정되지 않음")
+            return False
+
     
     def notify_symbol_changes(self, added: set, removed: set, get_stock_name_func=None):
         """종목 변경 알림"""
