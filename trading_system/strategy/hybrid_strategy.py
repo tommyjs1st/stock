@@ -500,43 +500,33 @@ class HybridStrategy:
             'recent_change': recent_change
         }
     
-
     def execute_hybrid_trade(self, symbol: str, positions: Dict) -> bool:
         """
-        개선된 하이브리드 매매 실행
+        간소화된 하이브리드 매매 실행 - trading_list.json에 이미 선별된 종목이므로 분봉 타이밍만 확인
         """
         stock_name = self.get_stock_name(symbol)
         
-        # 1. 일봉 전략 분석
-        daily_analysis = self.analyze_daily_strategy(symbol)
+        # trading_list.json에서 이미 선별된 종목이므로 일봉 분석 생략
+        # 바로 분봉 타이밍 분석으로 진행
+        self.logger.info(f"🎯 {stock_name}({symbol}) 분봉 타이밍 분석 (이미 선별된 종목)")
         
-        # 매수 신호 강도 기준 상향 조정
-        if daily_analysis['signal'] == 'HOLD' or daily_analysis['strength'] < 3.0:  
-            self.logger.debug(f"📊 {stock_name}({symbol}) 일봉 신호 미충족: {daily_analysis['signal']} "
-                            f"(강도: {daily_analysis['strength']:.2f})")
-            return False
-        
-        # 2. 분봉 타이밍 분석
-        timing_analysis = self.find_optimal_entry_timing(symbol, daily_analysis['signal'])
+        # 분봉 타이밍 분석
+        timing_analysis = self.find_optimal_entry_timing(symbol, 'BUY')
         
         if not timing_analysis['execute']:
             reason = timing_analysis.get('reason', '기준 미달')
             self.logger.info(f"⏰ {stock_name}({symbol}) 타이밍 부적절: {reason}")
             return False
         
-        # 3. 실제 매매 실행
+        # 실제 매수 실행
         current_price = timing_analysis['current_price']
-        
-        if daily_analysis['signal'] == 'BUY':
-            return self.execute_smart_buy(symbol, daily_analysis, timing_analysis, current_price, positions)
-        else:
-            return self.execute_smart_sell(symbol, daily_analysis, timing_analysis, current_price, positions)
-
+        return self.execute_smart_buy(symbol, timing_analysis, current_price, positions)
     
-    def execute_smart_buy(self, symbol: str, daily_analysis: Dict, timing_analysis: Dict, 
-                                  current_price: float, positions: Dict) -> bool:
+    
+    def execute_smart_buy(self, symbol: str, timing_analysis: Dict, 
+                                    current_price: float, positions: Dict) -> bool:
         """
-        개선된 스마트 매수 실행
+        간소화된 스마트 매수 실행 - 일봉 분석 없이 분봉 타이밍만으로 매수
         """
         stock_name = self.get_stock_name(symbol)
         
@@ -549,19 +539,21 @@ class HybridStrategy:
             self.logger.info(f"🚫 {stock_name}({symbol}) 매수 불가: {reason}")
             return False
         
-        # 추가 리스크 체크
-        risk_check = self.perform_risk_check(symbol, daily_analysis, timing_analysis, current_price)
-        if not risk_check['approved']:
-            self.logger.warning(f"⚠️ {stock_name}({symbol}) 리스크 체크 실패: {risk_check['reason']}")
+        # 기본 리스크 체크 (시장 상황, 급락 등)
+        basic_risk_check = self.perform_basic_risk_check(symbol, current_price)
+        if not basic_risk_check['approved']:
+            self.logger.warning(f"⚠️ {stock_name}({symbol}) 기본 리스크 체크 실패: {basic_risk_check['reason']}")
             return False
         
         # 변동성 계산
         volatility = self.calculate_volatility(symbol)
         
-        # 개선된 포지션 크기 계산
+        # 포지션 크기 계산 (일봉 강도 대신 분봉 점수 사용)
         price_position = timing_analysis.get('price_position', 0.5)
-        quantity = self.order_manager.calculate_position_size_improved(
-            current_price, daily_analysis['strength'], price_position, volatility, symbol
+        timing_score = timing_analysis.get('timing_score', 3)
+        
+        quantity = self.order_manager.calculate_position_size(
+            current_price, timing_score, price_position, volatility, symbol
         )
         
         if quantity <= 0:
@@ -569,13 +561,12 @@ class HybridStrategy:
             return False
         
         # 주문 전략 결정
-        order_strategy = self.determine_order_strategy_improved(timing_analysis)
+        order_strategy = self.determine_order_strategy(timing_analysis)
         
         # 상세 로그
-        self.logger.info(f"💰 {stock_name}({symbol}) 개선된 매수 실행:")
-        self.logger.info(f"  일봉: {daily_analysis['signal']} (강도: {daily_analysis['strength']:.2f})")
-        self.logger.info(f"  분봉: 타이밍 {timing_analysis['timing_score']}/5")
-        self.logger.info(f"  가격위치: {price_position:.2%} (20일고점 대비)")
+        self.logger.info(f"💰 {stock_name}({symbol}) 간소화된 매수 실행:")
+        self.logger.info(f"  분봉 점수: {timing_score}/5")
+        self.logger.info(f"  가격위치: {price_position:.2%}")
         self.logger.info(f"  변동성: {volatility:.2%}")
         self.logger.info(f"  수량: {quantity}주, 전략: {order_strategy}")
         
@@ -587,32 +578,104 @@ class HybridStrategy:
         if result['success']:
             order_no = result.get('order_no', 'Unknown')
             executed_price = result.get('limit_price', current_price)
-            stock_name = self.get_stock_name(symbol)
-        
+            
             # 시장가 주문인 경우 즉시 포지션에 기록
             if executed_price == 0:
                 executed_price = current_price
-                self.position_manager.record_purchase(symbol, quantity, executed_price, "hybrid_strategy")
-        
+                self.position_manager.record_purchase(symbol, quantity, executed_price, "timing_strategy")
+            
             # 강제 알림 전송
             if self.notifier and self.notifier.webhook_url:
                 self.notifier.notify_trade_success('BUY', symbol, quantity, executed_price, order_no, stock_name)
-        
-            # 개선된 매매 알림도 전송
-            self.notify_improved_trade(symbol, 'BUY', daily_analysis, timing_analysis, quantity, executed_price)
-        
+            
+            # 간소화된 매매 알림
+            self.notify_trade(symbol, 'BUY', timing_analysis, quantity, executed_price)
+            
             return True
         else:
             error_msg = result.get('error', 'Unknown error')
-            stock_name = self.get_stock_name(symbol)
-        
+            
             # 실패 알림
             if self.notifier and self.notifier.webhook_url:
                 self.notifier.notify_trade_failure('BUY', symbol, error_msg, stock_name)
-  
-        
-        return False
+            
+            return False
     
+    
+    def perform_basic_risk_check(self, symbol: str, current_price: float) -> Dict:
+        """
+        기본 리스크 체크 (일봉 분석 없이 기본적인 위험 요소만 확인)
+        """
+        risks = []
+        
+        try:
+            # 1. 시장 급락 체크
+            market_risk = self.check_market_conditions()
+            if market_risk['risk_level'] > 3:
+                risks.append(f"시장리스크: {market_risk['reason']}")
+            
+            # 2. 개별 종목 급락 체크 (간단한 버전)
+            minute_df = self.api_client.get_minute_data(symbol, minutes=60)
+            if not minute_df.empty and len(minute_df) >= 10:
+                # 1시간 내 급락 체크
+                hour_ago_price = minute_df['stck_prpr'].iloc[0]
+                hour_change = (current_price - hour_ago_price) / hour_ago_price
+                
+                if hour_change < -0.05:  # 1시간 내 5% 급락
+                    risks.append(f"급락위험: {hour_change:.1%}")
+            
+            approved = len(risks) == 0
+            
+            return {
+                'approved': approved,
+                'reason': '; '.join(risks) if risks else '기본 리스크 체크 통과'
+            }
+            
+        except Exception as e:
+            return {
+                'approved': False,
+                'reason': f'리스크 체크 오류: {e}'
+            }
+    
+    
+    def notify_trade(self, symbol: str, action: str, timing_analysis: Dict, 
+                               quantity: int, price: float):
+        """
+        간소화된 매매 알림
+        """
+        if not self.notifier:
+            return
+        
+        stock_name = self.get_stock_name(symbol)
+        action_emoji = "🛒" if action == "BUY" else "💸"
+        
+        title = f"{action_emoji} 타이밍 매수!"
+        
+        # 위험도 표시
+        price_position = timing_analysis.get('price_position', 0.5)
+        risk_level = "🟢 저위험" if price_position <= 0.4 else "🟡 중위험" if price_position <= 0.7 else "🔴 고위험"
+        
+        message = f"""
+    종목: {stock_name}({symbol})
+    수량: {quantity}주 @ {price:,}원
+    총액: {quantity * price:,}원
+    
+    📊 분석 결과:
+    위험도: {risk_level}
+    가격위치: {price_position:.1%} (20일고점 대비)
+    
+    ⏰ 분봉 타이밍:
+    점수: {timing_analysis['timing_score']}/5
+    근거: {', '.join(timing_analysis.get('reasons', []))}
+    RSI: {timing_analysis.get('minute_rsi', 0):.1f}
+    
+    💡 이미 일봉으로 선별된 우량 종목
+    
+    시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+    """
+        
+        color = 0x00ff00 if action == "BUY" else 0xff6600
+        self.notifier.send_notification(title, message, color)
     
     def perform_risk_check(self, symbol: str, daily_analysis: Dict, timing_analysis: Dict, 
                           current_price: float) -> Dict:

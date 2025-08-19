@@ -580,18 +580,19 @@ class AutoTrader:
                         
                         for i, symbol in enumerate(self.symbols, 1):
                             stock_name = self.get_stock_name(symbol)
-                            self.logger.info(f"🔍 [{i}/{len(self.symbols)}] {stock_name}({symbol}) 분석")
+                            self.logger.info(f"🔍 [{i}/{len(self.symbols)}] {stock_name}({symbol}) 분석 시작")
                             
                             try:
+
                                 trade_executed = self.hybrid_strategy.execute_hybrid_trade(symbol, self.positions)
-                                
+      
                                 if trade_executed:
                                     daily_trades += 1
                                     self.trade_count += 1
-                                    self.logger.info(f"✅ {stock_name}({symbol}) 매수 실행")
+                                    self.logger.info(f"  🎉 {stock_name}({symbol}) 매수 완료!")
                                 else:
-                                    self.logger.debug(f"⏸️ {stock_name}({symbol}) 매수 조건 미충족")
-                                    
+                                    self.logger.debug(f"  ⏸️ {stock_name}({symbol}) 타이밍 부적절")
+            
                                 time.sleep(2)
                                 
                             except Exception as e:
@@ -599,7 +600,7 @@ class AutoTrader:
                         
                         cycle_end_trades = self.trade_count
                         cycle_trades = cycle_end_trades - cycle_start_trades
-                        self.logger.info(f"✅ 개선된 사이클 완료 (거래: {cycle_trades}회)")
+                        self.logger.info(f"✅ 간소화된 사이클 완료 (거래: {cycle_trades}회)")
                         
                     except Exception as e:
                         self.logger.error(f"❌ 사이클 실행 오류: {e}")
