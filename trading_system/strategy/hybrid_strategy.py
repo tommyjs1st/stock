@@ -37,7 +37,8 @@ class HybridStrategy:
         # 1. 개선된 고점 매수 방지 필터 (20일 평균선 기준)
         if len(df) >= 20:
             ma20 = df['stck_prpr'].rolling(20).mean().iloc[-1]
-            high_20 = df['stck_prpr'].rolling(20).max().iloc[-1]
+            #high_20 = df['stck_prpr'].rolling(20).max().iloc[-1]
+            high_60 = df['stck_prpr'].rolling(60).max().iloc[-1]
             
             # 방법 A: 20일 평균선 기준 (추천)
             if current_price > ma20 * 1.05:  # 20일선 대비 5% 이상 위
@@ -50,10 +51,11 @@ class HybridStrategy:
                     'ma20_ratio': current_price / ma20
                 }
             
-            # 또는 방법 B: 20일 고점 기준 완화 (85%로 완화)
-            price_position = current_price / high_20
-            if price_position > 0.85:  # 기존 95% → 85%로 완화
-                self.logger.info(f"❌ {stock_name} 고점 매수 위험: {price_position:.1%}")
+  
+            # 방법 B: 60일 고점 기준으로 완화 (75%로 완화)
+            price_position = current_price / high_60
+            if price_position > 0.75:  # 85% → 75%로 완화, 60일 기준
+                self.logger.info(f"❌ {stock_name} 고점 매수 위험: {price_position:.1%} (60일 기준)")
                 return {
                     'execute': False,
                     'timing_score': 0,
@@ -61,6 +63,7 @@ class HybridStrategy:
                     'current_price': current_price,
                     'price_position': price_position
                 }
+
         
         # 2. 과매수 상태 체크 (기존 유지)
         minute_rsi = latest.get('rsi', 50)

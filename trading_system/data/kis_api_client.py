@@ -242,21 +242,33 @@ class KISAPIClient:
     
     def get_current_bid_ask(self, symbol: str) -> Dict:
             """현재 호가 정보 조회 (버그 수정 버전)"""
-            url = f"{self.base_url}/uapi/domestic-stock/v1/quotations/inquire-asking-price-exp-ccn"
-            headers = {
-                "content-type": "application/json",
-                "authorization": f"Bearer {self.get_access_token()}",
-                "appkey": self.app_key,
-                "appsecret": self.app_secret,
-                "tr_id": "FHKST01010200"
-            }
-            params = {
-                "fid_cond_mrkt_div_code": "J",
-                "fid_input_iscd": symbol
-            }
             
             try:
+                # 1. 먼저 현재가 확실히 조회
+                current_price_data = self.get_current_price(symbol)
+                current_price = 0
+                if current_price_data and current_price_data.get('output'):
+                    current_price = float(current_price_data['output'].get('stck_prpr', 0))
+        
+                if current_price == 0:
+                    return {}
+
+                # 2. 호가 조회 시도
+                url = f"{self.base_url}/uapi/domestic-stock/v1/quotations/inquire-asking-price-exp-ccn"
+                headers = {
+                    "content-type": "application/json",
+                    "authorization": f"Bearer {self.get_access_token()}",
+                    "appkey": self.app_key,
+                    "appsecret": self.app_secret,
+                    "tr_id": "FHKST01010200"
+                }
+                params = {
+                    "fid_cond_mrkt_div_code": "J",
+                    "fid_input_iscd": symbol
+                }
+
                 response = requests.get(url, headers=headers, params=params, timeout=10)
+                # 3. 호가 조회 성공 시에도 현재가 보정
                 if response.status_code == 200:
                     data = response.json()
                     
@@ -267,12 +279,6 @@ class KISAPIClient:
                     
                     if data.get('rt_cd') == '0' and data.get('output1'):
                         output = data['output1']
-                        
-                        # 필드 존재 여부 확인
-                        #print(f"  output1 keys: {list(output.keys())}")
-                        #print(f"  askp1: {output.get('askp1')} (type: {type(output.get('askp1'))})")
-                        #print(f"  bidp1: {output.get('bidp1')} (type: {type(output.get('bidp1'))})")
-                        #print(f"  stck_prpr: {output.get('stck_prpr')} (type: {type(output.get('stck_prpr'))})")
                         
                         # 안전한 숫자 변환
                         def safe_int_convert(value, default=0):
@@ -296,7 +302,6 @@ class KISAPIClient:
                         
                         # 계산된 값들 출력
                         print(f"  변환 후 - 현재가: {current_price}, 매수호가: {bid_price}, 매도호가: {ask_price}")
-                        
                         bid_ask_info = {
                             'current_price': current_price,
                             'bid_price': bid_price,
@@ -306,8 +311,22 @@ class KISAPIClient:
                             'spread': ask_price - bid_price if ask_price > 0 and bid_price > 0 else 0
                         }
                         
+
+                        # current_price가 0이면 현재가 API 결과 사용
+                        if bid_ask_info['current_price'] == 0 and current_price > 0:
+                            bid_ask_info['current_price'] = current_price
+
                         print(f"  최종 결과: {bid_ask_info}")
                         return bid_ask_info
+                # 4. 호가 조회 실패 시 현재가로만 구성
+                return {
+                    'current_price': current_price,
+                    'bid_price': current_price,
+                    'ask_price': current_price,
+                    'bid_quantity': 0,
+                    'ask_quantity': 0,
+                    'spread': 0
+                }
                         
             except Exception as e:
                 print(f"❌ {symbol} 호가 조회 오류: {e}")
