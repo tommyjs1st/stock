@@ -169,7 +169,7 @@ def background_updater():
             
             if is_market_hours:
                 update_portfolio_data()
-                time.sleep(60)  # 1분마다 업데이트
+                time.sleep(10)  # 1분마다 업데이트
             else:
                 print(f"📴 장외시간 - 업데이트 대기 중... ({now.strftime('%H:%M')})")
                 time.sleep(300)  # 5분마다 체크
@@ -318,17 +318,24 @@ if __name__ == '__main__':
     updater_thread.start()
     
     print("🌐 웹 서버 시작 중...")
-    print("📱 브라우저에서 http://localhost:35359 접속")
+    print("📱 브라우저에서 https://localhost:35359 접속")
     print("⏹️  Ctrl+C로 종료")
     
+    ssl_cert = os.path.join(current_dir, 'ssl/www.musi.co.kr_20241019A3207.crt.pem')
+    ssl_key = os.path.join(current_dir,  'ssl/www.musi.co.kr_20241019A3207.key.pem')
+
     # Flask 서버 실행
     try:
-        app.run(
-            host='0.0.0.0', 
-            port=35359, 
-            debug=False,  # 프로덕션에서는 False
-            threaded=True
-        )
+        if os.path.exists(ssl_cert) and os.path.exists(ssl_key):
+            app.run(
+                host='0.0.0.0', 
+                port=35359,
+                ssl_context=(ssl_cert, ssl_key), 
+                debug=False, 
+                threaded=True
+            )
+        else:
+            print("cert, key 파일이 존재하지 않습니다.")
     except KeyboardInterrupt:
         print("\n🛑 서버를 종료합니다.")
     except Exception as e:

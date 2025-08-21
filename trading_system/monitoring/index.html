@@ -98,7 +98,7 @@
 
         .summary-card h3 {
             color: #7f8c8d;
-            font-size: 0.9em;
+            font-size: 1.1em;
             margin-bottom: 10px;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -173,7 +173,7 @@
             color: #7f8c8d;
             padding: 4px 8px;
             border-radius: 8px;
-            font-size: 0.8em;
+            font-size: 1.0em;
             font-weight: bold;
         }
 
@@ -189,7 +189,7 @@
         }
 
         .detail-label {
-            font-size: 0.8em;
+            font-size: 1.0em;
             color: #7f8c8d;
             margin-bottom: 5px;
             text-transform: uppercase;
@@ -379,13 +379,8 @@
         let isAutoRefresh = false;
 
         function formatNumber(num) {
-            if (num >= 100000000) {
-                return (num / 100000000).toFixed(1) + '억원';
-            } else if (num >= 10000) {
-                return (num / 10000).toFixed(0) + '만원';
-            } else {
-                return num.toLocaleString() + '원';
-            }
+            // 모든 금액을 원단위로 표시
+            return num.toLocaleString() + '원';
         }
 
         function formatChange(change, amount) {
@@ -431,13 +426,15 @@
                         </div>
                         <div class="detail-item">
                             <div class="detail-label">평가금액</div>
-                            <div class="detail-value">${formatNumber(currentValue)}</div>
+                            <div class="detail-value">${currentValue.toLocaleString()}원</div>
                         </div>
                     </div>
 
                     <div class="profit-loss ${cardClass}">
-                        <div class="profit-percentage">${profitRate > 0 ? '+' : ''}${profitRate.toFixed(2)}%</div>
-                        <div class="profit-amount">${profitLoss > 0 ? '+' : ''}${profitLoss.toLocaleString()}원</div>
+                        <div class="profit-row">
+                            <span class="profit-percentage">${profitRate > 0 ? '+' : ''}${profitRate.toFixed(2)}%</span>
+                            <span class="profit-amount">${profitLoss > 0 ? '+' : ''}${profitLoss.toLocaleString()}원</span>
+                        </div>
                         
                         <div class="daily-change">
                             <span>일일변동:</span>
@@ -460,8 +457,9 @@
             const totalProfitLoss = currentValue - totalInvestment;
             const totalProfitRate = totalInvestment > 0 ? (totalProfitLoss / totalInvestment) * 100 : 0;
 
-            document.getElementById('totalInvestment').textContent = formatNumber(totalInvestment);
-            document.getElementById('currentValue').textContent = formatNumber(currentValue);
+            // 모든 금액을 원단위로 표시
+            document.getElementById('totalInvestment').textContent = totalInvestment.toLocaleString() + '원';
+            document.getElementById('currentValue').textContent = currentValue.toLocaleString() + '원';
             
             const profitElement = document.getElementById('totalProfitLoss');
             profitElement.textContent = (totalProfitLoss > 0 ? '+' : '') + totalProfitLoss.toLocaleString() + '원';
@@ -485,9 +483,16 @@
                 return;
             }
 
+            // 평가금액 순으로 정렬 (큰 순서부터)
+            const sortedHoldings = [...data.holdings].sort((a, b) => {
+                const valueA = a.quantity * a.currentPrice;
+                const valueB = b.quantity * b.currentPrice;
+                return valueB - valueA; // 내림차순 정렬
+            });
+
             const portfolioHTML = `
                 <div class="portfolio-grid">
-                    ${data.holdings.map(stock => createStockCard(stock)).join('')}
+                    ${sortedHoldings.map(stock => createStockCard(stock)).join('')}
                 </div>
             `;
 
@@ -583,7 +588,7 @@
                 isAutoRefresh = false;
                 button.textContent = '자동새로고침 시작';
             } else {
-                autoRefreshInterval = setInterval(refreshData, 60000); // 1분마다
+                autoRefreshInterval = setInterval(refreshData, 300000); // 5분마다 (기존 1분 → 5분)
                 isAutoRefresh = true;
                 button.textContent = '자동새로고침 중지';
             }
