@@ -90,6 +90,8 @@ class KISAPIClient:
 
         if self.load_saved_token():
             return self.access_token
+        else:
+            print("get_access_token:load_save_token failed!!")
 
         url = f"{self.base_url}/oauth2/tokenP"
         headers = {"content-type": "application/json"}

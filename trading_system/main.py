@@ -119,7 +119,10 @@ class AutoTrader:
         self.weekend_shutdown_enabled = system_config.get('weekend_shutdown_enabled', True)
         self.shutdown_delay_hours = system_config.get('shutdown_delay_hours', 1)
 
-        
+        # 일일 성과 추적기 추가
+        from monitoring.daily_performance import DailyPerformanceTracker
+        self.daily_tracker = DailyPerformanceTracker(self.api_client, self.logger)
+    
         self.logger.info("✅ 개선된 자동매매 시스템 초기화 완료")
 
 
@@ -531,9 +534,15 @@ class AutoTrader:
             while True:
                 current_time = datetime.now()
                 
+                market_info = self.get_market_status_info(current_time)
+
                 # 🆕 시작 시 자동 종료 조건 확인
                 should_shutdown, shutdown_reason = self.check_market_close_shutdown(current_time)
                 if should_shutdown:
+                    # 🆕 종료 전 일일 요약 전송
+                    self.logger.info("📊 종료 전 일일 거래 요약 전송 중...")
+                    self.send_daily_summary()
+
                     self.logger.info(f"🏁 자동 종료 실행: {shutdown_reason}")
                     self.notifier.notify_system_stop(f"자동 종료 - {shutdown_reason}")
                     break
@@ -608,20 +617,18 @@ class AutoTrader:
                 
                 else:
                     self.logger.info(f"⏰ 장 외 시간: {market_info['message']}")
-                    
+
                     # 🆕 장 외 시간에도 자동 종료 조건 확인
                     should_shutdown, shutdown_reason = self.check_market_close_shutdown(current_time)
                     if should_shutdown:
+                    # 🆕 종료 전 일일 요약 전송
+                        self.logger.info("📊 종료 전 일일 거래 요약 전송 중...")
+                        self.send_daily_summary()
+
                         self.logger.info(f"🏁 장 외 자동 종료 실행: {shutdown_reason}")
                         self.notifier.notify_system_stop(f"자동 종료 - {shutdown_reason}")
                         break
                 
-                # 일일 요약
-                if (current_time.date() != last_daily_summary and current_time.hour >= 16):
-                    self.notifier.notify_daily_summary(daily_trades, self.daily_pnl, daily_trades, symbol_list_with_names)
-                    daily_trades = 0
-                    self.daily_pnl = 0
-                    last_daily_summary = current_time.date()
                 
                 # 대기 시간 계산
                 if market_info['is_trading_time']:
@@ -658,15 +665,77 @@ class AutoTrader:
                         self.logger.debug(f"⏳ 대기 중... (남은 시간: {remaining_minutes:.0f}분)")
                 
         except KeyboardInterrupt:
+            self.send_daily_summary()
             self.logger.info("🛑 사용자가 개선된 시스템을 종료했습니다.")
             self.notifier.notify_system_stop("사용자 종료")
         except Exception as e:
             self.logger.error(f"❌ 개선된 시스템 치명적 오류: {e}")
             self.notifier.notify_error("개선된 시스템 오류", str(e))
+            self.send_daily_summary()
         finally:
             self.logger.info("🔚 개선된 하이브리드 시스템 종료")
 
-
+    def send_daily_summary(self):
+        """일일 요약 전송 - 거래 내역이 없어도 포트폴리오 현황 전송"""
+        try:
+            self.logger.info("📊 일일 포트폴리오 현황 생성 중...")
+            
+            # 일일 요약 계산
+            summary = self.daily_tracker.calculate_daily_summary()
+            
+            # 🆕 데이터가 없어도 기본 요약 전송
+            if not summary:
+                self.logger.warning("⚠️ 포트폴리오 데이터 조회 실패")
+                self.notifier.send_notification(
+                    "⚠️ 포트폴리오 현황", 
+                    f"오늘 ({datetime.now().strftime('%Y-%m-%d')}) 포트폴리오 데이터를 조회할 수 없습니다.", 
+                    0xff0000
+                )
+                return
+            
+            # 트렌드 분석
+            trend_analysis = self.daily_tracker.get_trend_analysis(7)
+            
+            # 🆕 항상 Discord 알림 전송
+            success = self.notifier.notify_daily_summary(summary, trend_analysis)
+            
+            if success:
+                self.logger.info("✅ 일일 포트폴리오 현황 Discord 전송 완료")
+            else:
+                self.logger.error("❌ 일일 포트폴리오 현황 Discord 전송 실패")
+            
+            # 콘솔 요약
+            total_profit_loss = summary.get('total_profit_loss', 0)
+            total_return_pct = summary.get('total_return_pct', 0)
+            total_assets = summary.get('total_assets', 0)
+            position_count = summary.get('position_count', 0)
+            today_trades = len(summary.get('today_trades', []))
+            
+            self.logger.info("=" * 60)
+            self.logger.info("📊 일일 포트폴리오 현황")
+            self.logger.info("=" * 60)
+            self.logger.info(f"💰 총 자산: {total_assets:,.0f}원")
+            
+            if position_count > 0:
+                self.logger.info(f"📈 평가손익: {total_profit_loss:+,.0f}원 ({total_return_pct:+.2f}%)")
+                self.logger.info(f"📋 보유종목: {position_count}개")
+            else:
+                self.logger.info("📋 보유종목: 없음")
+            
+            self.logger.info(f"🔄 오늘 프로그램 거래: {today_trades}건")
+            self.logger.info("=" * 60)
+            
+        except Exception as e:
+            self.logger.error(f"❌ 일일 현황 전송 실패: {e}")
+            
+            try:
+                self.notifier.send_notification(
+                    "⚠️ 포트폴리오 현황 오류", 
+                    f"포트폴리오 현황 생성 중 오류: {str(e)}", 
+                    0xff0000
+                )
+            except:
+                pass
 
 def main():
     """메인 함수"""

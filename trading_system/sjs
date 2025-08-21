@@ -1,0 +1,96 @@
+    def calculate_daily_summary(self) -> Dict:
+        """일일 수익률 요약 계산 - 기존 보유 종목 포함"""
+        try:
+            # 현재 포트폴리오 상태
+            holdings = self.api_client.get_all_holdings()
+            account_data = self.api_client.get_account_balance()
+            
+            if not account_data:
+                return {}
+            
+            output = account_data.get('output', {})
+            cash = float(output.get('ord_psbl_cash', 0))
+            
+            # 보유 주식 평가
+            total_stock_value = 0
+            total_purchase_amount = 0
+            total_profit_loss = 0
+            position_details = []
+            
+            for symbol, position in holdings.items():
+                stock_value = position['total_value']
+                purchase_value = position['purchase_amount']
+                profit_loss = stock_value - purchase_value
+                profit_loss_pct = (profit_loss / purchase_value * 100) if purchase_value > 0 else 0
+                
+                total_stock_value += stock_value
+                total_purchase_amount += purchase_value
+                total_profit_loss += profit_loss
+                
+                position_details.append({
+                    'symbol': symbol,
+                    'stock_name': position['stock_name'],
+                    'quantity': position['quantity'],
+                    'avg_price': position['avg_price'],
+                    'current_price': position['current_price'],
+                    'total_value': stock_value,
+                    'profit_loss': profit_loss,
+                    'profit_loss_pct': profit_loss_pct
+                })
+            
+            # 총 자산 및 수익률
+            total_assets = cash + total_stock_value
+            total_return_pct = (total_profit_loss / total_purchase_amount * 100) if total_purchase_amount > 0 else 0
+            
+            # 🆕 오늘 거래 내역 (프로그램 실행 중 + 기존 보유 정보)
+            today_trades = self.get_today_trades()
+            
+            # 🆕 거래 내역이 없어도 기본 요약 생성
+            summary = {
+                'date': datetime.now().strftime('%Y-%m-%d'),
+                'timestamp': datetime.now().isoformat(),
+                'total_assets': total_assets,
+                'cash': cash,
+                'stock_value': total_stock_value,
+                'total_profit_loss': total_profit_loss,
+                'total_return_pct': total_return_pct,
+                'position_count': len(holdings),
+                'position_details': position_details,
+                'today_trades': today_trades,
+                'has_holdings': len(holdings) > 0,  # 보유 종목 존재 여부
+                'program_trade_only': len(today_trades) == 0  # 프로그램 거래만 있는지
+            }
+            
+            # 저장
+            self.save_daily_performance(summary)
+            
+            return summary
+            
+        except Exception as e:
+            self.logger.error(f"일일 요약 계산 실패: {e}")
+            return {}
+    
+    def get_estimated_daily_trades_from_holdings(self, holdings: Dict) -> List[Dict]:
+        """보유 종목으로부터 추정 거래 내역 생성 (참고용)"""
+        try:
+            estimated_trades = []
+            today = datetime.now().strftime('%Y-%m-%d')
+            
+            for symbol, position in holdings.items():
+                # 기존 보유 종목을 "참고용 거래"로 표시
+                estimated_trades.append({
+                    'timestamp': f"{today}T09:00:00",  # 장 시작 시간으로 가정
+                    'symbol': symbol,
+                    'stock_name': position['stock_name'],
+                    'action': 'HOLD',  # 보유 중
+                    'quantity': position['quantity'],
+                    'price': position['avg_price'],
+                    'amount': position['purchase_amount'],
+                    'reason': '기존보유'
+                })
+            
+            return estimated_trades
+            
+        except Exception as e:
+            self.logger.error(f"추정 거래 내역 생성 실패: {e}")
+            return []
