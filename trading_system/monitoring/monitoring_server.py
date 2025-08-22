@@ -169,14 +169,15 @@ def background_updater():
             
             if is_market_hours:
                 update_portfolio_data()
-                time.sleep(10)  # 1분마다 업데이트
+                print(f"📊 포트폴리오 업데이트 완료 - {now.strftime('%H:%M:%S')}")
+                time.sleep(300)  # 5분마다 업데이트 (기존 60초 → 300초)
             else:
                 print(f"📴 장외시간 - 업데이트 대기 중... ({now.strftime('%H:%M')})")
-                time.sleep(300)  # 5분마다 체크
+                time.sleep(1800)  # 30분마다 체크 (기존 300초 → 1800초)
                 
         except Exception as e:
             print(f"❌ 백그라운드 업데이트 오류: {e}")
-            time.sleep(60)
+            time.sleep(300)  # 오류 시 5분 대기
 
 @app.route('/')
 def index():
@@ -212,7 +213,7 @@ def get_portfolio():
         # 캐시된 데이터가 없거나 너무 오래된 경우 즉시 업데이트
         if not portfolio_cache or not last_update_time:
             update_portfolio_data()
-        elif (datetime.now() - last_update_time).total_seconds() > 300:  # 5분 이상
+        elif (datetime.now() - last_update_time).total_seconds() > 600:  # 10분 이상 (기존 5분 → 10분)
             update_portfolio_data()
         
         return jsonify(portfolio_cache)
@@ -252,8 +253,45 @@ def get_market_status():
         'weekday': weekday
     })
 
-@app.route('/api/refresh')
-def force_refresh():
+def get_today_trades():
+    """오늘 거래 내역 조회"""
+    try:
+        trades_file = os.path.join(parent_dir, 'daily_trades.json')
+        if not os.path.exists(trades_file):
+            return []
+        
+        with open(trades_file, 'r', encoding='utf-8') as f:
+            all_trades = json.load(f)
+        
+        today = datetime.now().strftime('%Y-%m-%d')
+        today_trades = [trade for trade in all_trades 
+                       if trade.get('timestamp', '').startswith(today)]
+        
+        # 최신 거래부터 정렬
+        today_trades.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+        
+        return today_trades
+        
+    except Exception as e:
+        print(f"❌ 거래 내역 조회 실패: {e}")
+        return []
+
+@app.route('/api/trades')
+def get_trades():
+    """거래 내역 API"""
+    try:
+        today_trades = get_today_trades()
+        return jsonify({
+            'trades': today_trades,
+            'count': len(today_trades),
+            'date': datetime.now().strftime('%Y-%m-%d')
+        })
+    except Exception as e:
+        return jsonify({
+            'trades': [],
+            'count': 0,
+            'error': f'거래 내역 조회 오류: {str(e)}'
+        }), 500
     """강제 새로고침 API"""
     try:
         update_portfolio_data()

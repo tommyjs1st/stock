@@ -98,7 +98,7 @@
 
         .summary-card h3 {
             color: #7f8c8d;
-            font-size: 1.1em;
+            font-size: 0.9em;
             margin-bottom: 10px;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -173,7 +173,7 @@
             color: #7f8c8d;
             padding: 4px 8px;
             border-radius: 8px;
-            font-size: 1.0em;
+            font-size: 0.8em;
             font-weight: bold;
         }
 
@@ -189,7 +189,7 @@
         }
 
         .detail-label {
-            font-size: 1.0em;
+            font-size: 0.8em;
             color: #7f8c8d;
             margin-bottom: 5px;
             text-transform: uppercase;
@@ -364,6 +364,19 @@
             </div>
         </div>
 
+        <!-- 거래 내역 섹션 추가 -->
+        <div class="trades-section">
+            <div class="section-header">
+                <h2>📈 오늘 거래 내역</h2>
+                <span id="tradesCount">-</span>
+            </div>
+            <div id="tradesContainer">
+                <div class="no-data">
+                    거래 내역을 불러오는 중입니다...
+                </div>
+            </div>
+        </div>
+
         <div class="controls">
             <button class="refresh-btn" onclick="refreshData()">
                 <span id="refreshText">새로고침</span>
@@ -534,7 +547,64 @@
             }
         }
 
-        async function fetchPortfolioData() {
+        async function fetchTradesData() {
+            const response = await fetch('/api/trades');
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return await response.json();
+        }
+
+        function createTradeItem(trade) {
+            const tradeType = trade.action.toLowerCase();
+            const actionEmoji = trade.action === 'BUY' ? '🛒' : '💸';
+            const actionText = trade.action === 'BUY' ? '매수' : '매도';
+            
+            const totalAmount = trade.quantity * trade.price;
+            const tradeTime = new Date(trade.timestamp).toLocaleTimeString('ko-KR', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            return `
+                <div class="trade-item ${tradeType}">
+                    <div class="trade-info">
+                        <div class="trade-stock">${actionEmoji} ${trade.stock_name || trade.symbol}</div>
+                        <div class="trade-details">${trade.quantity.toLocaleString()}주 × ${trade.price.toLocaleString()}원</div>
+                        <div class="trade-time">${tradeTime} ${trade.reason ? `(${trade.reason})` : ''}</div>
+                    </div>
+                    <div class="trade-amount">
+                        <div class="trade-price">${totalAmount.toLocaleString()}원</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTrades(data) {
+            const container = document.getElementById('tradesContainer');
+            const countElement = document.getElementById('tradesCount');
+            
+            if (data.error) {
+                container.innerHTML = `<div class="error-message">${data.error}</div>`;
+                countElement.textContent = '오류';
+                return;
+            }
+            
+            countElement.textContent = `${data.count}건`;
+            
+            if (!data.trades || data.trades.length === 0) {
+                container.innerHTML = '<div class="no-data">오늘 거래 내역이 없습니다.</div>';
+                return;
+            }
+
+            const tradesHTML = `
+                <div class="trades-grid">
+                    ${data.trades.map(trade => createTradeItem(trade)).join('')}
+                </div>
+            `;
+
+            container.innerHTML = tradesHTML;
+        }
             const response = await fetch('/api/portfolio');
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -550,14 +620,20 @@
             refreshText.innerHTML = '<div class="loading"></div> 로딩중...';
 
             try {
-                const data = await fetchPortfolioData();
-                renderPortfolio(data);
+                // 포트폴리오와 거래 내역을 동시에 조회
+                const [portfolioData, tradesData] = await Promise.all([
+                    fetchPortfolioData(),
+                    fetchTradesData()
+                ]);
+                
+                renderPortfolio(portfolioData);
+                renderTrades(tradesData);
                 updateTimestamp();
                 updateMarketStatus();
                 
                 // 서버에서 받은 업데이트 시간이 있으면 사용
-                if (data.lastUpdate) {
-                    const serverTime = new Date(data.lastUpdate);
+                if (portfolioData.lastUpdate) {
+                    const serverTime = new Date(portfolioData.lastUpdate);
                     const timeString = serverTime.toLocaleString('ko-KR', {
                         year: 'numeric',
                         month: '2-digit',
