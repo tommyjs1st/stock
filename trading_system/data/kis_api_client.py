@@ -243,98 +243,107 @@ class KISAPIClient:
             return {}
     
     def get_current_bid_ask(self, symbol: str) -> Dict:
-            """현재 호가 정보 조회 (버그 수정 버전)"""
+        """현재 호가 정보 조회 (개선된 버전)"""
+        
+        try:
+            # 1. 먼저 현재가 확실히 조회
+            current_price_data = self.get_current_price(symbol)
+            current_price = 0
+            if current_price_data and current_price_data.get('output'):
+                current_price = float(current_price_data['output'].get('stck_prpr', 0))
+
+            if current_price == 0:
+                return {}
+
+            # 2. 호가 조회 시도
+            url = f"{self.base_url}/uapi/domestic-stock/v1/quotations/inquire-asking-price-exp-ccn"
+            headers = {
+                "content-type": "application/json",
+                "authorization": f"Bearer {self.get_access_token()}",
+                "appkey": self.app_key,
+                "appsecret": self.app_secret,
+                "tr_id": "FHKST01010200"
+            }
+            params = {
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": symbol
+            }
+
+            response = requests.get(url, headers=headers, params=params, timeout=10)
             
+            # 3. 호가 조회 성공 시 처리
+            if response.status_code == 200:
+                data = response.json()
+                
+                if data.get('rt_cd') == '0' and data.get('output1'):
+                    output = data['output1']
+                    
+                    # 안전한 숫자 변환 함수
+                    def safe_int_convert(value, default=0):
+                        try:
+                            if isinstance(value, str):
+                                clean_value = ''.join(c for c in value if c.isdigit() or c == '.')
+                                return int(float(clean_value)) if clean_value else default
+                            elif isinstance(value, (int, float)):
+                                return int(value)
+                            else:
+                                return default
+                        except (ValueError, TypeError):
+                            return default
+                    
+                    # 호가 데이터에서 현재가 우선 확인
+                    api_current_price = safe_int_convert(output.get('stck_prpr', 0))
+                    bid_price = safe_int_convert(output.get('bidp1', 0))
+                    ask_price = safe_int_convert(output.get('askp1', 0))
+                    bid_quantity = safe_int_convert(output.get('bidp_rsqn1', 0))
+                    ask_quantity = safe_int_convert(output.get('askp_rsqn1', 0))
+                    
+                    # 현재가는 호가 API에서 가져온 값을 우선 사용, 없으면 기존 값 사용
+                    final_current_price = api_current_price if api_current_price > 0 else current_price
+                    
+                    bid_ask_info = {
+                        'current_price': final_current_price,
+                        'bid_price': bid_price,
+                        'ask_price': ask_price,
+                        'bid_quantity': bid_quantity,
+                        'ask_quantity': ask_quantity,
+                        'spread': ask_price - bid_price if ask_price > 0 and bid_price > 0 else 0
+                    }
+                    
+                    return bid_ask_info
+            
+            # 4. 호가 조회 실패 시 현재가로만 구성
+            return {
+                'current_price': current_price,
+                'bid_price': current_price,
+                'ask_price': current_price,
+                'bid_quantity': 0,
+                'ask_quantity': 0,
+                'spread': 0
+            }
+                        
+        except Exception as e:
+            print(f"❌ {symbol} 호가 조회 오류: {e}")
+            
+            # 오류 발생 시 현재가 API로만 구성
             try:
-                # 1. 먼저 현재가 확실히 조회
                 current_price_data = self.get_current_price(symbol)
-                current_price = 0
                 if current_price_data and current_price_data.get('output'):
                     current_price = float(current_price_data['output'].get('stck_prpr', 0))
-        
-                if current_price == 0:
-                    return {}
-
-                # 2. 호가 조회 시도
-                url = f"{self.base_url}/uapi/domestic-stock/v1/quotations/inquire-asking-price-exp-ccn"
-                headers = {
-                    "content-type": "application/json",
-                    "authorization": f"Bearer {self.get_access_token()}",
-                    "appkey": self.app_key,
-                    "appsecret": self.app_secret,
-                    "tr_id": "FHKST01010200"
-                }
-                params = {
-                    "fid_cond_mrkt_div_code": "J",
-                    "fid_input_iscd": symbol
-                }
-
-                response = requests.get(url, headers=headers, params=params, timeout=10)
-                # 3. 호가 조회 성공 시에도 현재가 보정
-                if response.status_code == 200:
-                    data = response.json()
-                    
-                    # 응답 구조 디버깅
-                    #print(f"🔍 {symbol} 호가 응답 디버깅:")
-                    #print(f"  rt_cd: {data.get('rt_cd')}")
-                    #print(f"  response keys: {list(data.keys())}")
-                    
-                    if data.get('rt_cd') == '0' and data.get('output1'):
-                        output = data['output1']
-                        
-                        # 안전한 숫자 변환
-                        def safe_int_convert(value, default=0):
-                            try:
-                                if isinstance(value, str):
-                                    # 문자열에서 숫자만 추출
-                                    clean_value = ''.join(c for c in value if c.isdigit() or c == '.')
-                                    return int(float(clean_value)) if clean_value else default
-                                elif isinstance(value, (int, float)):
-                                    return int(value)
-                                else:
-                                    return default
-                            except (ValueError, TypeError):
-                                return default
-                        
-                        current_price = safe_int_convert(output.get('stck_prpr', 0))
-                        bid_price = safe_int_convert(output.get('bidp1', 0))
-                        ask_price = safe_int_convert(output.get('askp1', 0))
-                        bid_quantity = safe_int_convert(output.get('bidp_rsqn1', 0))
-                        ask_quantity = safe_int_convert(output.get('askp_rsqn1', 0))
-                        
-                        # 계산된 값들 출력
-                        print(f"  변환 후 - 현재가: {current_price}, 매수호가: {bid_price}, 매도호가: {ask_price}")
-                        bid_ask_info = {
+                    if current_price > 0:
+                        return {
                             'current_price': current_price,
-                            'bid_price': bid_price,
-                            'ask_price': ask_price,
-                            'bid_quantity': bid_quantity,
-                            'ask_quantity': ask_quantity,
-                            'spread': ask_price - bid_price if ask_price > 0 and bid_price > 0 else 0
+                            'bid_price': current_price,
+                            'ask_price': current_price,
+                            'bid_quantity': 0,
+                            'ask_quantity': 0,
+                            'spread': 0
                         }
-                        
+            except:
+                pass
+        
+        return {}
 
-                        # current_price가 0이면 현재가 API 결과 사용
-                        if bid_ask_info['current_price'] == 0 and current_price > 0:
-                            bid_ask_info['current_price'] = current_price
-
-                        print(f"  최종 결과: {bid_ask_info}")
-                        return bid_ask_info
-                # 4. 호가 조회 실패 시 현재가로만 구성
-                return {
-                    'current_price': current_price,
-                    'bid_price': current_price,
-                    'ask_price': current_price,
-                    'bid_quantity': 0,
-                    'ask_quantity': 0,
-                    'spread': 0
-                }
-                        
-            except Exception as e:
-                print(f"❌ {symbol} 호가 조회 오류: {e}")
-            
-            return {}
-    
     def get_account_balance(self) -> Dict:
         """계좌 잔고 조회"""
         url = f"{self.base_url}/uapi/domestic-stock/v1/trading/inquire-psbl-order"

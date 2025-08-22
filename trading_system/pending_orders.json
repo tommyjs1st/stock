@@ -1,1 +1,14 @@
-{}
+{
+  "Unknown": {
+    "order_no": "Unknown",
+    "symbol": "062040",
+    "stock_name": "산일전기",
+    "side": "BUY",
+    "quantity": 1,
+    "limit_price": 114500,
+    "strategy": "patient_limit",
+    "order_time": "2025-08-22T14:25:50.308651",
+    "check_count": 0,
+    "last_check": null
+  }
+}

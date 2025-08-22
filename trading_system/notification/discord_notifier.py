@@ -260,6 +260,39 @@ class DiscordNotifier:
             return False
 
     
+    def notify_system_start(self, strategy_name: str, check_interval: int, symbols: List[str]):
+        """시스템 시작 알림"""
+        title = "🚀 자동매매 시스템 시작"
+            
+        symbol_list = ", ".join(symbols[:5])  # 최대 5개만 표시
+        if len(symbols) > 5:
+            symbol_list += f" 외 {len(symbols) - 5}개"
+           
+        message = f"""
+전략: {strategy_name}
+체크 간격: {check_interval}분
+거래 종목: {symbol_list}
+시작 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+    
+시스템이 정상적으로 시작되었습니다.
+"""
+
+        return self.send_notification(title, message, 0x00ff00)
+        
+    def notify_error(self, error_type: str, error_message: str):
+        """오류 알림"""
+        if not self.notify_on_error:
+            return
+                
+        title = f"❌ 시스템 오류: {error_type}"
+        message = f"""
+오류 유형: {error_type}
+오류 내용: {error_message}
+발생 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+            
+        return self.send_notification(title, message, 0xff0000)
+
     def notify_symbol_changes(self, added: set, removed: set, get_stock_name_func=None):
         """종목 변경 알림"""
         if not added and not removed:
