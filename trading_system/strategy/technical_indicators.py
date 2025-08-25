@@ -11,7 +11,7 @@ class TechnicalIndicators:
     
     @staticmethod
     def calculate_macd(df: pd.DataFrame, price_col: str = 'stck_prpr', 
-                      fast: int = 12, slow: int = 26, signal: int = 9) -> pd.DataFrame:
+                      fast: int = 5, slow: int = 12, signal: int = 9) -> pd.DataFrame:
         """MACD 지표 계산"""
         if len(df) < slow + signal:
             return df

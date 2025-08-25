@@ -13,7 +13,6 @@ class OrderManager:
         self.max_position_ratio = max_position_ratio
         self.get_stock_name = get_stock_name_func or (lambda code: code)
     
-
     def calculate_position_size(self, current_price: float, signal_strength: float, 
                                price_position: float, volatility: float, symbol: str = None) -> int:
         try:
@@ -23,44 +22,44 @@ class OrderManager:
     
             output = account_data.get('output', {})
             available_cash = float(output.get('ord_psbl_cash', 0))
+            total_deposit = float(output.get('dnca_tot_amt', 0))
             
-            if available_cash == 0:
+            # 1. 계좌 정보 로깅
+            if symbol:  # 첫 번째 종목에서만 로깅 (중복 방지)
+                self.logger.info("💳 계좌 현황:")
+                self.logger.info(f"  총 예수금: {total_deposit:,.0f}원")
+                self.logger.info(f"  주문가능: {available_cash:,.0f}원")
+                
+                if total_deposit > available_cash + 50000:
+                    pending_settlement = total_deposit - available_cash
+                    self.logger.warning(f"⚠️ T+2 결제 대기중: 약 {pending_settlement:,.0f}원")
+            
+            # 2. 안전 마진 적용한 사용가능금액 계산
+            safety_margin = 50000
+            safe_amount = max(0, available_cash - safety_margin)
+            
+            if safe_amount < 30000:
+                if symbol:
+                    stock_name = self.get_stock_name(symbol) if self.get_stock_name else symbol
+                    self.logger.warning(f"⚠️ {stock_name}({symbol}) 안전사용금액 부족: {safe_amount:,.0f}원")
                 return 0
             
-            # 1. 기본 투자 가능 금액 더 증가
-            base_investment = available_cash * self.max_position_ratio * 3  # 2배 → 3배
-            
-            # 2. 완화된 승수 적용
-            position_multiplier = self.get_position_multiplier(price_position)
-            volatility_multiplier = self.get_volatility_multiplier(volatility)
-            strength_multiplier = self.get_strength_multiplier_conservative(signal_strength)
-            
-            # 3. 최종 계산 (더 관대하게)
-            adjusted_investment = (base_investment * 
-                                 max(position_multiplier, 0.8) *  # 최소 0.8 보장
-                                 max(volatility_multiplier, 0.8) *  # 최소 0.8 보장
-                                 max(strength_multiplier, 0.8))    # 최소 0.8 보장
-            
-            # 4. 최소/최대 제한 더 관대하게
-            min_investment = 200000   # 10만원 → 20만원
-            max_investment = available_cash * 0.3  # 25% → 30%
-            
-            adjusted_investment = max(min_investment, 
-                                    min(adjusted_investment, max_investment))
-            
-            quantity = int(adjusted_investment / current_price)
+            # 3. 실제 포지션 크기 계산
+            max_investment = safe_amount * 0.5  # 50%만 사용
+            quantity = int(max_investment / current_price)
             
             if symbol:
-                stock_name = self.get_stock_name(symbol)
-                self.logger.info(f"📊 {stock_name}({symbol}) 포지션 계산:")
-                self.logger.info(f"  기본투자: {base_investment:,.0f}원")
-                self.logger.info(f"  최종투자: {adjusted_investment:,.0f}원 → {quantity}주")
+                stock_name = self.get_stock_name(symbol) if self.get_stock_name else symbol
+                self.logger.info(f"📊 {stock_name}({symbol}) 안전 포지션:")
+                self.logger.info(f"  안전사용액: {safe_amount:,.0f}원")
+                self.logger.info(f"  최대투자: {max_investment:,.0f}원 → {quantity}주")
             
-            return max(quantity, 1)  # 최소 1주
+            return max(quantity, 0)
             
         except Exception as e:
-            return 1  # 오류 시 1주
-    
+            self.logger.error(f"포지션 계산 오류: {e}")
+            return 0
+
     def get_position_multiplier(self, price_position: float) -> float:
         """완화된 가격 위치 승수"""
         if price_position <= 0.3:

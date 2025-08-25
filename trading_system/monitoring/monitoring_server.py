@@ -268,6 +268,46 @@ def force_refresh():
             'message': f'업데이트 실패: {str(e)}'
         }), 500
 
+@app.route('/api/performance')
+def get_performance():
+    """간단한 수익 추이 API"""
+    try:
+        # 기존 파일만 확인
+        performance_file = os.path.join(parent_dir, 'daily_performance.json')
+        if os.path.exists(performance_file):
+            with open(performance_file, 'r', encoding='utf-8') as f:
+                all_performance = json.load(f)
+            recent_performance = all_performance[-14:] if len(all_performance) > 14 else all_performance
+        else:
+            # 간단한 샘플 데이터만
+            recent_performance = create_simple_sample_data()
+        
+        return jsonify({
+            'performance': recent_performance,
+            'count': len(recent_performance),
+            'period': f'{len(recent_performance)}일'
+        })
+    except Exception as e:
+        return jsonify({
+            'performance': create_simple_sample_data(),
+            'count': 7,
+            'period': '7일 (샘플)'
+        })
+
+def create_simple_sample_data():
+    """간단한 샘플 데이터"""
+    from datetime import datetime, timedelta
+    data = []
+    for i in range(7):
+        date = datetime.now() - timedelta(days=6-i)
+        data.append({
+            'date': date.strftime('%Y-%m-%d'),
+            'total_assets': 10000000 + i * 50000,
+            'total_profit_loss': i * 10000 - 30000,
+            'total_return_pct': (i * 0.5) - 1.5
+        })
+    return data
+
 def initialize_system():
     """시스템 초기화"""
     global api_client

@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>주식 포트폴리오 모니터링</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+
     <style>
         * {
             margin: 0;
@@ -322,6 +325,26 @@
                 grid-template-columns: 1fr;
             }
         }
+        /* 수익 추이 차트 섹션 스타일 */
+        .chart-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 15px 0;
+        }
+
+        #performanceChart {
+            width: 100% !important;
+            height: 100% !important;
+        }
     </style>
 </head>
 <body>
@@ -336,6 +359,17 @@
                 <div class="status">
                     <span id="marketStatus">시장 상태: 확인 중...</span>
                 </div>
+            </div>
+        </div>
+
+        <!-- 수익 추이 섹션 추가 (요약 카드 위에) -->
+        <div class="chart-section">
+            <div class="section-header">
+                <h2>📈 수익 추이</h2>
+                <span id="chartPeriod">-</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="performanceChart" width="800" height="300"></canvas>
             </div>
         </div>
 
@@ -542,6 +576,70 @@
             return await response.json();
         }
 
+        let performanceChart = null;
+
+        // 수익 추이 데이터 조회
+        async function fetchPerformanceData() {
+            const response = await fetch('/api/performance');
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return await response.json();
+        }
+
+        // 수익 추이 차트 생성
+        function createPerformanceChart(data) {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            
+            if (performanceChart) {
+                performanceChart.destroy();
+            }
+
+            const labels = data.performance.map(item => {
+                const date = new Date(item.date);
+                return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+            });
+
+            const assetData = data.performance.map(item => Math.round(item.total_assets / 10000));
+
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '총 자산 (만원)',
+                        data: assetData,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: { display: true, text: '총 자산 (만원)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 수익 추이 차트 렌더링
+        function renderPerformanceChart(data) {
+            document.getElementById('chartPeriod').textContent = data.period;
+            if (data.performance && data.performance.length > 0) {
+                createPerformanceChart(data);
+            } else {
+                document.querySelector('.chart-container').innerHTML = 
+                    '<div class="no-data">수익 추이 데이터가 없습니다.</div>';
+            }
+        }
+
         async function refreshData() {
             const refreshBtn = document.querySelector('.refresh-btn');
             const refreshText = document.getElementById('refreshText');
@@ -568,6 +666,10 @@
                     });
                     document.getElementById('lastUpdate').textContent = `최종 업데이트: ${timeString}`;
                 }
+
+                // 수익 추이도 함께 조회
+                const performanceData = await fetch('/api/performance').then(r => r.json());
+                renderChart(performanceData);
                 
             } catch (error) {
                 console.error('데이터 로드 실패:', error);
@@ -577,6 +679,10 @@
                 refreshBtn.disabled = false;
                 refreshText.textContent = '새로고침';
             }
+        }
+
+        function renderChart(data) {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
         }
 
         function toggleAutoRefresh() {

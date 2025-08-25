@@ -1,0 +1,112 @@
+[
+  {
+    "date": "2025-08-22",
+    "timestamp": "2025-08-22T14:52:37.987013",
+    "total_assets": 924981.0,
+    "cash": 12581.0,
+    "stock_value": 912400.0,
+    "total_profit_loss": 25400.0,
+    "total_return_pct": 2.8635851183765504,
+    "position_count": 4,
+    "position_details": [
+      {
+        "symbol": "062040",
+        "stock_name": "산일전기",
+        "quantity": 3,
+        "avg_price": 112766.6667,
+        "current_price": 115200.0,
+        "total_value": 345600.0,
+        "profit_loss": 7300.0,
+        "profit_loss_pct": 2.157848063848655
+      },
+      {
+        "symbol": "249420",
+        "stock_name": "일동제약",
+        "quantity": 2,
+        "avg_price": 22750.0,
+        "current_price": 23600.0,
+        "total_value": 47200.0,
+        "profit_loss": 1700.0,
+        "profit_loss_pct": 3.7362637362637363
+      },
+      {
+        "symbol": "251270",
+        "stock_name": "넷마블",
+        "quantity": 1,
+        "avg_price": 60700.0,
+        "current_price": 60600.0,
+        "total_value": 60600.0,
+        "profit_loss": -100.0,
+        "profit_loss_pct": -0.16474464579901155
+      },
+      {
+        "symbol": "278470",
+        "stock_name": "에이피알",
+        "quantity": 2,
+        "avg_price": 221250.0,
+        "current_price": 229500.0,
+        "total_value": 459000.0,
+        "profit_loss": 16500.0,
+        "profit_loss_pct": 3.728813559322034
+      }
+    ],
+    "today_trades": [],
+    "has_holdings": true,
+    "program_trade_only": true
+  },
+  {
+    "date": "2025-08-25",
+    "timestamp": "2025-08-25T15:28:35.138732",
+    "total_assets": 925981.0,
+    "cash": 12581.0,
+    "stock_value": 913400.0,
+    "total_profit_loss": 26400.0,
+    "total_return_pct": 2.9763246899661784,
+    "position_count": 4,
+    "position_details": [
+      {
+        "symbol": "062040",
+        "stock_name": "산일전기",
+        "quantity": 3,
+        "avg_price": 112766.6667,
+        "current_price": 117300.0,
+        "total_value": 351900.0,
+        "profit_loss": 13600.0,
+        "profit_loss_pct": 4.0201005025125625
+      },
+      {
+        "symbol": "249420",
+        "stock_name": "일동제약",
+        "quantity": 2,
+        "avg_price": 22750.0,
+        "current_price": 23800.0,
+        "total_value": 47600.0,
+        "profit_loss": 2100.0,
+        "profit_loss_pct": 4.615384615384616
+      },
+      {
+        "symbol": "251270",
+        "stock_name": "넷마블",
+        "quantity": 1,
+        "avg_price": 60700.0,
+        "current_price": 60900.0,
+        "total_value": 60900.0,
+        "profit_loss": 200.0,
+        "profit_loss_pct": 0.3294892915980231
+      },
+      {
+        "symbol": "278470",
+        "stock_name": "에이피알",
+        "quantity": 2,
+        "avg_price": 221250.0,
+        "current_price": 226500.0,
+        "total_value": 453000.0,
+        "profit_loss": 10500.0,
+        "profit_loss_pct": 2.3728813559322033
+      }
+    ],
+    "today_trades": [],
+    "has_holdings": true,
+    "program_trade_only": true
+  }
+]
