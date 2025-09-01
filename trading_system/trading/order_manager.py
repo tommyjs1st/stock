@@ -21,22 +21,25 @@ class OrderManager:
                 return 0
     
             output = account_data.get('output', {})
+            self.logger.info("📊 계좌 상세 정보 (output):")
+            self.logger.info("-" * 40)
+            for key, value in output.items():
+                self.logger.info(f"  {key}: {value}")
+            self.logger.info("-" * 40)
+
             available_cash = float(output.get('ord_psbl_cash', 0))
             total_deposit = float(output.get('dnca_tot_amt', 0))
+            nrcvb_buy_amt = float(output.get('nrcvb_buy_amt', 0))
+        
             
             # 1. 계좌 정보 로깅
             if symbol:  # 첫 번째 종목에서만 로깅 (중복 방지)
                 self.logger.info("💳 계좌 현황:")
-                self.logger.info(f"  총 예수금: {total_deposit:,.0f}원")
-                self.logger.info(f"  주문가능: {available_cash:,.0f}원")
-                
-                if total_deposit > available_cash + 50000:
-                    pending_settlement = total_deposit - available_cash
-                    self.logger.warning(f"⚠️ T+2 결제 대기중: 약 {pending_settlement:,.0f}원")
+                self.logger.info(f"  총 예수금: {available_cash:,.0f}원")
+                self.logger.info(f"  주문가능: {nrcvb_buy_amt:,.0f}원")
             
             # 2. 안전 마진 적용한 사용가능금액 계산
-            safety_margin = 50000
-            safe_amount = max(0, available_cash - safety_margin)
+            safe_amount = max(0, nrcvb_buy_amt)
             
             if safe_amount < 30000:
                 if symbol:

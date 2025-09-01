@@ -108,5 +108,60 @@
     "today_trades": [],
     "has_holdings": true,
     "program_trade_only": true
+  },
+  {
+    "date": "2025-09-01",
+    "timestamp": "2025-09-01T12:40:48.750525",
+    "total_assets": 687612.0,
+    "cash": 13012.0,
+    "stock_value": 674600.0,
+    "total_profit_loss": -1150.0,
+    "total_return_pct": -0.17018128005919347,
+    "position_count": 4,
+    "position_details": [
+      {
+        "symbol": "192400",
+        "stock_name": "쿠쿠홀딩스",
+        "quantity": 4,
+        "avg_price": 31762.5,
+        "current_price": 31800.0,
+        "total_value": 127200.0,
+        "profit_loss": 150.0,
+        "profit_loss_pct": 0.11806375442739078
+      },
+      {
+        "symbol": "249420",
+        "stock_name": "일동제약",
+        "quantity": 2,
+        "avg_price": 22750.0,
+        "current_price": 24750.0,
+        "total_value": 49500.0,
+        "profit_loss": 4000.0,
+        "profit_loss_pct": 8.791208791208792
+      },
+      {
+        "symbol": "251270",
+        "stock_name": "넷마블",
+        "quantity": 1,
+        "avg_price": 60700.0,
+        "current_price": 59400.0,
+        "total_value": 59400.0,
+        "profit_loss": -1300.0,
+        "profit_loss_pct": -2.14168039538715
+      },
+      {
+        "symbol": "278470",
+        "stock_name": "에이피알",
+        "quantity": 2,
+        "avg_price": 221250.0,
+        "current_price": 219250.0,
+        "total_value": 438500.0,
+        "profit_loss": -4000.0,
+        "profit_loss_pct": -0.903954802259887
+      }
+    ],
+    "today_trades": [],
+    "has_holdings": true,
+    "program_trade_only": true
   }
 ]
