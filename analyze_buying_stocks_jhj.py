@@ -828,7 +828,8 @@ def calculate_buy_signal_score(df, name, code, foreign_trend=None):
         "엔벨로프돌파": is_envelope_squeeze_breakout(df),
         "MACD골든크로스": is_macd_golden_cross(df),
         "MACD돌파직전": is_macd_near_golden_cross(df),  # 새로 추가
-        "외국인기관매수": foreign_trend == "steady_buying" and is_institution_consecutive_buying(code, app_key, app_secret, access_token) if app_key else False 
+        "외국인매수": foreign_trend == "steady_buying" ,
+        "기관매수": is_institution_consecutive_buying(code, app_key, app_secret, access_token) if app_key else False 
     }
 
     score = sum(signals.values())
@@ -917,7 +918,8 @@ if __name__ == "__main__":
         "엔벨로프돌파": [],
         "MACD골든크로스": [],
         "MACD돌파직전": [],  # 새로 추가
-        "외국인기관매수": [] 
+        "외국인매수": [],
+        "기관매수": [] 
     }
     
     # 다중신호 종목 분류
@@ -1046,7 +1048,8 @@ if __name__ == "__main__":
                     "엔벨로프돌파": "📈",
                     "MACD골든크로스": "⚡",
                     "MACD돌파직전": "🔆",  # 새로 추가
-                    "외국인기관매수": "🌍"
+                    "외국인매수": "🌍",
+                    "기관매수": "🌍"
                 }
                 icon = icons.get(signal_type, "📊")
                 msg = f"{icon} **[{signal_type} 발생 종목]**\n" + "\n".join(signal_list)
