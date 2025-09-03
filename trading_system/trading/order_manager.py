@@ -21,11 +21,11 @@ class OrderManager:
                 return 0
     
             output = account_data.get('output', {})
-            self.logger.info("📊 계좌 상세 정보 (output):")
-            self.logger.info("-" * 40)
-            for key, value in output.items():
-                self.logger.info(f"  {key}: {value}")
-            self.logger.info("-" * 40)
+            #self.logger.info("📊 계좌 상세 정보 (output):")
+            #self.logger.info("-" * 40)
+            #for key, value in output.items():
+            #    self.logger.info(f"  {key}: {value}")
+            #self.logger.info("-" * 40)
 
             available_cash = float(output.get('ord_psbl_cash', 0))
             total_deposit = float(output.get('dnca_tot_amt', 0))

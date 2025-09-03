@@ -1,14 +1,1 @@
-{
-  "Unknown": {
-    "order_no": "Unknown",
-    "symbol": "192400",
-    "stock_name": "쿠쿠홀딩스",
-    "side": "BUY",
-    "quantity": 1,
-    "limit_price": 31800,
-    "strategy": "patient_limit",
-    "order_time": "2025-09-01T12:41:00.463202",
-    "check_count": 0,
-    "last_check": null
-  }
-}
+{}

@@ -120,9 +120,9 @@ class TechnicalIndicators:
             if close_prices.isnull().any():
                 return False
             
-            # 표준 MACD 계산 (12일 EMA - 26일 EMA)
-            ema_12 = close_prices.ewm(span=8, adjust=False).mean()
-            ema_26 = close_prices.ewm(span=18, adjust=False).mean()
+            # 표준 MACD 계산 (12일 EMA - 26일 EMA) -> 5-12
+            ema_12 = close_prices.ewm(span=5, adjust=False).mean()
+            ema_26 = close_prices.ewm(span=12, adjust=False).mean()
             macd_line = ema_12 - ema_26
             signal_line = macd_line.ewm(span=9, adjust=False).mean()
             

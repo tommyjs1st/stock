@@ -121,13 +121,39 @@ class PositionManager:
         if last_purchase_time:
             last_time = datetime.fromisoformat(last_purchase_time)
             time_since_last = datetime.now() - last_time
-            
+        
             if time_since_last < timedelta(hours=self.purchase_cooldown_hours):
                 remaining_hours = self.purchase_cooldown_hours - time_since_last.total_seconds() / 3600
-                return False, f"재매수 금지 기간 중 (남은 시간: {remaining_hours:.1f}시간)"
-        
-        return True, "매수 가능"
+            
+                # 🆕 매도 후 재매수인지 확인
+                recent_sales = self._get_recent_sales(symbol)
+                if recent_sales:
+                    last_sale = recent_sales[-1]
+                    sale_price = last_sale['price']
+                    sale_time = datetime.fromisoformat(last_sale['timestamp'])
+                    
+                    return False, (f"재매수 금지 기간 중 (남은: {remaining_hours:.1f}시간) "
+                                 f"- 최근매도: {sale_price:,}원 ({sale_time.strftime('%m/%d %H:%M')})")
+                else:
+                    return False, f"재매수 금지 기간 중 (남은 시간: {remaining_hours:.1f}시간)"
     
+        return True, "매수 가능"
+
+    def _get_recent_sales(self, symbol: str, days: int = 7) -> List[Dict]:
+        """최근 매도 내역 조회"""
+        if symbol not in self.position_history:
+            return []
+    
+        cutoff_date = datetime.now() - timedelta(days=days)
+        recent_sales = []
+    
+        for record in self.position_history[symbol]['purchases']:
+            if (record.get('order_type') == 'SELL' and 
+                datetime.fromisoformat(record['timestamp']) > cutoff_date):
+                recent_sales.append(record)
+    
+        return sorted(recent_sales, key=lambda x: x['timestamp'])
+
     def can_sell_symbol(self, symbol: str, current_quantity: int = 0) -> Tuple[bool, str]:
         """종목 매도 가능 여부 확인"""
         

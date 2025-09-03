@@ -529,6 +529,15 @@ class HybridStrategy:
         """
         stock_name = self.get_stock_name(symbol)
         
+        # 🔥 재매수 금지 체크를 가장 먼저 실행
+        current_position = positions.get(symbol, {})
+        current_quantity = current_position.get('quantity', 0)
+    
+        can_buy, reason = self.position_manager.can_purchase_symbol(symbol, current_quantity)
+        if not can_buy:
+            self.logger.info(f"🚫 {stock_name}({symbol}) 매수 차단: {reason}")
+            return False  # 여기서 바로 종료
+    
         # trading_list.json에서 이미 선별된 종목이므로 일봉 분석 생략
         # 바로 분봉 타이밍 분석으로 진행
         self.logger.info(f"🎯 {stock_name}({symbol}) 분봉 타이밍 분석 (이미 선별된 종목)")
@@ -552,7 +561,7 @@ class HybridStrategy:
         간소화된 스마트 매수 실행 - 일봉 분석 없이 분봉 타이밍만으로 매수
         """
         stock_name = self.get_stock_name(symbol)
-        
+
         # 매수 가능 여부 확인
         current_position = positions.get(symbol, {})
         current_quantity = current_position.get('quantity', 0)
