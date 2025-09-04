@@ -1,9 +1,6 @@
-    """
-    지능형 손절 시스템 - 상승 가능성을 고려한 손절 판단
-    """
     
     def process_sell_for_symbol(self, symbol: str, position: dict):
-        """지능형 개별 종목 매도 처리 - 상승 가능성 고려"""
+        """개선된 개별 종목 매도 처리 - 적절한 익절 타이밍 추가"""
         try:
             if symbol not in self.all_positions:
                 return
@@ -20,24 +17,39 @@
                 self.execute_sell(symbol, quantity, "urgent", "극한손절")
                 return
             
-            # 🔥 2순위: 지능형 손절 판단 (-3% ~ -7% 구간에서 상승 가능성 검토)
+            # 🔥 2순위: 단계적 익절 시스템 (기존 20%에서 개선)
+            if profit_loss_decimal >= 0.15:  # 15% 이상 익절
+                can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
+                if can_sell:
+                    self.logger.info(f"🎯 {stock_name}({symbol}) 1차 익절! ({profit_loss_pct:+.2f}%)")
+                    self.execute_sell(symbol, quantity, "aggressive_limit", "1차익절")
+                    return
+            elif profit_loss_decimal >= 0.10:  # 10% 이상에서 기술적 확인 후 익절
+                daily_analysis = self.hybrid_strategy.analyze_daily_strategy(symbol)
+                if daily_analysis['signal'] == 'SELL' and daily_analysis['strength'] >= 2.0:  # 기준 완화
+                    can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
+                    if can_sell:
+                        self.logger.info(f"🎯 {stock_name}({symbol}) 기술적 익절! ({profit_loss_pct:+.2f}%)")
+                        self.execute_sell(symbol, quantity, "aggressive_limit", "기술적익절")
+                        return
+            
+            # 🔥 3순위: 지능형 손절 판단 (-3% ~ -7% 구간에서 상승 가능성 검토)
             if -0.07 < profit_loss_decimal <= -0.03:
                 recovery_analysis = self.analyze_recovery_potential(symbol, current_price)
                 
                 if recovery_analysis['should_hold']:
                     self.logger.info(f"💎 {stock_name}({symbol}) 손절 보류: {recovery_analysis['reason']} "
                                    f"(현재: {profit_loss_pct:+.2f}%)")
-                    return  # 손절하지 않고 보유 지속
+                    return
                 else:
                     self.logger.warning(f"🛑 {stock_name}({symbol}) 지능형 손절: {recovery_analysis['reason']} "
                                       f"({profit_loss_pct:+.2f}%)")
                     self.execute_sell(symbol, quantity, "aggressive_limit", "지능형손절")
                     return
             
-            # 🔥 3순위: 급락 감지 (하지만 회복 가능성도 체크)
+            # 🔥 4순위: 급락 감지
             rapid_drop = self.check_rapid_drop(symbol, current_price)
             if rapid_drop['should_sell']:
-                # 급락 상황에서도 회복 가능성 체크
                 recovery_analysis = self.analyze_recovery_potential(symbol, current_price)
                 
                 if recovery_analysis['strong_recovery_signal']:
@@ -48,178 +60,34 @@
                     self.execute_sell(symbol, quantity, "urgent", rapid_drop['reason'])
                     return
             
-            # 나머지 로직은 기존과 동일 (익절, 기술적 매도 등)
-            if profit_loss_decimal >= 0.20:
-                can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
-                if can_sell:
-                    self.logger.info(f"🎯 {stock_name}({symbol}) 익절 실행! ({profit_loss_pct:+.2f}%)")
-                    self.execute_sell(symbol, quantity, "aggressive_limit", "익절매")
-                    return
-            
+            # 🔥 5순위: 일반적 기술적 매도 (기준 완화)
             if symbol in self.symbols:
                 daily_analysis = self.hybrid_strategy.analyze_daily_strategy(symbol)
                 
-                if daily_analysis['signal'] == 'SELL' and daily_analysis['strength'] >= 3.5:
+                if daily_analysis['signal'] == 'SELL' and daily_analysis['strength'] >= 2.5:  # 3.5 → 2.5로 완화
                     can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
                     
                     if can_sell:
                         self.logger.info(f"📉 {stock_name}({symbol}) 기술적 매도 신호")
                         self.execute_sell(symbol, quantity, "aggressive_limit", "기술적매도")
                         return
+            
+            # 🆕 6순위: 장기 보유 시 수익 확정 (5일 이상 보유 + 5% 이상 수익)
+            if profit_loss_decimal >= 0.05:
+                position_summary = self.position_manager.get_position_summary(symbol)
+                first_purchase = position_summary.get('first_purchase_time')
                 
+                if first_purchase:
+                    first_time = datetime.fromisoformat(first_purchase)
+                    holding_days = (datetime.now() - first_time).total_seconds() / (24 * 3600)
+                    
+                    if holding_days >= 5:  # 5일 이상 보유
+                        can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
+                        if can_sell:
+                            self.logger.info(f"⏰ {stock_name}({symbol}) 장기보유 익절: {holding_days:.1f}일 보유 ({profit_loss_pct:+.2f}%)")
+                            self.execute_sell(symbol, quantity, "aggressive_limit", "장기익절")
+                            return
+                    
         except Exception as e:
             self.logger.error(f"{symbol} 매도 처리 중 오류: {e}")
     
-    
-    def analyze_recovery_potential(self, symbol: str, current_price: float) -> Dict:
-        """상승 회복 가능성 분석 - 새로운 메서드"""
-        try:
-            stock_name = self.get_stock_name(symbol)
-            self.logger.info(f"🔍 {stock_name}({symbol}) 회복 가능성 분석 시작")
-            
-            recovery_score = 0
-            reasons = []
-            
-            # 1. 일봉 기술적 분석 (가장 중요)
-            daily_analysis = self.hybrid_strategy.analyze_daily_strategy(symbol)
-            
-            if daily_analysis['signal'] == 'BUY':
-                recovery_score += daily_analysis['strength']
-                reasons.append(f"일봉매수신호({daily_analysis['strength']:.1f}점)")
-            
-            # 2. 가격 위치 분석
-            daily_df = self.api_client.get_daily_data(symbol, days=60)
-            if not daily_df.empty and len(daily_df) >= 20:
-                # 20일 평균선 대비 위치
-                ma20 = daily_df['stck_prpr'].rolling(20).mean().iloc[-1]
-                ma20_ratio = current_price / ma20
-                
-                if ma20_ratio <= 0.95:  # 평균선 5% 아래
-                    recovery_score += 2.0
-                    reasons.append(f"평균선하회({ma20_ratio:.3f})")
-                
-                # 60일 고점 대비 위치
-                high_60 = daily_df['stck_prpr'].rolling(60).max().iloc[-1]
-                price_position = current_price / high_60
-                
-                if price_position <= 0.7:  # 고점 대비 30% 이상 하락
-                    recovery_score += 1.5
-                    reasons.append(f"고점대비저점({price_position:.1%})")
-            
-            # 3. RSI 과매도 확인
-            if not daily_df.empty:
-                daily_df_with_rsi = self.hybrid_strategy.calculate_daily_indicators(daily_df)
-                current_rsi = daily_df_with_rsi['rsi'].iloc[-1]
-                
-                if current_rsi < 30:  # 과매도
-                    recovery_score += 2.0
-                    reasons.append(f"RSI과매도({current_rsi:.1f})")
-                elif current_rsi < 40:
-                    recovery_score += 1.0
-                    reasons.append(f"RSI매수권({current_rsi:.1f})")
-            
-            # 4. 분봉 반등 신호 확인
-            minute_df = self.api_client.get_minute_data(symbol, minutes=60)
-            if not minute_df.empty and len(minute_df) >= 10:
-                # 최근 10분간 상승 추세
-                recent_prices = minute_df['stck_prpr'].tail(10).tolist()
-                rising_count = sum(1 for i in range(1, len(recent_prices)) 
-                                 if recent_prices[i] > recent_prices[i-1])
-                
-                if rising_count >= 6:  # 10분 중 6분 이상 상승
-                    recovery_score += 1.5
-                    reasons.append(f"분봉반등({rising_count}/10)")
-                
-                # 거래량 증가 확인
-                if len(minute_df) >= 20:
-                    recent_vol = minute_df['cntg_vol'].tail(10).mean()
-                    past_vol = minute_df['cntg_vol'].head(10).mean()
-                    
-                    if recent_vol > past_vol * 1.5:  # 최근 거래량 50% 증가
-                        recovery_score += 1.0
-                        reasons.append("거래량증가")
-            
-            # 5. 시장 상황 고려 (KOSPI/KOSDAQ 상승시 가점)
-            try:
-                kospi_data = self.api_client.get_daily_data('000001', days=2)  # KOSPI
-                if not kospi_data.empty and len(kospi_data) >= 2:
-                    kospi_change = (kospi_data['stck_prpr'].iloc[-1] / kospi_data['stck_prpr'].iloc[-2] - 1) * 100
-                    if kospi_change > 0.5:  # KOSPI 0.5% 이상 상승
-                        recovery_score += 0.5
-                        reasons.append(f"시장상승({kospi_change:.1f}%)")
-            except:
-                pass
-            
-            # 결론 도출
-            should_hold = recovery_score >= 4.0  # 4점 이상이면 보유
-            strong_recovery = recovery_score >= 6.0  # 6점 이상이면 강한 회복 신호
-            
-            reason_text = ', '.join(reasons) if reasons else '회복신호없음'
-            
-            self.logger.info(f"📊 {stock_name}({symbol}) 회복분석 완료: {recovery_score:.1f}점 - {reason_text}")
-            
-            return {
-                'should_hold': should_hold,
-                'strong_recovery_signal': strong_recovery,
-                'recovery_score': recovery_score,
-                'reason': reason_text,
-                'analysis_details': reasons
-            }
-            
-        except Exception as e:
-            self.logger.error(f"회복 가능성 분석 오류: {e}")
-            return {
-                'should_hold': False,
-                'strong_recovery_signal': False,
-                'recovery_score': 0,
-                'reason': f'분석오류: {e}',
-                'analysis_details': []
-            }
-    
-    
-    def check_rapid_drop(self, symbol: str, current_price: float) -> Dict:
-        """개선된 급락 감지 시스템 - 회복 가능성도 고려"""
-        try:
-            minute_df = self.api_client.get_minute_data(symbol, minutes=120)
-            
-            if minute_df.empty or len(minute_df) < 10:
-                return {'should_sell': False, 'reason': '데이터부족'}
-            
-            # 급락 기준을 더 엄격하게 (진짜 위험한 상황만)
-            
-            # 1시간 내 7% 이상 급락 (기존 4%에서 상향)
-            if len(minute_df) >= 60:
-                hour_ago_price = minute_df['stck_prpr'].iloc[-60]
-                hour_change = (current_price - hour_ago_price) / hour_ago_price
-                
-                if hour_change < -0.07:  # -7% 이상 급락
-                    return {'should_sell': True, 'reason': f"심각한급락({hour_change:.1%})"}
-            
-            # 30분 내 최고가 대비 10% 이상 급락 (기존 6%에서 상향)
-            recent_30min = minute_df.tail(30)
-            if not recent_30min.empty:
-                recent_high = recent_30min['stck_prpr'].max()
-                drop_from_high = (current_price - recent_high) / recent_high
-                
-                if drop_from_high < -0.10:  # -10% 이상 급락
-                    return {'should_sell': True, 'reason': f"단기폭락({drop_from_high:.1%})"}
-            
-            # 연속 하락도 더 엄격하게
-            if len(minute_df) >= 15:
-                recent_prices = minute_df['stck_prpr'].tail(15).tolist()
-                declining_count = 0
-                
-                for i in range(1, len(recent_prices)):
-                    if recent_prices[i] < recent_prices[i-1]:
-                        declining_count += 1
-                
-                # 15분봉 중 12개 이상이 하락하고 -4% 이상 하락
-                if declining_count >= 12:
-                    total_decline = (recent_prices[-1] - recent_prices[0]) / recent_prices[0]
-                    if total_decline < -0.04:
-                        return {'should_sell': True, 'reason': f"장기연속하락({total_decline:.1%})"}
-            
-            return {'should_sell': False, 'reason': '정상'}
-            
-        except Exception as e:
-            return {'should_sell': False, 'reason': f'오류:{e}'}

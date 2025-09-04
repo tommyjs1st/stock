@@ -4,14 +4,14 @@
 import json
 import os
 from datetime import datetime, timedelta
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 
 
 class PositionManager:
     """종목별 포지션 관리 클래스"""
     
-    def __init__(self, logger, max_purchases_per_symbol=2, max_quantity_per_symbol=300, 
-                 min_holding_period_hours=72, purchase_cooldown_hours=48):
+    def __init__(self, logger, max_purchases_per_symbol=2, max_quantity_per_symbol=200, 
+                 min_holding_period_hours=24, purchase_cooldown_hours=24):
         self.logger = logger
         self.position_history_file = "position_history.json"
         self.position_history = {}

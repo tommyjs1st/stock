@@ -1,1 +1,14 @@
-{}
+{
+  "Unknown": {
+    "order_no": "Unknown",
+    "symbol": "009420",
+    "stock_name": "한올바이오파마",
+    "side": "BUY",
+    "quantity": 2,
+    "limit_price": 33600,
+    "strategy": "patient_limit",
+    "order_time": "2025-09-04T10:52:04.828155",
+    "check_count": 0,
+    "last_check": null
+  }
+}
