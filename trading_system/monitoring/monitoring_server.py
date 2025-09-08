@@ -92,23 +92,48 @@ def update_portfolio_data():
         
         for symbol, position in holdings_data.items():
             try:
-                # 현재가 조회
+                # 현재가 조회 (전일대비 정보 포함)
                 current_price_data = api_client.get_current_price(symbol)
-                current_price = float(current_price_data.get('output', {}).get('stck_prpr', 0))
-                
-                if current_price == 0:
-                    current_price = position['current_price']
-                
-                # 전일 대비 변동률 계산 (일봉 데이터 사용)
-                daily_df = api_client.get_daily_data(symbol, days=2)
+                current_price = 0
                 daily_change = 0
                 daily_change_amount = 0
                 
-                if not daily_df.empty and len(daily_df) >= 2:
-                    today_price = float(daily_df['stck_prpr'].iloc[-1])
-                    yesterday_price = float(daily_df['stck_prpr'].iloc[-2])
-                    daily_change = ((today_price - yesterday_price) / yesterday_price) * 100
-                    daily_change_amount = today_price - yesterday_price
+                if current_price_data and current_price_data.get('output'):
+                    output = current_price_data['output']
+                    current_price = float(output.get('stck_prpr', 0))
+                    
+                    # 현재가 API에서 전일대비 정보 직접 추출
+                    prdy_ctrt = output.get('prdy_ctrt', '0')  # 전일대비율
+                    prdy_vrss = output.get('prdy_vrss', '0')  # 전일대비 가격
+                    
+                    try:
+                        daily_change = float(prdy_ctrt) if prdy_ctrt else 0
+                        daily_change_amount = int(float(prdy_vrss)) if prdy_vrss else 0
+                        print(f"📈 {symbol} 현재가API 전일대비: {daily_change}%, {daily_change_amount}원")
+                    except (ValueError, TypeError):
+                        print(f"⚠️ {symbol} 현재가API 전일대비 파싱 실패")
+                        daily_change = 0
+                        daily_change_amount = 0
+                
+                # 현재가 API 실패 시 기존 방식으로 폴백
+                if current_price == 0:
+                    current_price = position['current_price']
+                    print(f"⚠️ {symbol} 현재가 API 실패, 계좌정보 사용: {current_price}")
+                
+                # 현재가 API에서 전일대비를 못 가져온 경우 일봉으로 계산
+                if daily_change == 0 and daily_change_amount == 0:
+                    try:
+                        daily_df = api_client.get_daily_data(symbol, days=10)
+                        if not daily_df.empty and len(daily_df) >= 2:
+                            # 가장 최근 거래일의 종가 (전일 종가)
+                            yesterday_close = float(daily_df['stck_prpr'].iloc[-2])
+                            
+                            if yesterday_close > 0 and current_price > 0:
+                                daily_change = ((current_price - yesterday_close) / yesterday_close) * 100
+                                daily_change_amount = int(current_price - yesterday_close)
+                                print(f"📊 {symbol} 일봉계산 전일대비: {daily_change:.2f}%, {daily_change_amount}원")
+                    except Exception as e:
+                        print(f"❌ {symbol} 일봉 전일대비 계산 실패: {e}")
                 
                 stock_info = {
                     'symbol': symbol,
@@ -120,12 +145,12 @@ def update_portfolio_data():
                     'purchaseAmount': position['purchase_amount'],
                     'profitLoss': position['total_value'] - position['purchase_amount'],
                     'profitRate': position['profit_loss'],
-                    'dailyChange': daily_change,
-                    'dailyChangeAmount': int(daily_change_amount)
+                    'dailyChange': round(daily_change, 2),
+                    'dailyChangeAmount': daily_change_amount
                 }
                 
                 portfolio_list.append(stock_info)
-                print(f"✅ {stock_info['name']}({symbol}) 데이터 업데이트 완료")
+                print(f"✅ {stock_info['name']}({symbol}) 완료 - 현재가: {int(current_price):,}원, 전일대비: {daily_change:+.2f}%")
                 
                 # API 호출 간격
                 time.sleep(0.2)
@@ -150,7 +175,7 @@ def update_portfolio_data():
             'error': f'데이터 조회 실패: {str(e)}',
             'lastUpdate': datetime.now().isoformat()
         }
-
+        
 def background_updater():
     """백그라운드에서 주기적으로 데이터 업데이트"""
     while True:
