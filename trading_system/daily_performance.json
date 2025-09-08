@@ -258,5 +258,100 @@
     "today_trades": [],
     "has_holdings": true,
     "program_trade_only": true
+  },
+  {
+    "date": "2025-09-05",
+    "timestamp": "2025-09-05T11:25:47.677237",
+    "total_assets": 870504.0,
+    "cash": 31994.0,
+    "stock_value": 838510.0,
+    "total_profit_loss": 16445.0,
+    "total_return_pct": 2.000450086063754,
+    "position_count": 8,
+    "position_details": [
+      {
+        "symbol": "003160",
+        "stock_name": "디아이",
+        "quantity": 5,
+        "avg_price": 13750.0,
+        "current_price": 13700.0,
+        "total_value": 68500.0,
+        "profit_loss": -250.0,
+        "profit_loss_pct": -0.36363636363636365
+      },
+      {
+        "symbol": "009420",
+        "stock_name": "한올바이오파마",
+        "quantity": 1,
+        "avg_price": 32500.0,
+        "current_price": 31800.0,
+        "total_value": 31800.0,
+        "profit_loss": -700.0,
+        "profit_loss_pct": -2.1538461538461537
+      },
+      {
+        "symbol": "042660",
+        "stock_name": "한화오션",
+        "quantity": 1,
+        "avg_price": 115500.0,
+        "current_price": 113100.0,
+        "total_value": 113100.0,
+        "profit_loss": -2400.0,
+        "profit_loss_pct": -2.0779220779220777
+      },
+      {
+        "symbol": "062040",
+        "stock_name": "산일전기",
+        "quantity": 1,
+        "avg_price": 105500.0,
+        "current_price": 106200.0,
+        "total_value": 106200.0,
+        "profit_loss": 700.0,
+        "profit_loss_pct": 0.6635071090047393
+      },
+      {
+        "symbol": "082740",
+        "stock_name": "한화엔진",
+        "quantity": 1,
+        "avg_price": 45300.0,
+        "current_price": 45200.0,
+        "total_value": 45200.0,
+        "profit_loss": -100.0,
+        "profit_loss_pct": -0.22075055187637968
+      },
+      {
+        "symbol": "085620",
+        "stock_name": "미래에셋생명",
+        "quantity": 7,
+        "avg_price": 7623.5714,
+        "current_price": 7630.0,
+        "total_value": 53410.0,
+        "profit_loss": 45.0,
+        "profit_loss_pct": 0.0843249320715825
+      },
+      {
+        "symbol": "192400",
+        "stock_name": "쿠쿠홀딩스",
+        "quantity": 6,
+        "avg_price": 31775.0,
+        "current_price": 34050.0,
+        "total_value": 204300.0,
+        "profit_loss": 13650.0,
+        "profit_loss_pct": 7.159716758457907
+      },
+      {
+        "symbol": "278470",
+        "stock_name": "에이피알",
+        "quantity": 1,
+        "avg_price": 210500.0,
+        "current_price": 216000.0,
+        "total_value": 216000.0,
+        "profit_loss": 5500.0,
+        "profit_loss_pct": 2.6128266033254155
+      }
+    ],
+    "today_trades": [],
+    "has_holdings": true,
+    "program_trade_only": true
   }
 ]

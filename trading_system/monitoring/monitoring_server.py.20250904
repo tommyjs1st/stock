@@ -270,104 +270,42 @@ def force_refresh():
 
 @app.route('/api/performance')
 def get_performance():
-    """수익금 중심 수익 추이 API"""
+    """간단한 수익 추이 API"""
     try:
-        # 🔥 경로 수정: 상위 디렉토리의 daily_performance.json 찾기
+        # 기존 파일만 확인
         performance_file = os.path.join(parent_dir, 'daily_performance.json')
-        
         if os.path.exists(performance_file):
             with open(performance_file, 'r', encoding='utf-8') as f:
                 all_performance = json.load(f)
-            
-            # 최근 14일 데이터만 사용
             recent_performance = all_performance[-14:] if len(all_performance) > 14 else all_performance
-            
-            # 🔥 수익금 중심으로 데이터 변환
-            validated_performance = []
-            for item in recent_performance:
-                try:
-                    profit_loss = float(item.get('total_profit_loss', 0))
-                    return_pct = float(item.get('total_return_pct', 0))
-                    
-                    validated_item = {
-                        'date': item.get('date', ''),
-                        'total_assets': float(item.get('total_assets', 0)),
-                        'total_profit_loss': profit_loss,
-                        'total_return_pct': return_pct,
-                        'position_count': int(item.get('position_count', 0)),
-                        'profit_loss_krw': round(profit_loss / 10000, 1)  # 만원 단위
-                    }
-                    validated_performance.append(validated_item)
-                except (ValueError, TypeError) as e:
-                    print(f"⚠️ 데이터 검증 실패: {item} - {e}")
-                    continue
-            
-            print(f"✅ 수익금 추이 데이터 조회 성공: {len(validated_performance)}개")
-            
-            return jsonify({
-                'performance': validated_performance,
-                'count': len(validated_performance),
-                'period': f'{len(validated_performance)}일',
-                'data_type': 'profit_loss'
-            })
         else:
-            print(f"⚠️ 성과 파일 없음: {performance_file}")
-            sample_data = create_profit_sample_data()
-            return jsonify({
-                'performance': sample_data,
-                'count': len(sample_data),
-                'period': f'{len(sample_data)}일 (샘플)',
-                'data_type': 'profit_loss'
-            })
-            
-    except Exception as e:
-        print(f"❌ 수익금 추이 조회 오류: {e}")
-        import traceback
-        print(f"상세 오류: {traceback.format_exc()}")
+            # 간단한 샘플 데이터만
+            recent_performance = create_simple_sample_data()
         
-        sample_data = create_profit_sample_data()
         return jsonify({
-            'performance': sample_data,
-            'count': len(sample_data),
-            'period': f'{len(sample_data)}일 (샘플)',
-            'data_type': 'profit_loss',
-            'error': str(e)
+            'performance': recent_performance,
+            'count': len(recent_performance),
+            'period': f'{len(recent_performance)}일'
+        })
+    except Exception as e:
+        return jsonify({
+            'performance': create_simple_sample_data(),
+            'count': 7,
+            'period': '7일 (샘플)'
         })
 
-
-def create_profit_sample_data():
-    """수익금 중심 샘플 데이터 생성"""
+def create_simple_sample_data():
+    """간단한 샘플 데이터"""
     from datetime import datetime, timedelta
-    import random
-    
     data = []
-    
     for i in range(7):
         date = datetime.now() - timedelta(days=6-i)
-        
-        # 실제와 비슷한 수익금 패턴 생성
-        if i == 0:
-            profit_loss = random.uniform(-25000, 5000)  # 첫날
-        else:
-            # 이전 수익에서 변동
-            prev_profit = data[i-1]['total_profit_loss']
-            daily_change = random.uniform(-15000, 20000)
-            profit_loss = prev_profit + daily_change
-            
-        # 수익률 계산 (85만원 기준)
-        base_assets = 850000
-        return_pct = (profit_loss / base_assets) * 100
-        total_assets = base_assets + profit_loss
-        
         data.append({
             'date': date.strftime('%Y-%m-%d'),
-            'total_assets': round(total_assets),
-            'total_profit_loss': round(profit_loss),
-            'total_return_pct': round(return_pct, 2),
-            'position_count': random.randint(3, 7),
-            'profit_loss_krw': round(profit_loss / 10000, 1)
+            'total_assets': 10000000 + i * 50000,
+            'total_profit_loss': i * 10000 - 30000,
+            'total_return_pct': (i * 0.5) - 1.5
         })
-    
     return data
 
 def initialize_system():
