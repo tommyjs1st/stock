@@ -1,0 +1,130 @@
+        
+        // 🔥 시장 상태에 따른 자동 새로고침 간격 조정
+        async function getOptimalRefreshInterval() {
+            try {
+                const response = await fetch('/api/system-status');
+                const status = await response.json();
+                
+                if (status.is_market_hours) {
+                    return 30000; // 장중: 30초마다 화면 새로고침
+                } else {
+                    return 300000; // 장외: 5분마다 화면 새로고침
+                }
+            } catch (error) {
+                console.error('시스템 상태 조회 실패:', error);
+                return 60000; // 기본값: 1분
+            }
+        }
+        
+        // 🔥 최적화된 자동 새로고침
+        async function startOptimizedAutoRefresh() {
+            if (isAutoRefresh) return;
+            
+            isAutoRefresh = true;
+            document.getElementById('autoRefreshText').textContent = '자동새로고침 중지';
+            
+            const refreshFunction = async () => {
+                try {
+                    // 너무 빈번한 요청 방지 (최소 10초 간격)
+                    const now = Date.now();
+                    if (now - lastRefreshTime < 10000) {
+                        console.log('⏰ 새로고침 쿨다운 중...');
+                        return;
+                    }
+                    
+                    await refreshData();
+                    lastRefreshTime = now;
+                    
+                    // 시장 상태에 따라 다음 새로고침 간격 조정
+                    if (isAutoRefresh) {
+                        const interval = await getOptimalRefreshInterval();
+                        console.log(`🔄 다음 자동 새로고침: ${interval/1000}초 후`);
+                        
+                        clearTimeout(autoRefreshInterval);
+                        autoRefreshInterval = setTimeout(refreshFunction, interval);
+                    }
+                    
+                } catch (error) {
+                    console.error('자동 새로고침 실패:', error);
+                    
+                    // 오류 시 더 긴 간격으로 재시도
+                    if (isAutoRefresh) {
+                        autoRefreshInterval = setTimeout(refreshFunction, 60000);
+                    }
+                }
+            };
+            
+            // 즉시 첫 번째 새로고침 실행
+            refreshFunction();
+        }
+        
+        function stopAutoRefresh() {
+            isAutoRefresh = false;
+            if (autoRefreshInterval) {
+                clearTimeout(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+            document.getElementById('autoRefreshText').textContent = '자동새로고침 시작';
+        }
+        
+        function toggleAutoRefresh() {
+            if (isAutoRefresh) {
+                stopAutoRefresh();
+            } else {
+                startOptimizedAutoRefresh();
+            }
+        }
+        
+        // 🔥 수동 새로고침도 쿨다운 적용
+        async function refreshData() {
+            const refreshBtn = document.querySelector('.refresh-btn');
+            const refreshText = document.getElementById('refreshText');
+            
+            // 쿨다운 체크
+            const now = Date.now();
+            if (now - lastRefreshTime < 10000 && lastRefreshTime > 0) {
+                const remaining = Math.ceil((10000 - (now - lastRefreshTime)) / 1000);
+                refreshText.textContent = `${remaining}초 후 가능`;
+                setTimeout(() => {
+                    refreshText.textContent = '새로고침';
+                }, remaining * 1000);
+                return;
+            }
+            
+            refreshBtn.disabled = true;
+            refreshText.innerHTML = '<div class="loading"></div> 로딩중...';
+        
+            try {
+                const data = await fetchPortfolioData();
+                renderPortfolio(data);
+                updateTimestamp();
+                updateMarketStatus();
+                
+                // 서버 시간 업데이트
+                if (data.lastUpdate) {
+                    const serverTime = new Date(data.lastUpdate);
+                    const timeString = serverTime.toLocaleString('ko-KR', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                    document.getElementById('lastUpdate').textContent = `최종 업데이트: ${timeString}`;
+                }
+        
+                // 차트 업데이트
+                await renderCompleteDailyReturnChart();
+                
+                lastRefreshTime = now;
+                
+            } catch (error) {
+                console.error('데이터 새로고침 실패:', error);
+                document.getElementById('portfolioContainer').innerHTML = 
+                    `<div class="error-message">데이터를 불러오는데 실패했습니다: ${error.message}</div>`;
+            } finally {
+                refreshBtn.disabled = false;
+                refreshText.textContent = '새로고침';
+            }
+        }

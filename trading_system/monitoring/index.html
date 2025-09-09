@@ -433,8 +433,138 @@
     <script>
         let autoRefreshInterval = null;
         let isAutoRefresh = false;
+        let lastRefreshTime = 0;
         let performanceChart = null;
-
+        
+        // 🔥 시장 상태에 따른 자동 새로고침 간격 조정
+        async function getOptimalRefreshInterval() {
+            try {
+                const response = await fetch('/api/system-status');
+                const status = await response.json();
+                
+                if (status.is_market_hours) {
+                    return 30000; // 장중: 30초마다 화면 새로고침
+                } else {
+                    return 300000; // 장외: 5분마다 화면 새로고침
+                }
+            } catch (error) {
+                console.error('시스템 상태 조회 실패:', error);
+                return 60000; // 기본값: 1분
+            }
+        }
+        
+        // 🔥 최적화된 자동 새로고침
+        async function startOptimizedAutoRefresh() {
+            if (isAutoRefresh) return;
+            
+            isAutoRefresh = true;
+            document.getElementById('autoRefreshText').textContent = '자동새로고침 중지';
+            
+            const refreshFunction = async () => {
+                try {
+                    // 너무 빈번한 요청 방지 (최소 10초 간격)
+                    const now = Date.now();
+                    if (now - lastRefreshTime < 10000) {
+                        console.log('⏰ 새로고침 쿨다운 중...');
+                        return;
+                    }
+                    
+                    await refreshData();
+                    lastRefreshTime = now;
+                    
+                    // 시장 상태에 따라 다음 새로고침 간격 조정
+                    if (isAutoRefresh) {
+                        const interval = await getOptimalRefreshInterval();
+                        console.log(`🔄 다음 자동 새로고침: ${interval/1000}초 후`);
+                        
+                        clearTimeout(autoRefreshInterval);
+                        autoRefreshInterval = setTimeout(refreshFunction, interval);
+                    }
+                    
+                } catch (error) {
+                    console.error('자동 새로고침 실패:', error);
+                    
+                    // 오류 시 더 긴 간격으로 재시도
+                    if (isAutoRefresh) {
+                        autoRefreshInterval = setTimeout(refreshFunction, 60000);
+                    }
+                }
+            };
+            
+            // 즉시 첫 번째 새로고침 실행
+            refreshFunction();
+        }
+        
+        function stopAutoRefresh() {
+            isAutoRefresh = false;
+            if (autoRefreshInterval) {
+                clearTimeout(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+            document.getElementById('autoRefreshText').textContent = '자동새로고침 시작';
+        }
+        
+        function toggleAutoRefresh() {
+            if (isAutoRefresh) {
+                stopAutoRefresh();
+            } else {
+                startOptimizedAutoRefresh();
+            }
+        }
+        
+        // 🔥 수동 새로고침도 쿨다운 적용
+        async function refreshData() {
+            const refreshBtn = document.querySelector('.refresh-btn');
+            const refreshText = document.getElementById('refreshText');
+            
+            // 쿨다운 체크
+            const now = Date.now();
+            if (now - lastRefreshTime < 10000 && lastRefreshTime > 0) {
+                const remaining = Math.ceil((10000 - (now - lastRefreshTime)) / 1000);
+                refreshText.textContent = `${remaining}초 후 가능`;
+                setTimeout(() => {
+                    refreshText.textContent = '새로고침';
+                }, remaining * 1000);
+                return;
+            }
+            
+            refreshBtn.disabled = true;
+            refreshText.innerHTML = '<div class="loading"></div> 로딩중...';
+        
+            try {
+                const data = await fetchPortfolioData();
+                renderPortfolio(data);
+                updateTimestamp();
+                updateMarketStatus();
+                
+                // 서버 시간 업데이트
+                if (data.lastUpdate) {
+                    const serverTime = new Date(data.lastUpdate);
+                    const timeString = serverTime.toLocaleString('ko-KR', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                    document.getElementById('lastUpdate').textContent = `최종 업데이트: ${timeString}`;
+                }
+        
+                // 차트 업데이트
+                await renderCompleteDailyReturnChart();
+                
+                lastRefreshTime = now;
+                
+            } catch (error) {
+                console.error('데이터 새로고침 실패:', error);
+                document.getElementById('portfolioContainer').innerHTML = 
+                    `<div class="error-message">데이터를 불러오는데 실패했습니다: ${error.message}</div>`;
+            } finally {
+                refreshBtn.disabled = false;
+                refreshText.textContent = '새로고침';
+            }
+        }
         function formatNumber(num) {
             return num.toLocaleString() + '원';
         }
@@ -596,113 +726,113 @@
             return await response.json();
         }
 
-        // 수익금 추이 데이터 조회
-        async function fetchPerformanceData() {
+        // 완전한 일별 수익률 데이터 조회 (백필 + 실시간)
+        async function fetchCompleteDailyReturns() {
             try {
-                console.log('📊 수익금 추이 데이터 조회 시작...');
-                const response = await fetch('/api/performance');
+                console.log('📊 완전한 일별 수익률 데이터 요청...');
                 
+                const response = await fetch('/api/complete-daily-returns');
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
                 const data = await response.json();
-                console.log('✅ 수익금 추이 데이터 조회 성공:', data);
+                console.log('✅ 완전한 일별 수익률 데이터 조회 성공:', data);
                 
                 return data;
             } catch (error) {
-                console.error('❌ 수익금 추이 데이터 조회 실패:', error);
+                console.error('❌ 완전한 일별 수익률 데이터 조회 실패:', error);
                 throw error;
             }
         }
-
-        // 수익금 중심 차트 생성
-        function createProfitChart(data) {
-            console.log('🎨 수익금 차트 생성 시작');
+        
+        // 완전한 일별 수익률 차트 생성
+        function createCompleteDailyReturnChart(data) {
+            console.log('🎨 완전한 일별 수익률 차트 생성 시작');
             
             const ctx = document.getElementById('performanceChart');
             if (!ctx) {
                 console.error('❌ performanceChart 캔버스 요소를 찾을 수 없습니다');
-                throw new Error('Chart canvas not found');
-            }
-            
-            if (typeof Chart === 'undefined') {
-                console.error('❌ Chart.js 라이브러리가 로드되지 않았습니다');
-                throw new Error('Chart.js library not loaded');
+                return;
             }
             
             // 기존 차트 삭제
             if (performanceChart && typeof performanceChart.destroy === 'function') {
-                console.log('🗑️ 기존 차트 삭제');
                 performanceChart.destroy();
                 performanceChart = null;
             }
-
+        
             // 데이터 검증
-            if (!data.performance || !Array.isArray(data.performance) || data.performance.length === 0) {
-                console.warn('⚠️ 차트 데이터가 없습니다');
+            if (!data.complete_daily_returns || !Array.isArray(data.complete_daily_returns) || data.complete_daily_returns.length === 0) {
+                console.warn('⚠️ 완전한 일별 수익률 데이터가 없습니다');
                 document.querySelector('.chart-container').innerHTML = 
-                    '<div class="no-data">수익금 추이 데이터가 없습니다.</div>';
+                    '<div class="no-data">완전한 일별 수익률 데이터가 없습니다.</div>';
                 return;
             }
-
-            // 수익금 데이터 준비
-            const labels = data.performance.map(item => {
+        
+            // 차트 데이터 준비
+            const labels = data.complete_daily_returns.map(item => {
                 const date = new Date(item.date);
                 return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
             });
-
-            // 수익금을 만원 단위로 변환
-            const profitData = data.performance.map(item => {
-                const profit = item.profit_loss_krw || (item.total_profit_loss / 10000);
-                return Math.round(profit * 10) / 10;
+        
+            const returnData = data.complete_daily_returns.map(item => item.daily_return_pct);
+            const amountData = data.complete_daily_returns.map(item => Math.round(item.daily_return_amount / 1000)); // 천원 단위
+        
+            // 백필 데이터와 실시간 데이터 구분
+            const backgroundColors = data.complete_daily_returns.map((item, index) => {
+                const isBackfilled = item.method === 'backfilled';
+                const isPositive = item.daily_return_pct >= 0;
+                
+                if (isBackfilled) {
+                    return isPositive ? 'rgba(39, 174, 96, 0.5)' : 'rgba(231, 76, 60, 0.5)';  // 투명도 높음
+                } else {
+                    return isPositive ? 'rgba(39, 174, 96, 0.8)' : 'rgba(231, 76, 60, 0.8)';  // 진한 색
+                }
             });
-            
-            const returnData = data.performance.map(item => parseFloat(item.total_return_pct || 0));
-
-            console.log('📊 수익금 차트 데이터:', {
+        
+            const borderColors = data.complete_daily_returns.map((item, index) => {
+                const isPositive = item.daily_return_pct >= 0;
+                return isPositive ? '#27ae60' : '#e74c3c';
+            });
+        
+            console.log('📊 완전한 일별 수익률 차트 데이터:', {
                 labels: labels.length,
-                profitRange: `${Math.min(...profitData)} ~ ${Math.max(...profitData)}만원`,
-                returnRange: `${Math.min(...returnData)} ~ ${Math.max(...returnData)}%`
+                returnRange: `${Math.min(...returnData)}% ~ ${Math.max(...returnData)}%`,
+                amountRange: `${Math.min(...amountData)} ~ ${Math.max(...amountData)}천원`,
+                historical: data.historical_count,
+                realtime: data.realtime_count
             });
-
-            // 수익금 중심 Chart.js 설정
+        
+            // Chart.js 설정
             const config = {
-                type: 'line',
+                type: 'bar',
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: '수익금 (만원)',
-                        data: profitData,
-                        borderColor: '#e74c3c',
-                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                        borderWidth: 3, /* 4 → 3 */
-                        fill: true,
-                        tension: 0.3,
-                        yAxisID: 'y',
-                        pointBackgroundColor: profitData.map(val => val >= 0 ? '#27ae60' : '#e74c3c'),
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 1, /* 2 → 1 */
-                        pointRadius: 5, /* 8 → 5 */
-                        pointHoverRadius: 7, /* 10 → 7 */
-                        segment: {
-                            borderColor: function(ctx) {
-                                return ctx.p1.parsed.y >= 0 ? '#27ae60' : '#e74c3c';
-                            }
-                        }
-                    }, {
-                        label: '수익률 (%)',
+                        label: '일별 수익률 (%)',
                         data: returnData,
-                        borderColor: '#9b59b6',
-                        backgroundColor: 'rgba(155, 89, 182, 0.1)',
+                        backgroundColor: backgroundColors,
+                        borderColor: borderColors,
+                        borderWidth: 1,
+                        yAxisID: 'y'
+                    }, {
+                        label: '일별 손익 (천원)',
+                        data: amountData,
+                        type: 'line',
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
                         borderWidth: 2,
                         fill: false,
-                        tension: 0.3,
+                        tension: 0.2,
                         yAxisID: 'y1',
-                        pointBackgroundColor: '#9b59b6',
+                        pointBackgroundColor: amountData.map(val => 
+                            val >= 0 ? '#27ae60' : '#e74c3c'
+                        ),
                         pointBorderColor: '#ffffff',
-                        pointBorderWidth: 1,
-                        pointRadius: 3 /* 4 → 3 */
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
                     }]
                 },
                 options: {
@@ -710,46 +840,38 @@
                     maintainAspectRatio: false,
                     interaction: {
                         mode: 'index',
-                        intersect: false,
+                        intersect: false
                     },
                     plugins: {
-                        tooltip: {
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            titleColor: '#ffffff',
-                            bodyColor: '#ffffff',
-                            borderColor: '#ffffff',
-                            borderWidth: 1,
-                            titleFont: {
-                                size: 12 /* 축소 */
-                            },
-                            bodyFont: {
-                                size: 11 /* 축소 */
-                            },
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) {
-                                        label += ': ';
-                                    }
-                                    if (context.parsed.y !== null) {
-                                        if (context.datasetIndex === 0) {
-                                            const sign = context.parsed.y >= 0 ? '+' : '';
-                                            label += sign + context.parsed.y + '만원';
-                                        } else {
-                                            const sign = context.parsed.y >= 0 ? '+' : '';
-                                            label += sign + context.parsed.y.toFixed(2) + '%';
-                                        }
-                                    }
-                                    return label;
-                                }
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: { size: 12 },
+                                boxWidth: 20,
+                                padding: 15
                             }
                         },
-                        legend: {
-                            labels: {
-                                usePointStyle: true,
-                                padding: 15, /* 20 → 15 */
-                                font: {
-                                    size: 11 /* 축소 */
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                            titleColor: 'white',
+                            bodyColor: 'white',
+                            borderColor: '#ddd',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    const item = data.complete_daily_returns[context.dataIndex];
+                                    const method = item.method === 'backfilled' ? ' (백필)' : ' (실시간)';
+                                    
+                                    if (context.datasetIndex === 0) {
+                                        const value = context.parsed.y;
+                                        const sign = value >= 0 ? '+' : '';
+                                        return `일별 수익률: ${sign}${value.toFixed(2)}%${method}`;
+                                    } else {
+                                        const value = context.parsed.y;
+                                        const sign = value >= 0 ? '+' : '';
+                                        return `일별 손익: ${sign}${value.toFixed(0)}천원${method}`;
+                                    }
                                 }
                             }
                         }
@@ -759,19 +881,12 @@
                             display: true,
                             title: {
                                 display: true,
-                                text: '날짜',
-                                font: {
-                                    size: 11, /* 14 → 11 */
-                                    weight: 'bold'
-                                }
-                            },
-                            grid: {
-                                color: '#ecf0f1'
+                                text: '날짜 (연한색: 백필, 진한색: 실시간)',
+                                font: { size: 11 }
                             },
                             ticks: {
-                                font: {
-                                    size: 10 /* 축소 */
-                                }
+                                font: { size: 10 },
+                                maxRotation: 45
                             }
                         },
                         y: {
@@ -780,36 +895,21 @@
                             position: 'left',
                             title: {
                                 display: true,
-                                text: '수익금 (만원)',
-                                font: {
-                                    size: 11, /* 14 → 11 */
-                                    weight: 'bold'
-                                },
-                                color: '#2c3e50'
+                                text: '일별 수익률 (%)',
+                                font: { size: 12 },
+                                color: '#e74c3c'
                             },
                             ticks: {
+                                font: { size: 11 },
                                 callback: function(value) {
                                     const sign = value >= 0 ? '+' : '';
-                                    return sign + value + '만원';
+                                    return sign + value.toFixed(1) + '%';
                                 },
-                                color: function(context) {
-                                    return context.tick.value >= 0 ? '#27ae60' : '#e74c3c';
-                                },
-                                font: {
-                                    weight: 'bold',
-                                    size: 10 /* 축소 */
-                                }
+                                color: '#e74c3c'
                             },
                             grid: {
-                                color: function(context) {
-                                    if (context.tick.value === 0) {
-                                        return '#34495e';
-                                    }
-                                    return '#ecf0f1';
-                                },
-                                lineWidth: function(context) {
-                                    return context.tick.value === 0 ? 2 : 1; /* 3 → 2 */
-                                }
+                                drawOnChartArea: true,
+                                color: 'rgba(231, 76, 60, 0.1)'
                             }
                         },
                         y1: {
@@ -818,63 +918,61 @@
                             position: 'right',
                             title: {
                                 display: true,
-                                text: '수익률 (%)',
-                                font: {
-                                    size: 11, /* 14 → 11 */
-                                    weight: 'bold'
-                                },
-                                color: '#9b59b6'
-                            },
-                            grid: {
-                                drawOnChartArea: false,
+                                text: '일별 손익 (천원)',
+                                font: { size: 12 },
+                                color: '#3498db'
                             },
                             ticks: {
+                                font: { size: 11 },
                                 callback: function(value) {
                                     const sign = value >= 0 ? '+' : '';
-                                    return sign + value.toFixed(1) + '%';
+                                    return sign + value.toFixed(0) + '천원';
                                 },
-                                color: '#9b59b6',
-                                font: {
-                                    weight: 'bold',
-                                    size: 10 /* 축소 */
-                                }
+                                color: '#3498db'
+                            },
+                            grid: {
+                                drawOnChartArea: false
                             }
                         }
                     }
                 }
             };
-
+        
             try {
                 performanceChart = new Chart(ctx, config);
-                console.log('✅ 수익금 차트 생성 성공');
+                console.log('✅ 완전한 일별 수익률 차트 생성 성공');
             } catch (error) {
-                console.error('❌ 수익금 차트 생성 실패:', error);
+                console.error('❌ 완전한 일별 수익률 차트 생성 실패:', error);
                 throw error;
             }
         }
-
-        // 수익금 차트 렌더링
-        async function renderProfitChart() {
+        
+        // 완전한 일별 수익률 차트 렌더링
+        async function renderCompleteDailyReturnChart() {
             try {
-                console.log('📈 수익금 차트 렌더링 시작...');
+                console.log('📈 완전한 일별 수익률 차트 렌더링 시작...');
                 
-                const data = await fetchPerformanceData();
+                const data = await fetchCompleteDailyReturns();
                 
                 // 기간 정보 업데이트
                 document.getElementById('chartPeriod').textContent = data.period || '-';
                 
-                // 차트 생성
-                createProfitChart(data);
+                // 차트 제목 수정
+                document.querySelector('.chart-section h2').textContent = '📊 포트폴리오 일별 수익률 (완전판)';
                 
-                console.log('✅ 수익금 차트 렌더링 완료');
+                // 차트 생성
+                createCompleteDailyReturnChart(data);
+                
+                console.log('✅ 완전한 일별 수익률 차트 렌더링 완료');
                 
             } catch (error) {
-                console.error('❌ 수익금 차트 렌더링 실패:', error);
+                console.error('❌ 완전한 일별 수익률 차트 렌더링 실패:', error);
                 document.querySelector('.chart-container').innerHTML = 
-                    `<div class="error-message">수익금 추이를 불러오는데 실패했습니다: ${error.message}</div>`;
+                    `<div class="error-message">완전한 일별 수익률을 불러오는데 실패했습니다: ${error.message}</div>`;
             }
         }
 
+                
         async function refreshData() {
             const refreshBtn = document.querySelector('.refresh-btn');
             const refreshText = document.getElementById('refreshText');
@@ -900,9 +998,8 @@
                     });
                     document.getElementById('lastUpdate').textContent = `최종 업데이트: ${timeString}`;
                 }
+                await renderCompleteDailyReturnChart();
 
-                // 수익금 차트 업데이트
-                await renderProfitChart();
                 
             } catch (error) {
                 console.error('데이터 로드 실패:', error);
