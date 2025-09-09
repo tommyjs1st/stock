@@ -1,0 +1,49 @@
+    def get_market_status_info(self, current_time=None):
+        """장 상태 정보 반환 (NXT 연장거래 포함)"""
+        if current_time is None:
+            current_time = datetime.now()
+        
+        is_open = self.is_market_open(current_time)
+        
+        if is_open:
+            # 새로운 마감시간 (오후 8시)
+            today_close = current_time.replace(hour=20, minute=0, second=0, microsecond=0)
+            time_to_close = today_close - current_time
+            
+            hours, remainder = divmod(time_to_close.total_seconds(), 3600)
+            minutes, _ = divmod(remainder, 60)
+            
+            return {
+                'status': 'OPEN',
+                'message': f'장 시간 중 (마감까지 {int(hours)}시간 {int(minutes)}분)',
+                'next_change': today_close,
+                'is_trading_time': True
+            }
+        else:
+            weekday = current_time.weekday()
+            
+            if weekday >= 5:
+                days_until_monday = 7 - weekday
+                next_open = current_time + timedelta(days=days_until_monday)
+                next_open = next_open.replace(hour=8, minute=0, second=0, microsecond=0)  # 새로운 시작시간
+                message = f'주말 휴장 (다음 개장: {next_open.strftime("%m/%d %H:%M")})'
+            elif current_time.hour < 8:  # 새로운 시작시간
+                next_open = current_time.replace(hour=8, minute=0, second=0, microsecond=0)
+                time_to_open = next_open - current_time
+                hours, remainder = divmod(time_to_open.total_seconds(), 3600)
+                minutes, _ = divmod(remainder, 60)
+                message = f'장 시작 전 (개장까지 {int(hours)}시간 {int(minutes)}분)'
+            else:
+                next_day = current_time + timedelta(days=1)
+                while next_day.weekday() >= 5:
+                    next_day += timedelta(days=1)
+                
+                next_open = next_day.replace(hour=8, minute=0, second=0, microsecond=0)  # 새로운 시작시간
+                message = f'장 마감 후 (다음 개장: {next_open.strftime("%m/%d %H:%M")})'
+            
+            return {
+                'status': 'CLOSED',
+                'message': message,
+                'next_change': next_open if 'next_open' in locals() else current_time + timedelta(hours=12),
+                'is_trading_time': False
+            }

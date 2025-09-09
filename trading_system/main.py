@@ -615,32 +615,34 @@ class AutoTrader:
 
     
     def is_market_open(self, current_time=None):
-        """한국 증시 개장 시간 확인"""
+        """한국 증시 개장 시간 확인 (KRX + NXT 통합)"""
         if current_time is None:
             current_time = datetime.now()
         
         weekday = current_time.weekday()
-        if weekday >= 5:
+        if weekday >= 5:  # 토요일(5), 일요일(6)
             return False
         
         hour = current_time.hour
         minute = current_time.minute
         current_time_minutes = hour * 60 + minute
         
-        market_open_minutes = 9 * 60
-        market_close_minutes = 15 * 60 + 30
+        # 새로운 거래시간: 오전 8시 ~ 오후 8시 (NXT 포함)
+        market_open_minutes = 8 * 60      # 08:00
+        market_close_minutes = 20 * 60    # 20:00 (오후 8시)
         
-        return market_open_minutes <= current_time_minutes <= market_close_minutes
+        return market_open_minutes <= current_time_minutes < market_close_minutes
     
     def get_market_status_info(self, current_time=None):
-        """장 상태 정보 반환"""
+        """장 상태 정보 반환 (NXT 연장거래 포함)"""
         if current_time is None:
             current_time = datetime.now()
         
         is_open = self.is_market_open(current_time)
         
         if is_open:
-            today_close = current_time.replace(hour=15, minute=30, second=0, microsecond=0)
+            # 새로운 마감시간 (오후 8시)
+            today_close = current_time.replace(hour=20, minute=0, second=0, microsecond=0)
             time_to_close = today_close - current_time
             
             hours, remainder = divmod(time_to_close.total_seconds(), 3600)
@@ -658,10 +660,10 @@ class AutoTrader:
             if weekday >= 5:
                 days_until_monday = 7 - weekday
                 next_open = current_time + timedelta(days=days_until_monday)
-                next_open = next_open.replace(hour=9, minute=0, second=0, microsecond=0)
+                next_open = next_open.replace(hour=8, minute=0, second=0, microsecond=0)  # 새로운 시작시간
                 message = f'주말 휴장 (다음 개장: {next_open.strftime("%m/%d %H:%M")})'
-            elif current_time.hour < 9:
-                next_open = current_time.replace(hour=9, minute=0, second=0, microsecond=0)
+            elif current_time.hour < 8:  # 새로운 시작시간
+                next_open = current_time.replace(hour=8, minute=0, second=0, microsecond=0)
                 time_to_open = next_open - current_time
                 hours, remainder = divmod(time_to_open.total_seconds(), 3600)
                 minutes, _ = divmod(remainder, 60)
@@ -671,7 +673,7 @@ class AutoTrader:
                 while next_day.weekday() >= 5:
                     next_day += timedelta(days=1)
                 
-                next_open = next_day.replace(hour=9, minute=0, second=0, microsecond=0)
+                next_open = next_day.replace(hour=8, minute=0, second=0, microsecond=0)  # 새로운 시작시간
                 message = f'장 마감 후 (다음 개장: {next_open.strftime("%m/%d %H:%M")})'
             
             return {
@@ -680,7 +682,6 @@ class AutoTrader:
                 'next_change': next_open if 'next_open' in locals() else current_time + timedelta(hours=12),
                 'is_trading_time': False
             }
-
 
     def run_hybrid_strategy(self, check_interval_minutes=30):
         """개선된 하이브리드 전략 실행 - 자동 종료 기능 추가"""
