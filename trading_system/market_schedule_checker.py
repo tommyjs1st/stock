@@ -18,9 +18,9 @@ class KoreanMarketSchedule:
         self.openapi_decoding_key = openapi_config['decoding_key']
         
         # 한국 주식시장 운영시간
-        self.market_open_time = time(9, 0)      # 09:00
-        self.market_close_time = time(15, 30)   # 15:30 (실제 거래 종료)
-        self.after_hours_limit = time(16, 0)    # 16:00 (분석 프로그램 종료 시간)
+        self.market_open_time = time(8, 0)      # 09:00
+        self.market_close_time = time(20, 0)   # 15:30 (실제 거래 종료)
+        self.after_hours_limit = time(20, 10)    # 16:00 (분석 프로그램 종료 시간)
         
         # 공휴일 API URL (공공데이터포털)
         self.holiday_api_key = os.getenv("HOLIDAY_API_KEY")  # 선택사항

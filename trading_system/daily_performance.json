@@ -353,5 +353,90 @@
     "today_trades": [],
     "has_holdings": true,
     "program_trade_only": true
+  },
+  {
+    "date": "2025-09-11",
+    "timestamp": "2025-09-11T17:21:49.135200",
+    "total_assets": 894199.0,
+    "cash": 26509.0,
+    "stock_value": 867690.0,
+    "total_profit_loss": 44475.0,
+    "total_return_pct": 5.402598349155445,
+    "position_count": 7,
+    "position_details": [
+      {
+        "symbol": "005940",
+        "stock_name": "NH투자증권",
+        "quantity": 2,
+        "avg_price": 19950.0,
+        "current_price": 20650.0,
+        "total_value": 41300.0,
+        "profit_loss": 1400.0,
+        "profit_loss_pct": 3.508771929824561
+      },
+      {
+        "symbol": "009420",
+        "stock_name": "한올바이오파마",
+        "quantity": 1,
+        "avg_price": 32500.0,
+        "current_price": 33400.0,
+        "total_value": 33400.0,
+        "profit_loss": 900.0,
+        "profit_loss_pct": 2.769230769230769
+      },
+      {
+        "symbol": "034220",
+        "stock_name": "LG디스플레이",
+        "quantity": 16,
+        "avg_price": 11925.0,
+        "current_price": 11750.0,
+        "total_value": 188000.0,
+        "profit_loss": -2800.0,
+        "profit_loss_pct": -1.4675052410901468
+      },
+      {
+        "symbol": "062040",
+        "stock_name": "산일전기",
+        "quantity": 1,
+        "avg_price": 105500.0,
+        "current_price": 117100.0,
+        "total_value": 117100.0,
+        "profit_loss": 11600.0,
+        "profit_loss_pct": 10.995260663507109
+      },
+      {
+        "symbol": "085620",
+        "stock_name": "미래에셋생명",
+        "quantity": 7,
+        "avg_price": 7623.5714,
+        "current_price": 7770.0,
+        "total_value": 54390.0,
+        "profit_loss": 1025.0,
+        "profit_loss_pct": 1.9207345638527125
+      },
+      {
+        "symbol": "192400",
+        "stock_name": "쿠쿠홀딩스",
+        "quantity": 6,
+        "avg_price": 31775.0,
+        "current_price": 34000.0,
+        "total_value": 204000.0,
+        "profit_loss": 13350.0,
+        "profit_loss_pct": 7.002360346184107
+      },
+      {
+        "symbol": "278470",
+        "stock_name": "에이피알",
+        "quantity": 1,
+        "avg_price": 210500.0,
+        "current_price": 229500.0,
+        "total_value": 229500.0,
+        "profit_loss": 19000.0,
+        "profit_loss_pct": 9.026128266033254
+      }
+    ],
+    "today_trades": [],
+    "has_holdings": true,
+    "program_trade_only": true
   }
 ]

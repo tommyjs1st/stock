@@ -729,19 +729,20 @@
         // 완전한 일별 수익률 데이터 조회 (백필 + 실시간)
         async function fetchCompleteDailyReturns() {
             try {
-                console.log('📊 V2 완전한 일별 수익률 데이터 요청...');
-        
-                // V2 API 호출
+                console.log('📊 완전한 일별 수익률 데이터 요청...');
+                
                 const response = await fetch('/api/complete-daily-returns');
-        
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
-                console.log('✅ V2 일별 수익률 데이터 조회 성공:', data);
-        
+                console.log('✅ 완전한 일별 수익률 데이터 조회 성공:', data);
+                
                 return data;
             } catch (error) {
-                console.error('❌ V2 일별 수익률 데이터 조회 실패, V1으로 폴백:', error);
-                // 오류 시 기존 API로 폴백
-                return await fetchCompleteDailyReturns();
+                console.error('❌ 완전한 일별 수익률 데이터 조회 실패:', error);
+                throw error;
             }
         }
         
@@ -947,31 +948,6 @@
         }
         
         // 완전한 일별 수익률 차트 렌더링
-        async function renderCompleteDailyReturnChart() {
-            try {
-                console.log('📈 V2 일별 수익률 차트 렌더링 시작...');
-        
-                // V2 데이터 가져오기
-                const data = await fetchCompleteDailyReturns();
-        
-                // 기간 정보 업데이트
-                document.getElementById('chartPeriod').textContent = data.period || '-';
-        
-                // 차트 제목 수정
-                document.querySelector('.chart-section h2').textContent = '📊 정확한 포트폴리오 일별 수익률';
-        
-                // 기존 차트 생성 함수 재사용 (데이터 구조 동일)
-                createCompleteDailyReturnChart(data);
-        
-                console.log('✅ V2 일별 수익률 차트 렌더링 완료');
-        
-            } catch (error) {
-                console.error('❌ V2 일별 수익률 차트 렌더링 실패:', error);
-                document.querySelector('.chart-container').innerHTML = 
-                    `<div class="error-message">일별 수익률을 불러오는데 실패했습니다: ${error.message}</div>`;
-            }
-        }
-
         async function renderCompleteDailyReturnChart() {
             try {
                 console.log('📈 완전한 일별 수익률 차트 렌더링 시작...');

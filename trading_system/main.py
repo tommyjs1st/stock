@@ -172,7 +172,7 @@ class AutoTrader:
             return False
 
     def process_sell_for_symbol(self, symbol: str, position: dict):
-        """개선된 개별 종목 매도 처리 - 적절한 익절 타이밍 추가"""
+        """개선된 개별 종목 매도 처리 - 포트폴리오 최적화 통합"""
         try:
             if symbol not in self.all_positions:
                 return
@@ -198,20 +198,41 @@ class AutoTrader:
                     return
             elif profit_loss_decimal >= 0.10:  # 10% 이상에서 기술적 확인 후 익절
                 daily_analysis = self.hybrid_strategy.analyze_daily_strategy(symbol)
-                if daily_analysis['signal'] == 'SELL' and daily_analysis['strength'] >= 2.0:  # 기준 완화
+                if daily_analysis['signal'] == 'SELL' and daily_analysis['strength'] >= 2.0:
                     can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
                     if can_sell:
                         self.logger.info(f"🎯 {stock_name}({symbol}) 기술적 익절! ({profit_loss_pct:+.2f}%)")
                         self.execute_sell(symbol, quantity, "aggressive_limit", "기술적익절")
                         return
             
-            # 🔥 3순위: 지능형 손절 판단 (-3% ~ -7% 구간에서 상승 가능성 검토)
+            # 🆕 3순위: 절대적 미래 상승 가능성 기준 (새로 추가!)
+            future_analysis = self.hybrid_strategy.calculate_future_potential(symbol)
+            future_score = future_analysis['total_score']
+            
+            # 절대적 기준: 35점 미만 무조건 매도
+            if future_score < 35:
+                can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
+                if can_sell:
+                    self.logger.warning(f"📊 {stock_name}({symbol}) 절대점수매도: {future_score:.1f}점 "
+                                      f"({future_analysis['grade']}) - {profit_loss_pct:+.2f}%")
+                    self.execute_sell(symbol, quantity, "aggressive_limit", "절대점수매도")
+                    return
+            
+            # 복합 기준: 손실 + 낮은 점수
+            if profit_loss_decimal < -0.08 and future_score < 50:
+                can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
+                if can_sell:
+                    self.logger.warning(f"📊 {stock_name}({symbol}) 손실+점수매도: {future_score:.1f}점 + {profit_loss_pct:+.2f}%")
+                    self.execute_sell(symbol, quantity, "aggressive_limit", "손실점수매도")
+                    return
+            
+            # 🔥 4순위: 지능형 손절 판단 (-3% ~ -7% 구간에서 상승 가능성 검토)
             if -0.07 < profit_loss_decimal <= -0.03:
                 recovery_analysis = self.analyze_recovery_potential(symbol, current_price)
                 
                 if recovery_analysis['should_hold']:
                     self.logger.info(f"💎 {stock_name}({symbol}) 손절 보류: {recovery_analysis['reason']} "
-                                   f"(현재: {profit_loss_pct:+.2f}%)")
+                                   f"(현재: {profit_loss_pct:+.2f}%, 미래점수: {future_score:.1f})")
                     return
                 else:
                     self.logger.warning(f"🛑 {stock_name}({symbol}) 지능형 손절: {recovery_analysis['reason']} "
@@ -219,24 +240,28 @@ class AutoTrader:
                     self.execute_sell(symbol, quantity, "aggressive_limit", "지능형손절")
                     return
             
-            # 🔥 4순위: 급락 감지
+            # 🔥 5순위: 급락 감지
             rapid_drop = self.check_rapid_drop(symbol, current_price)
             if rapid_drop['should_sell']:
-                recovery_analysis = self.analyze_recovery_potential(symbol, current_price)
-                
-                if recovery_analysis['strong_recovery_signal']:
-                    self.logger.info(f"🔄 {stock_name}({symbol}) 급락이지만 회복 신호로 보유: {recovery_analysis['reason']}")
+                # 미래 상승 가능성이 높으면 급락 매도도 보류 고려
+                if future_score >= 70:
+                    self.logger.info(f"🔄 {stock_name}({symbol}) 급락이지만 높은 미래점수로 보유: {future_score:.1f}점")
                     return
                 else:
-                    self.logger.warning(f"💥 {stock_name}({symbol}) 급락 매도: {rapid_drop['reason']}")
-                    self.execute_sell(symbol, quantity, "urgent", rapid_drop['reason'])
-                    return
+                    recovery_analysis = self.analyze_recovery_potential(symbol, current_price)
+                    if recovery_analysis['strong_recovery_signal']:
+                        self.logger.info(f"🔄 {stock_name}({symbol}) 급락이지만 회복 신호로 보유: {recovery_analysis['reason']}")
+                        return
+                    else:
+                        self.logger.warning(f"💥 {stock_name}({symbol}) 급락 매도: {rapid_drop['reason']}")
+                        self.execute_sell(symbol, quantity, "urgent", rapid_drop['reason'])
+                        return
             
-            # 🔥 5순위: 일반적 기술적 매도 (기준 완화)
+            # 🔥 6순위: 일반적 기술적 매도 (기준 완화)
             if symbol in self.symbols:
                 daily_analysis = self.hybrid_strategy.analyze_daily_strategy(symbol)
                 
-                if daily_analysis['signal'] == 'SELL' and daily_analysis['strength'] >= 2.5:  # 3.5 → 2.5로 완화
+                if daily_analysis['signal'] == 'SELL' and daily_analysis['strength'] >= 2.5:
                     can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
                     
                     if can_sell:
@@ -244,7 +269,7 @@ class AutoTrader:
                         self.execute_sell(symbol, quantity, "aggressive_limit", "기술적매도")
                         return
             
-            # 🆕 6순위: 장기 보유 시 수익 확정 (5일 이상 보유 + 5% 이상 수익)
+            # 🔥 7순위: 장기 보유 시 수익 확정 (5일 이상 보유 + 5% 이상 수익)
             if profit_loss_decimal >= 0.05:
                 position_summary = self.position_manager.get_position_summary(symbol)
                 first_purchase = position_summary.get('first_purchase_time')
@@ -259,11 +284,157 @@ class AutoTrader:
                             self.logger.info(f"⏰ {stock_name}({symbol}) 장기보유 익절: {holding_days:.1f}일 보유 ({profit_loss_pct:+.2f}%)")
                             self.execute_sell(symbol, quantity, "aggressive_limit", "장기익절")
                             return
+            
+            # 로그 출력: 보유 유지 이유
+            self.logger.info(f"💎 {stock_name}({symbol}) 보유유지: 미래점수 {future_score:.1f}점, 수익률 {profit_loss_pct:+.2f}%")
                     
         except Exception as e:
             self.logger.error(f"{symbol} 매도 처리 중 오류: {e}")
     
     
+    def execute_portfolio_optimization_sell(self):
+        """
+        포트폴리오 최적화 매도 (주 2회 실행)
+        상대적 기준으로 하위 종목 정리
+        """
+        try:
+            current_day = datetime.now().weekday()
+            
+            # 화요일(1), 금요일(4)에만 실행
+            if current_day not in [1, 4]:
+                return
+            
+            # 3개 이상 보유시만 실행
+            if len(self.all_positions) < 3:
+                self.logger.info("📊 포트폴리오 최적화: 보유종목 3개 미만으로 스킵")
+                return
+            
+            self.logger.info("🎯 포트폴리오 최적화 매도 분석 시작")
+            
+            # 전체 포트폴리오 분석
+            portfolio_analysis = self.evaluate_portfolio_optimization()
+            sell_candidates = portfolio_analysis.get('sell_candidates', [])
+            
+            if not sell_candidates:
+                self.logger.info("📊 포트폴리오 최적화: 매도 후보 없음")
+                return
+            
+            # 가장 낮은 점수 종목 1개만 매도 (과도한 회전매매 방지)
+            worst_candidate = sell_candidates[0]
+            symbol = worst_candidate['symbol']
+            combined_score = worst_candidate['combined_score']
+            
+            # 점수가 너무 낮거나, 손실이 큰 경우만 매도
+            if combined_score < 45 or worst_candidate['current_return'] < -10:
+                position = self.all_positions.get(symbol)
+                if position:
+                    quantity = position['quantity']
+                    can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
+                    
+                    if can_sell:
+                        stock_name = self.get_stock_name(symbol)
+                        self.logger.warning(f"🎯 포트폴리오 최적화 매도: {stock_name}({symbol}) "
+                                          f"점수 {combined_score:.1f}점, 수익률 {worst_candidate['current_return']:+.2f}%")
+                        self.execute_sell(symbol, quantity, "limit", "포트폴리오최적화")
+                    else:
+                        self.logger.info(f"📊 포트폴리오 최적화: {symbol} 매도 불가 - {sell_reason}")
+            else:
+                self.logger.info(f"📊 포트폴리오 최적화: 하위종목도 기준점수 이상 ({combined_score:.1f}점)")
+        
+        except Exception as e:
+            self.logger.error(f"포트폴리오 최적화 매도 오류: {e}")
+    
+    def evaluate_portfolio_optimization(self) -> Dict:
+        """
+        포트폴리오 최적화를 위한 종목별 미래 상승 가능성 평가
+        """
+        try:
+            self.logger.info("🎯 포트폴리오 최적화 분석 시작")
+            
+            portfolio_analysis = {}
+            sell_candidates = []
+            
+            # 모든 보유 종목의 미래 상승 가능성 분석
+            for symbol, position in self.all_positions.items():
+                # 미래 상승 가능성 점수 계산
+                future_potential = self.calculate_future_potential(symbol)
+                
+                # 현재 수익률 정보
+                current_return = position['profit_loss_pct']
+                holding_period = self.get_holding_period(symbol)
+                
+                # 종합 평가 점수 (미래 가능성 70% + 현재 수익률 30%)
+                # 현재 수익률이 마이너스면 페널티, 플러스면 보너스
+                return_adjustment = max(min(current_return * 0.3, 10), -15)  # -15~+10 범위
+                combined_score = future_potential['total_score'] + return_adjustment
+                
+                portfolio_analysis[symbol] = {
+                    'stock_name': future_potential['stock_name'],
+                    'current_return': current_return,
+                    'future_potential': future_potential['total_score'],
+                    'combined_score': combined_score,
+                    'grade': future_potential['grade'],
+                    'holding_period': holding_period,
+                    'recommendation': future_potential['recommendation'],
+                    'position_value': position['total_value'],
+                    'top_reasons': future_potential.get('top_reasons', [])
+                }
+                
+                # 매도 후보 선정 (점수 50점 미만 또는 현재 손실 5% 이상)
+                if combined_score < 50 or current_return < -5:
+                    sell_candidates.append({
+                        'symbol': symbol,
+                        'stock_name': future_potential['stock_name'],
+                        'combined_score': combined_score,
+                        'current_return': current_return,
+                        'reason': '낮은 미래 가능성' if combined_score < 50 else '큰 손실'
+                    })
+            
+            # 매도 우선순위 결정 (점수가 낮은 순)
+            sell_candidates.sort(key=lambda x: x['combined_score'])
+            
+            # 결과 정리
+            sorted_portfolio = sorted(portfolio_analysis.items(), 
+                                    key=lambda x: x[1]['combined_score'], reverse=True)
+            
+            self.logger.info(f"📊 포트폴리오 최적화 분석 완료: {len(portfolio_analysis)}개 종목")
+            for symbol, analysis in sorted_portfolio:
+                self.logger.info(f"  {analysis['stock_name']}: {analysis['combined_score']:.1f}점 "
+                               f"(미래:{analysis['future_potential']:.1f} + 수익:{analysis['current_return']:+.1f}%)")
+            
+            return {
+                'portfolio_analysis': portfolio_analysis,
+                'sorted_portfolio': sorted_portfolio,
+                'sell_candidates': sell_candidates,
+                'total_positions': len(portfolio_analysis),
+                'analysis_time': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            self.logger.error(f"포트폴리오 최적화 분석 오류: {e}")
+            return {
+                'portfolio_analysis': {},
+                'sell_candidates': [],
+                'error': str(e)
+            }
+    
+    
+    def get_holding_period(self, symbol: str) -> float:
+        """보유 기간 계산 (일 단위)"""
+        try:
+            position_summary = self.position_manager.get_position_summary(symbol)
+            first_purchase = position_summary.get('first_purchase_time')
+            
+            if first_purchase:
+                first_time = datetime.fromisoformat(first_purchase)
+                holding_days = (datetime.now() - first_time).total_seconds() / (24 * 3600)
+                return holding_days
+            
+            return 0
+            
+        except Exception:
+            return 0
+
     def analyze_recovery_potential(self, symbol: str, current_price: float) -> Dict:
         """상승 회복 가능성 분석 - 새로운 메서드"""
         try:
@@ -750,6 +921,9 @@ class AutoTrader:
                                 time.sleep(0.2)
                             except Exception as e:
                                 self.logger.error(f"{symbol} 매도 처리 오류: {e}")
+
+                        # 🆕 포트폴리오 최적화 매도 (주 2회)
+                        self.execute_portfolio_optimization_sell()
                         
                         # 종목별 하이브리드 매수
                         self.logger.info(f"🎯 고점 방지 매수 분석 시작 (총 {len(self.symbols)}개)")
