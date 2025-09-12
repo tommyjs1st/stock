@@ -357,7 +357,7 @@ class AutoTrader:
             # 모든 보유 종목의 미래 상승 가능성 분석
             for symbol, position in self.all_positions.items():
                 # 미래 상승 가능성 점수 계산
-                future_potential = self.calculate_future_potential(symbol)
+                future_potential = self.hybrid_strategy.calculate_future_potential(symbol)
                 
                 # 현재 수익률 정보
                 current_return = position['profit_loss_pct']

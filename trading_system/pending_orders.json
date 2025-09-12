@@ -1,1 +1,14 @@
-{}
+{
+  "Unknown": {
+    "order_no": "Unknown",
+    "symbol": "271940",
+    "stock_name": "일진하이솔루스",
+    "side": "BUY",
+    "quantity": 3,
+    "limit_price": 19550,
+    "strategy": "patient_limit",
+    "order_time": "2025-09-12T09:32:16.979830",
+    "check_count": 0,
+    "last_check": null
+  }
+}
