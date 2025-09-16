@@ -438,5 +438,80 @@
     "today_trades": [],
     "has_holdings": true,
     "program_trade_only": true
+  },
+  {
+    "date": "2025-09-12",
+    "timestamp": "2025-09-12T09:41:09.681931",
+    "total_assets": 777829.0,
+    "cash": 26509.0,
+    "stock_value": 751320.0,
+    "total_profit_loss": 15370.0,
+    "total_return_pct": 2.088457096270127,
+    "position_count": 6,
+    "position_details": [
+      {
+        "symbol": "005940",
+        "stock_name": "NH투자증권",
+        "quantity": 2,
+        "avg_price": 19950.0,
+        "current_price": 20600.0,
+        "total_value": 41200.0,
+        "profit_loss": 1300.0,
+        "profit_loss_pct": 3.258145363408521
+      },
+      {
+        "symbol": "007340",
+        "stock_name": "DN오토모티브",
+        "quantity": 4,
+        "avg_price": 26400.0,
+        "current_price": 26300.0,
+        "total_value": 105200.0,
+        "profit_loss": -400.0,
+        "profit_loss_pct": -0.3787878787878788
+      },
+      {
+        "symbol": "009420",
+        "stock_name": "한올바이오파마",
+        "quantity": 1,
+        "avg_price": 32500.0,
+        "current_price": 34400.0,
+        "total_value": 34400.0,
+        "profit_loss": 1900.0,
+        "profit_loss_pct": 5.846153846153846
+      },
+      {
+        "symbol": "034220",
+        "stock_name": "LG디스플레이",
+        "quantity": 16,
+        "avg_price": 11925.0,
+        "current_price": 11910.0,
+        "total_value": 190560.0,
+        "profit_loss": -240.0,
+        "profit_loss_pct": -0.12578616352201258
+      },
+      {
+        "symbol": "271940",
+        "stock_name": "일진하이솔루스",
+        "quantity": 8,
+        "avg_price": 19581.25,
+        "current_price": 19620.0,
+        "total_value": 156960.0,
+        "profit_loss": 310.0,
+        "profit_loss_pct": 0.1978933929141398
+      },
+      {
+        "symbol": "278470",
+        "stock_name": "에이피알",
+        "quantity": 1,
+        "avg_price": 210500.0,
+        "current_price": 223000.0,
+        "total_value": 223000.0,
+        "profit_loss": 12500.0,
+        "profit_loss_pct": 5.938242280285035
+      }
+    ],
+    "today_trades": [],
+    "has_holdings": true,
+    "program_trade_only": true
   }
 ]
