@@ -234,7 +234,7 @@ class AutoTrader:
                                           f"{future_score:.1f}점 + {profit_loss_pct:+.2f}%")
                         self.execute_sell(symbol, quantity, "aggressive_limit", "큰손실매도")
                         return
-                elif future_analysis['grade'].startswith('D') and profit_loss_decimal < 0:  # D등급 + 손실
+                elif future_analysis['grade'].startswith('D'):  # D등급 + 손실
                     can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
                     if can_sell:
                         self.logger.warning(f"📊 {stock_name}({symbol}) D등급+손실매도: "

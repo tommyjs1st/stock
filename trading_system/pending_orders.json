@@ -1,13 +1,13 @@
 {
   "Unknown": {
     "order_no": "Unknown",
-    "symbol": "009420",
-    "stock_name": "한올바이오파마",
-    "side": "SELL",
+    "symbol": "241560",
+    "stock_name": "두산밥캣",
+    "side": "BUY",
     "quantity": 1,
-    "limit_price": 32100,
-    "strategy": "aggressive_limit",
-    "order_time": "2025-09-18T12:38:42.144535",
+    "limit_price": 55100,
+    "strategy": "patient_limit",
+    "order_time": "2025-09-18T12:47:10.855240",
     "check_count": 0,
     "last_check": null
   }
