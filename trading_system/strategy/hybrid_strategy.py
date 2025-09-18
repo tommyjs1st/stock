@@ -533,7 +533,8 @@ class HybridStrategy:
         current_position = positions.get(symbol, {})
         current_quantity = current_position.get('quantity', 0)
     
-        can_buy, reason = self.position_manager.can_purchase_symbol(symbol, current_quantity)
+        total_holdings = len(positions)  # 전체 보유 종목 수
+        can_buy, reason = self.position_manager.can_purchase_symbol(symbol, current_quantity, total_holdings)
         if not can_buy:
             self.logger.info(f"🚫 {stock_name}({symbol}) 매수 차단: {reason}")
             return False  # 여기서 바로 종료

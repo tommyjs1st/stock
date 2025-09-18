@@ -11,7 +11,8 @@ class PositionManager:
     """종목별 포지션 관리 클래스"""
     
     def __init__(self, logger, max_purchases_per_symbol=2, max_quantity_per_symbol=200, 
-                 min_holding_period_hours=24, purchase_cooldown_hours=24):
+                 min_holding_period_hours=24, purchase_cooldown_hours=24,
+                 max_total_holdings=5):
         self.logger = logger
         self.position_history_file = "position_history.json"
         self.position_history = {}
@@ -21,6 +22,7 @@ class PositionManager:
         self.max_quantity_per_symbol = max_quantity_per_symbol
         self.min_holding_period_hours = min_holding_period_hours
         self.purchase_cooldown_hours = purchase_cooldown_hours
+        self.max_total_holdings = max_total_holdings
         
         self.load_position_history()
     
@@ -102,9 +104,14 @@ class PositionManager:
             self.logger.info(f"📝 매도 기록: {symbol} {quantity}주 @ {price:,}원 "
                            f"사유: {reason} (잔여: {self.position_history[symbol]['total_quantity']}주)")
     
-    def can_purchase_symbol(self, symbol: str, current_quantity: int = 0) -> Tuple[bool, str]:
+    def can_purchase_symbol(self, symbol: str, current_quantity: int = 0,
+                            current_total_holdings: int = 0) -> Tuple[bool, str]:
         """종목 매수 가능 여부 확인"""
         
+        # 총 보유 종목 수 제한 확인 (새로 추가)
+        if current_total_holdings >= self.max_total_holdings:
+            return False, f"최대 보유 종목 수 초과 ({current_total_holdings}/{self.max_total_holdings}개)"
+    
         # 현재 보유 수량 확인
         if current_quantity >= self.max_quantity_per_symbol:
             return False, f"최대 보유 수량 초과 ({current_quantity}/{self.max_quantity_per_symbol}주)"
