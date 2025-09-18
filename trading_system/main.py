@@ -208,6 +208,11 @@ class AutoTrader:
             # 🆕 3순위: 현재 상승 중이면 미래 점수 무시하고 보유 (NEW!)
             daily_analysis = self.hybrid_strategy.analyze_daily_strategy(symbol)
             if daily_analysis['signal'] == 'BUY' and daily_analysis['strength'] >= 3.0:
+                can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
+                if not can_sell:
+                    self.logger.info(f"⏸️ {stock_name}({symbol}) 매도 보류: {sell_reason}")
+                    return
+
                 self.logger.info(f"📈 {stock_name}({symbol}) 상승신호로 보유유지: "
                                f"매수신호 {daily_analysis['strength']:.1f}점 ({profit_loss_pct:+.2f}%)")
                 return
@@ -234,7 +239,7 @@ class AutoTrader:
                                           f"{future_score:.1f}점 + {profit_loss_pct:+.2f}%")
                         self.execute_sell(symbol, quantity, "aggressive_limit", "큰손실매도")
                         return
-                elif future_analysis['grade'].startswith('D'):  # D등급 + 손실
+                elif future_analysis['grade'].startswith('D'):  # D등급
                     can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
                     if can_sell:
                         self.logger.warning(f"📊 {stock_name}({symbol}) D등급+손실매도: "
