@@ -563,11 +563,14 @@ class HybridStrategy:
         """
         stock_name = self.get_stock_name(symbol)
 
+        # 전체 보유 종목 수 확인
+        total_holdings = len(positions)
+
         # 매수 가능 여부 확인
         current_position = positions.get(symbol, {})
         current_quantity = current_position.get('quantity', 0)
         
-        can_buy, reason = self.position_manager.can_purchase_symbol(symbol, current_quantity)
+        can_buy, reason = self.position_manager.can_purchase_symbol(symbol, current_quantity, total_holdings)
         if not can_buy:
             self.logger.info(f"🚫 {stock_name}({symbol}) 매수 불가: {reason}")
             return False

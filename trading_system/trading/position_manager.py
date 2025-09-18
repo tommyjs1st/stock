@@ -105,12 +105,12 @@ class PositionManager:
                            f"사유: {reason} (잔여: {self.position_history[symbol]['total_quantity']}주)")
     
     def can_purchase_symbol(self, symbol: str, current_quantity: int = 0,
-                            current_total_holdings: int = 0) -> Tuple[bool, str]:
+                            total_holdings_count: int = 0) -> Tuple[bool, str]:
         """종목 매수 가능 여부 확인"""
         
-        # 총 보유 종목 수 제한 확인 (새로 추가)
-        if current_total_holdings >= self.max_total_holdings:
-            return False, f"최대 보유 종목 수 초과 ({current_total_holdings}/{self.max_total_holdings}개)"
+        # 총 보유 종목 수 제한 확인 (맨 앞에 추가)
+        if current_quantity == 0 and total_holdings_count >= self.max_total_holdings:
+            return False, f"최대 보유 종목 수 초과 ({total_holdings_count}/{self.max_total_holdings}개)"
     
         # 현재 보유 수량 확인
         if current_quantity >= self.max_quantity_per_symbol:

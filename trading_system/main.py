@@ -218,7 +218,7 @@ class AutoTrader:
                 future_score = future_analysis['total_score']
                 
                 # 매우 낮은 점수 + 손실인 경우만 매도
-                if future_score < 25 and profit_loss_decimal < -0.05:  # 25점 미만 + 5% 이상 손실
+                if future_score < 35 and profit_loss_decimal < -0.02:  # 35점 미만 + 2% 이상 손실
                     can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
                     if can_sell:
                         self.logger.warning(f"📊 {stock_name}({symbol}) 극저점수+손실매도: "
@@ -233,6 +233,13 @@ class AutoTrader:
                         self.logger.warning(f"📊 {stock_name}({symbol}) 큰손실+점수매도: "
                                           f"{future_score:.1f}점 + {profit_loss_pct:+.2f}%")
                         self.execute_sell(symbol, quantity, "aggressive_limit", "큰손실매도")
+                        return
+                elif future_analysis['grade'].startswith('D') and profit_loss_decimal < 0:  # D등급 + 손실
+                    can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
+                    if can_sell:
+                        self.logger.warning(f"📊 {stock_name}({symbol}) D등급+손실매도: "
+                                          f"{future_score:.1f}점 + {profit_loss_pct:+.2f}%")
+                        self.execute_sell(symbol, quantity, "aggressive_limit", "D등급매도")
                         return
                 
             except Exception as e:

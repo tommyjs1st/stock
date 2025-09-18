@@ -513,5 +513,90 @@
     "today_trades": [],
     "has_holdings": true,
     "program_trade_only": true
+  },
+  {
+    "date": "2025-09-18",
+    "timestamp": "2025-09-18T12:39:27.079085",
+    "total_assets": 847155.0,
+    "cash": 30545.0,
+    "stock_value": 816610.0,
+    "total_profit_loss": 6610.0,
+    "total_return_pct": 0.8160493827160494,
+    "position_count": 7,
+    "position_details": [
+      {
+        "symbol": "005940",
+        "stock_name": "NH투자증권",
+        "quantity": 2,
+        "avg_price": 19950.0,
+        "current_price": 20875.0,
+        "total_value": 41750.0,
+        "profit_loss": 1850.0,
+        "profit_loss_pct": 4.636591478696742
+      },
+      {
+        "symbol": "008770",
+        "stock_name": "호텔신라",
+        "quantity": 1,
+        "avg_price": 53100.0,
+        "current_price": 52900.0,
+        "total_value": 52900.0,
+        "profit_loss": -200.0,
+        "profit_loss_pct": -0.3766478342749529
+      },
+      {
+        "symbol": "033240",
+        "stock_name": "자화전자",
+        "quantity": 5,
+        "avg_price": 21570.0,
+        "current_price": 21750.0,
+        "total_value": 108750.0,
+        "profit_loss": 900.0,
+        "profit_loss_pct": 0.8344923504867872
+      },
+      {
+        "symbol": "035720",
+        "stock_name": "카카오",
+        "quantity": 1,
+        "avg_price": 63000.0,
+        "current_price": 64400.0,
+        "total_value": 64400.0,
+        "profit_loss": 1400.0,
+        "profit_loss_pct": 2.2222222222222223
+      },
+      {
+        "symbol": "114090",
+        "stock_name": "GKL",
+        "quantity": 3,
+        "avg_price": 17183.3333,
+        "current_price": 17220.0,
+        "total_value": 51660.0,
+        "profit_loss": 110.0,
+        "profit_loss_pct": 0.21338506304558683
+      },
+      {
+        "symbol": "251270",
+        "stock_name": "넷마블",
+        "quantity": 1,
+        "avg_price": 68100.0,
+        "current_price": 67150.0,
+        "total_value": 67150.0,
+        "profit_loss": -950.0,
+        "profit_loss_pct": -1.3950073421439062
+      },
+      {
+        "symbol": "278470",
+        "stock_name": "에이피알",
+        "quantity": 2,
+        "avg_price": 213250.0,
+        "current_price": 215000.0,
+        "total_value": 430000.0,
+        "profit_loss": 3500.0,
+        "profit_loss_pct": 0.8206330597889802
+      }
+    ],
+    "today_trades": [],
+    "has_holdings": true,
+    "program_trade_only": true
   }
 ]

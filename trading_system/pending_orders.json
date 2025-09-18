@@ -1,13 +1,13 @@
 {
   "Unknown": {
     "order_no": "Unknown",
-    "symbol": "033240",
-    "stock_name": "자화전자",
-    "side": "BUY",
+    "symbol": "009420",
+    "stock_name": "한올바이오파마",
+    "side": "SELL",
     "quantity": 1,
-    "limit_price": 21750,
-    "strategy": "patient_limit",
-    "order_time": "2025-09-18T11:01:58.574688",
+    "limit_price": 32100,
+    "strategy": "aggressive_limit",
+    "order_time": "2025-09-18T12:38:42.144535",
     "check_count": 0,
     "last_check": null
   }
