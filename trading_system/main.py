@@ -208,15 +208,36 @@ class AutoTrader:
             # 🆕 3순위: 현재 상승 중이면 미래 점수 무시하고 보유 (NEW!)
             daily_analysis = self.hybrid_strategy.analyze_daily_strategy(symbol)
             if daily_analysis['signal'] == 'BUY' and daily_analysis['strength'] >= 3.0:
-                can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
-                if not can_sell:
-                    self.logger.info(f"⏸️ {stock_name}({symbol}) 매도 보류: {sell_reason}")
-                    return
-
                 self.logger.info(f"📈 {stock_name}({symbol}) 상승신호로 보유유지: "
                                f"매수신호 {daily_analysis['strength']:.1f}점 ({profit_loss_pct:+.2f}%)")
                 return
             
+            # 🆕 추가 조건: 당일 상승률로도 판단
+            if profit_loss_pct > 3.0:  # 당일 3% 이상 상승
+                # 분봉 데이터로 상승 추세 확인
+                minute_df = self.api_client.get_minute_data(symbol, minutes=30)
+                if not minute_df.empty and len(minute_df) >= 10:
+                    recent_prices = minute_df['stck_prpr'].tail(10).tolist()
+                    rising_count = sum(1 for i in range(1, len(recent_prices)) 
+                                     if recent_prices[i] > recent_prices[i-1])
+        
+                    if rising_count >= 6:  # 10분 중 6분 이상 상승
+                        self.logger.info(f"📈 {stock_name}({symbol}) 실시간상승추세로 보유유지: "
+                                       f"분봉상승 {rising_count}/10, 수익률 {profit_loss_pct:+.2f}%")
+                        return
+
+            # 🆕 추가 조건: RSI가 과매도가 아니고 수익이 나는 경우
+            daily_df = self.api_client.get_daily_data(symbol, days=20)
+            if not daily_df.empty:
+                daily_df_with_rsi = self.hybrid_strategy.calculate_daily_indicators(daily_df)
+                current_rsi = daily_df_with_rsi['rsi'].iloc[-1]
+    
+                # RSI 50 이상이고 수익이 2% 이상인 경우 D등급이어도 보호
+                if current_rsi >= 50 and profit_loss_pct >= 2.0:
+                    self.logger.info(f"📈 {stock_name}({symbol}) RSI양호+수익으로 보유유지: "
+                                   f"RSI {current_rsi:.1f}, 수익률 {profit_loss_pct:+.2f}%")
+                    return
+
             # 🆕 4순위: 매우 보수적인 절대 점수 기준 (25점 미만으로 완화)
             try:
                 future_analysis = self.hybrid_strategy.calculate_future_potential(symbol)
@@ -239,7 +260,7 @@ class AutoTrader:
                                           f"{future_score:.1f}점 + {profit_loss_pct:+.2f}%")
                         self.execute_sell(symbol, quantity, "aggressive_limit", "큰손실매도")
                         return
-                elif future_analysis['grade'].startswith('D'):  # D등급
+                elif future_analysis['grade'].startswith('D') and profit_loss_decimal < 0:  # D등급
                     can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
                     if can_sell:
                         self.logger.warning(f"📊 {stock_name}({symbol}) D등급+손실매도: "
@@ -247,6 +268,13 @@ class AutoTrader:
                         self.execute_sell(symbol, quantity, "aggressive_limit", "D등급매도")
                         return
                 
+                elif future_analysis['grade'].startswith('D'):
+                    # D등급이어도 수익이 나는 경우는 매도하지 않음
+                    if profit_loss_pct > 0:
+                        self.logger.info(f"📊 {stock_name}({symbol}) D등급이지만 수익으로 보유유지: "
+                                       f"{future_score:.1f}점, 수익률 {profit_loss_pct:+.2f}%")
+                        return
+    
             except Exception as e:
                 self.logger.error(f"미래 점수 계산 오류 ({symbol}): {e}")
                 # 오류 발생시 기존 로직으로 진행

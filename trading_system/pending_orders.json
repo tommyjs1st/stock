@@ -1,14 +1,1 @@
-{
-  "Unknown": {
-    "order_no": "Unknown",
-    "symbol": "008770",
-    "stock_name": "호텔신라",
-    "side": "SELL",
-    "quantity": 1,
-    "limit_price": 55600,
-    "strategy": "aggressive_limit",
-    "order_time": "2025-09-19T09:00:22.132791",
-    "check_count": 0,
-    "last_check": null
-  }
-}
+{}

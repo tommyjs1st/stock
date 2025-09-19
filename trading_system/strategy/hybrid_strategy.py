@@ -1307,7 +1307,7 @@ RSI: {daily_analysis.get('rsi', 0):.1f}
     
     
     def _calculate_volume_score(self, symbol: str) -> Dict:
-        """거래량 분석 점수 (15점 만점)"""
+        """거래량 분석 점수 (10점 만점)"""
         score = 0
         reasons = []
         
