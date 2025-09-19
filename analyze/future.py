@@ -8,10 +8,20 @@ import time
 from datetime import datetime
 from dotenv import load_dotenv
 
+# trading_system 모듈 경로 추가 (analyze 폴더에서 사용시)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+trading_system_path = os.path.join(parent_dir, 'trading_system')
+
+if os.path.exists(trading_system_path) and trading_system_path not in sys.path:
+    sys.path.insert(0, trading_system_path)
+
 # 모듈 import
 from data_fetcher import DataFetcher
 from technical_indicators import SignalAnalyzer
-from future_potential_analyzer import FuturePotentialAnalyzer
+from strategy.future_potential_analyzer import FuturePotentialAnalyzer
+from config.config_manager import ConfigManager
+from data.kis_api_client import KISAPIClient
 from utils import (
     setup_logger, send_discord_message, format_multi_signal_message,
     format_signal_combination_message, save_backtest_candidates, ProgressTracker
@@ -28,17 +38,26 @@ if os.path.exists(trading_system_path):
 
 load_dotenv()
 
-class EnhancedStockAnalyzer:
+class StockAnalyzer:
     """미래 상승 가능성 분석이 반영된 주식 분석 클래스"""
     
-    def __init__(self):
+    def __init__(self, config_path: str = "../trading_system/config.yaml"):
+        self.config_manager = ConfigManager(config_path)
+        kis_config = self.config_manager.get_kis_config()
+        self.api_client = KISAPIClient(
+            app_key=kis_config['app_key'],
+            app_secret=kis_config['app_secret'],
+            base_url=kis_config['base_url'],
+            account_no=kis_config['account_no']
+        )
+
         self.logger = setup_logger()
         self.data_fetcher = DataFetcher()
         self.signal_analyzer = SignalAnalyzer(self.data_fetcher)
         self.webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
         
         # 미래 상승 가능성 분석 모듈
-        self.future_analyzer = FuturePotentialAnalyzer(self.logger)
+        self.future_analyzer = FuturePotentialAnalyzer(self.api_client, self.logger)
         
         # 결과 저장용
         self.backtest_candidates = []
@@ -101,22 +120,19 @@ class EnhancedStockAnalyzer:
             future_grade = future_analysis["grade"]
             
             # 3. 종합 평가 점수 계산
-            if self.future_analyzer.is_enabled():
-                # 미래 점수를 0-5점 스케일로 변환
-                future_normalized = min(future_score / 20, 5)  # 100점 -> 5점으로 변환
-                combined_score = signal_score * 0.7 + future_normalized * 0.3
+            # 미래 점수를 0-5점 스케일로 변환
+            future_normalized = min(future_score / 20, 5)  # 100점 -> 5점으로 변환
+            combined_score = signal_score * 0.7 + future_normalized * 0.3
                 
-                # D등급 필터링 (40점 미만)
-                if future_score < 40:
-                    self.logger.debug(f"🚫 {name}({code}) D등급으로 제외: {future_score:.1f}점")
-                    return False
-            else:
-                combined_score = signal_score
-                future_normalized = 0
+            # D등급 필터링 (40점 미만)
+            if future_score < 40:
+                self.logger.debug(f"🚫 {name}({code}) D등급으로 제외: {future_score:.1f}점")
+                return True
             
             # 4. 최종 점수가 기준 미달이면 제외
             if combined_score < self.min_signal_score:
-                return False
+                self.logger.debug(f"🚫 {name}({code}) 기준미달로 제외: {future_score:.1f}점")
+                return True
             
             # 현재 가격 정보
             current_price = df.iloc[-1]["stck_clpr"]
@@ -206,10 +222,7 @@ class EnhancedStockAnalyzer:
         """전체 분석 실행"""
         self.logger.info("📊 시가총액 상위 200개 종목 분석 시작...")
         
-        if self.future_analyzer.is_enabled():
-            self.logger.info(f"🎯 미래 상승 가능성 분석 활성화 (최소 기준: {self.min_future_score}점)")
-        else:
-            self.logger.warning("⚠️ 미래 상승 가능성 분석 비활성화 (기존 방식 사용)")
+        self.logger.info(f"🎯 미래 상승 가능성 분석 활성화 (최소 기준: {self.min_future_score}점)")
         
         # 종목 리스트 조회
         stock_list = self.data_fetcher.get_top_200_stocks()
@@ -238,10 +251,9 @@ class EnhancedStockAnalyzer:
                         f"성공률 {summary['success_rate']:.1f}%")
         
         # 백테스트 후보에 미래 분석 추가 적용 (2차 필터링)
-        if self.future_analyzer.is_enabled():
-            self.backtest_candidates = self.future_analyzer.get_filtered_candidates(
-                self.backtest_candidates, self.min_future_score
-            )
+        self.backtest_candidates = self.future_analyzer.get_filtered_candidates(
+            self.backtest_candidates, self.min_future_score
+        )
         
         # 1. 다중신호 종목 우선순위별 전송
         self._send_enhanced_multi_signal_results()
@@ -291,8 +303,7 @@ class EnhancedStockAnalyzer:
                 signals_text += f" 외 {len(stock['signals'])-3}개"
             
             future_info = ""
-            if self.future_analyzer.is_enabled():
-                future_info = f" | 미래:{stock['future_score']:.0f}점({stock['future_grade'][:1]})"
+            future_info = f" | 미래:{stock['future_score']:.0f}점({stock['future_grade'][:1]})"
             
             msg += f"- **{stock['name']}** ({stock['code']}) "
             msg += f"종합:{stock['score']}점{future_info}\n"
@@ -317,8 +328,7 @@ class EnhancedStockAnalyzer:
         total_multi_signals = sum(len(stocks) for grade, stocks in self.multi_signal_stocks.items() 
                                  if grade != "single")
         
-        analysis_mode = "🎯 미래분석모드" if self.future_analyzer.is_enabled() else "📊 기존분석모드"
-        
+        analysis_mode = "🎯 미래분석모드" 
         summary_msg = f"📈 **[{analysis_mode} 종목 요약]**\n"
         summary_msg += f"🚀 초강력 신호: {len(self.multi_signal_stocks['ultra_strong'])}개\n"
         summary_msg += f"🔥 강력 신호: {len(self.multi_signal_stocks['strong'])}개\n"
@@ -327,19 +337,18 @@ class EnhancedStockAnalyzer:
         summary_msg += f"💡 단일 신호: {len(self.multi_signal_stocks['single'])}개\n"
         summary_msg += f"📊 **총 다중신호 종목: {total_multi_signals}개**\n"
         
-        if self.future_analyzer.is_enabled():
-            # 미래 등급 분포 추가
-            future_grades = {}
-            for grade_stocks in self.multi_signal_stocks.values():
-                for stock in grade_stocks:
-                    grade_key = stock['future_grade'][:1]  # A, B, C, D
-                    future_grades[grade_key] = future_grades.get(grade_key, 0) + 1
+        # 미래 등급 분포 추가
+        future_grades = {}
+        for grade_stocks in self.multi_signal_stocks.values():
+            for stock in grade_stocks:
+                grade_key = stock['future_grade'][:1]  # A, B, C, D
+                future_grades[grade_key] = future_grades.get(grade_key, 0) + 1
             
-            summary_msg += f"🎯 미래등급 분포: "
-            for grade in ['A', 'B', 'C']:
-                count = future_grades.get(grade, 0)
-                summary_msg += f"{grade}등급 {count}개, "
-            summary_msg = summary_msg.rstrip(", ") + "\n"
+        summary_msg += f"🎯 미래등급 분포: "
+        for grade in ['A', 'B', 'C']:
+            count = future_grades.get(grade, 0)
+            summary_msg += f"{grade}등급 {count}개, "
+        summary_msg = summary_msg.rstrip(", ") + "\n"
         
         summary_msg += f"✅ 분석 성공: {summary['analyzed_count']}개 | ❌ 오류: {summary['error_count']}개\n"
         summary_msg += f"⏱️ 처리시간: {summary['elapsed_time']/60:.1f}분"
@@ -381,7 +390,7 @@ def main():
             return
         
         # 분석기 생성 및 실행
-        analyzer = EnhancedStockAnalyzer()
+        analyzer = StockAnalyzer()
         success = analyzer.run_analysis()
         
         if success:

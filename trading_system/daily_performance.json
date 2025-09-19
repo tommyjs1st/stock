@@ -581,12 +581,12 @@
   },
   {
     "date": "2025-09-19",
-    "timestamp": "2025-09-19T13:14:08.686812",
-    "total_assets": 858917.0,
+    "timestamp": "2025-09-19T14:38:38.791810",
+    "total_assets": 856927.0,
     "cash": 25517.0,
-    "stock_value": 833400.0,
-    "total_profit_loss": -10175.0,
-    "total_return_pct": -1.206176095782829,
+    "stock_value": 831410.0,
+    "total_profit_loss": -12165.0,
+    "total_return_pct": -1.4420768752037458,
     "position_count": 4,
     "position_details": [
       {
@@ -594,40 +594,40 @@
         "stock_name": "제주은행",
         "quantity": 3,
         "avg_price": 14500.0,
-        "current_price": 14100.0,
-        "total_value": 42300.0,
-        "profit_loss": -1200.0,
-        "profit_loss_pct": -2.7586206896551726
+        "current_price": 14070.0,
+        "total_value": 42210.0,
+        "profit_loss": -1290.0,
+        "profit_loss_pct": -2.9655172413793105
       },
       {
         "symbol": "034230",
         "stock_name": "파라다이스",
         "quantity": 4,
         "avg_price": 22381.25,
-        "current_price": 22675.0,
-        "total_value": 90700.0,
-        "profit_loss": 1175.0,
-        "profit_loss_pct": 1.312482546774644
+        "current_price": 22900.0,
+        "total_value": 91600.0,
+        "profit_loss": 2075.0,
+        "profit_loss_pct": 2.317788327282882
       },
       {
         "symbol": "066570",
         "stock_name": "LG전자",
         "quantity": 6,
         "avg_price": 81700.0,
-        "current_price": 79800.0,
-        "total_value": 478800.0,
-        "profit_loss": -11400.0,
-        "profit_loss_pct": -2.3255813953488373
+        "current_price": 79200.0,
+        "total_value": 475200.0,
+        "profit_loss": -15000.0,
+        "profit_loss_pct": -3.0599755201958385
       },
       {
         "symbol": "241560",
         "stock_name": "두산밥캣",
         "quantity": 4,
         "avg_price": 55087.5,
-        "current_price": 55400.0,
-        "total_value": 221600.0,
-        "profit_loss": 1250.0,
-        "profit_loss_pct": 0.5672793283412753
+        "current_price": 55600.0,
+        "total_value": 222400.0,
+        "profit_loss": 2050.0,
+        "profit_loss_pct": 0.9303380984796914
       }
     ],
     "today_trades": [],

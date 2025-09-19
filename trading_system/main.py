@@ -25,6 +25,7 @@ try:
     from trading.order_manager import OrderManager
     from trading.order_tracker import OrderTracker
     from strategy.hybrid_strategy import HybridStrategy
+    from strategy.future_potential_analyzer import FuturePotentialAnalyzer
     from notification.discord_notifier import DiscordNotifier
     from utils.logger import setup_logger
     from utils.helpers import create_logs_directory, check_dependencies
@@ -112,6 +113,7 @@ class AutoTrader:
             order_tracker=self.order_tracker, 
             get_stock_name_func=self.get_stock_name
         )
+        self.future_analyzer = FuturePotentialAnalyzer(self.api_client, self.logger)
 
         # 자동 종료 설정 추가
         system_config = self.config_manager.get_system_config()
@@ -240,7 +242,7 @@ class AutoTrader:
 
             # 🆕 4순위: 매우 보수적인 절대 점수 기준 (25점 미만으로 완화)
             try:
-                future_analysis = self.hybrid_strategy.calculate_future_potential(symbol)
+                future_analysis = self.future_analyzer.calculate_future_potential(symbol)
                 future_score = future_analysis['total_score']
                 
                 # 매우 낮은 점수 + 손실인 경우만 매도
@@ -414,7 +416,7 @@ class AutoTrader:
             # 모든 보유 종목의 미래 상승 가능성 분석
             for symbol, position in self.all_positions.items():
                 # 미래 상승 가능성 점수 계산
-                future_potential = self.hybrid_strategy.calculate_future_potential(symbol)
+                future_potential = self.future_analyzer.calculate_future_potential(symbol)
                 
                 # 현재 수익률 정보
                 current_return = position['profit_loss_pct']
