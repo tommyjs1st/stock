@@ -20,6 +20,7 @@ def is_envelope_bottom_rebound(df, period=20, envelope_ratio=0.10):
     엔벨로프 하단 터치 후 반등 신호
     """
     if len(df) < period + 2:
+        print("is_envelope_bottom_rebound:no data!!")
         return False
     
     df["ma"] = df["stck_clpr"].rolling(window=period).mean()
@@ -29,6 +30,7 @@ def is_envelope_bottom_rebound(df, period=20, envelope_ratio=0.10):
     recent_3days = df.tail(3)
     
     if len(recent_3days) < 3:
+        print("is_envelope_bottom_rebound:no data!!")
         return False
     
     day_before_yesterday = recent_3days.iloc[0]
@@ -41,6 +43,7 @@ def is_envelope_bottom_rebound(df, period=20, envelope_ratio=0.10):
     low_touched_band = yesterday["stck_lwpr"] <= yesterday["envelope_lower"] * 1.005
     meaningful_rebound = (today["stck_clpr"] / yesterday["stck_clpr"] - 1) >= 0.005
     
+    #print(f"{touched_lower_band},  {price_recovery},  {low_touched_band}, {meaningful_rebound}")
     return touched_lower_band and price_recovery and low_touched_band and meaningful_rebound
 
 
@@ -49,6 +52,7 @@ def is_envelope_squeeze_breakout(df, period=20, envelope_ratio=0.06, squeeze_thr
     엔벨로프 스퀴즈(밴드 축소) 후 상향 돌파 신호
     """
     if len(df) < period + 10:
+        print("is_envelope_squeeze_breakout:not enough data!!")
         return False
     
     df["ma"] = df["stck_clpr"].rolling(window=period).mean()
@@ -780,7 +784,7 @@ def get_top_200_stocks():
     exclude_keywords = ["KODEX","TIGER", "PLUS", "ACE", "ETF", "ETN", "리츠", "우", "스팩", "커버드"]
     cnt = 0
 
-    for page in range(1, 11):
+    for page in range(1, 20):
         url = f"https://finance.naver.com/sise/sise_market_sum.nhn?sosok=0&page={page}"
         headers = {"User-Agent": "Mozilla/5.0"}
         res = requests.get(url, headers=headers)
@@ -954,13 +958,15 @@ if __name__ == "__main__":
             #if is_bollinger_rebound(df):
             #    signal_lists["볼린저밴드복귀"].append(f"- {name} ({code})")
             if is_envelope_bottom_rebound(df):
+                print(f"엔벨로프반등{grade} 종목: {name} ({code})")
                 signal_lists["엔벨로프반등"].append(f"- {name} ({code})")
             if is_envelope_squeeze_breakout(df):
+                print(f"엔벨로프돌파{grade} 종목: {name} ({code})")
                 signal_lists["엔벨로프돌파"].append(f"- {name} ({code})")
-            if is_macd_golden_cross(df):
-                signal_lists["MACD골든크로스"].append(f"- {name} ({code})")
-            if is_macd_near_golden_cross(df):
-                signal_lists["MACD돌파직전"].append(f"- {name} ({code})")
+            #if is_macd_golden_cross(df):
+            #    signal_lists["MACD골든크로스"].append(f"- {name} ({code})")
+            #if is_macd_near_golden_cross(df):
+            #    signal_lists["MACD돌파직전"].append(f"- {name} ({code})")
             if trend == "steady_buying" and is_institution_consecutive_buying(code, app_key, app_secret, access_token):
                 signal_lists["외국인기관매수"].append(f"- {name} ({code})") 
             

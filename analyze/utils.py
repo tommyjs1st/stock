@@ -1,6 +1,5 @@
 """
-유틸리티 모듈
-JSON 처리, 로깅, 메시지 포맷팅 등
+유틸리티 모듈 - 강화된 JSON 직렬화
 """
 import json
 import logging
@@ -34,48 +33,154 @@ def setup_logger(log_dir="logs", log_filename="buying_stocks.log", when="midnigh
 
 
 def convert_numpy_types(obj):
-    """numpy 타입을 JSON 직렬화 가능한 타입으로 변환"""
-    if hasattr(obj, 'item'):  # numpy scalar이면 Python 기본 타입으로 변환
-        return obj.item()
-    elif isinstance(obj, (np.integer, np.int64, np.int32, np.int16, np.int8)):
+    """강화된 numpy 타입을 JSON 직렬화 가능한 타입으로 변환"""
+    # 1. numpy scalar 처리 (가장 우선)
+    if hasattr(obj, 'item'):
+        try:
+            return obj.item()
+        except (ValueError, TypeError):
+            pass
+    
+    # 2. numpy 정수형들
+    if isinstance(obj, (np.integer, np.int64, np.int32, np.int16, np.int8, np.uint64, np.uint32, np.uint16, np.uint8)):
         return int(obj)
-    elif isinstance(obj, (np.floating, np.float64, np.float32, np.float16)):
+    
+    # 3. numpy 실수형들
+    if isinstance(obj, (np.floating, np.float64, np.float32, np.float16)):
         return float(obj)
-    elif isinstance(obj, np.bool_):
+    
+    # 4. numpy bool
+    if isinstance(obj, np.bool_):
         return bool(obj)
-    elif isinstance(obj, np.ndarray):
+    
+    # 5. numpy 배열
+    if isinstance(obj, np.ndarray):
         return obj.tolist()
-    elif isinstance(obj, pd.Series):
+    
+    # 6. pandas 타입들
+    if isinstance(obj, pd.Series):
         return obj.tolist()
-    elif isinstance(obj, pd.DataFrame):
+    if isinstance(obj, pd.DataFrame):
         return obj.to_dict('records')
-    elif isinstance(obj, dict):
+    if hasattr(obj, 'dtype') and 'int' in str(obj.dtype):
+        return int(obj) if not pd.isna(obj) else None
+    if hasattr(obj, 'dtype') and 'float' in str(obj.dtype):
+        return float(obj) if not pd.isna(obj) else None
+    
+    # 7. 컬렉션 타입들 (재귀 처리)
+    if isinstance(obj, dict):
         return {key: convert_numpy_types(value) for key, value in obj.items()}
-    elif isinstance(obj, (list, tuple)):
+    if isinstance(obj, (list, tuple)):
         return [convert_numpy_types(item) for item in obj]
-    elif isinstance(obj, datetime):
+    
+    # 8. 날짜 타입
+    if isinstance(obj, datetime):
         return obj.isoformat()
-    else:
+    
+    # 9. 기타 Python 기본 타입들
+    if isinstance(obj, (int, float, str, bool, type(None))):
         return obj
+    
+    # 10. 알 수 없는 타입은 문자열로 변환
+    try:
+        # numpy 타입인지 한번 더 확인
+        if hasattr(obj, 'dtype'):
+            return obj.item() if hasattr(obj, 'item') else str(obj)
+        return obj
+    except:
+        return str(obj)
 
 
 def safe_json_save(data, filename):
-    """안전한 JSON 저장 함수"""
+    """강화된 안전한 JSON 저장 함수"""
     try:
-        # 1단계: numpy 타입 변환
+        # 1단계: 강화된 numpy 타입 변환
         converted_data = convert_numpy_types(data)
         
         # 2단계: JSON 직렬화 테스트
-        json.dumps(converted_data, ensure_ascii=False)
+        test_json = json.dumps(converted_data, ensure_ascii=False, default=str)
         
-        # 3단계: 파일 저장
-        with open(filename, "w", encoding="utf-8") as f:
-            json.dump(converted_data, f, ensure_ascii=False, indent=2)
+        # 3단계: 임시 파일에 먼저 저장
+        temp_filename = f"{filename}.tmp"
+        with open(temp_filename, "w", encoding="utf-8") as f:
+            json.dump(converted_data, f, ensure_ascii=False, indent=2, default=str)
         
-        return True, None
+        # 4단계: 임시 파일이 정상적으로 생성되었는지 확인
+        if os.path.exists(temp_filename) and os.path.getsize(temp_filename) > 0:
+            # 정상이면 원본 파일로 이동
+            if os.path.exists(filename):
+                os.remove(filename)
+            os.rename(temp_filename, filename)
+            return True, None
+        else:
+            return False, "임시 파일 생성 실패"
         
     except Exception as e:
+        # 임시 파일 정리
+        temp_filename = f"{filename}.tmp"
+        if os.path.exists(temp_filename):
+            try:
+                os.remove(temp_filename)
+            except:
+                pass
         return False, str(e)
+
+
+def save_backtest_candidates(candidates, logger):
+    """백테스트 후보 종목을 JSON 파일로 저장 - 강화된 버전"""
+    try:
+        if not candidates:
+            logger.warning("⚠️ 저장할 후보 종목이 없습니다.")
+            return
+        
+        # score 기준으로 내림차순 정렬 후 상위 10개만 선택
+        sorted_candidates = sorted(candidates, key=lambda x: x.get('score', 0), reverse=True)[:10]
+        
+        logger.debug(f"저장할 데이터 개수: {len(sorted_candidates)}")
+        
+        # 데이터 타입 디버깅
+        if logger.level <= logging.DEBUG:
+            for i, candidate in enumerate(sorted_candidates[:2]):  # 처음 2개만
+                logger.debug(f"후보 {i+1} 타입 분석:")
+                for key, value in candidate.items():
+                    logger.debug(f"  {key}: {type(value)} = {value}")
+        
+        # 강화된 안전한 JSON 저장
+        success, error = safe_json_save(sorted_candidates, "trading_list.json")
+        
+        if success:
+            logger.info(f"✅ trading_list.json 저장 완료: {len(sorted_candidates)}개 종목")
+            
+            # 저장된 파일 크기 확인
+            if os.path.exists("trading_list.json"):
+                file_size = os.path.getsize("trading_list.json")
+                logger.debug(f"저장된 파일 크기: {file_size} bytes")
+        else:
+            logger.error(f"❌ trading_list.json 저장 실패: {error}")
+            
+            # 실패 시 대안: pickle로 저장
+            try:
+                import pickle
+                with open("trading_list.pkl", "wb") as f:
+                    pickle.dump(sorted_candidates, f)
+                logger.info("✅ 대안으로 trading_list.pkl에 저장 완료")
+            except Exception as pickle_error:
+                logger.error(f"❌ pickle 저장도 실패: {pickle_error}")
+            
+            # 추가 대안: 간단한 텍스트 파일로 저장
+            try:
+                with open("trading_list.txt", "w", encoding="utf-8") as f:
+                    f.write("# 백테스트 후보 종목 리스트\n")
+                    f.write(f"# 생성일시: {datetime.now()}\n\n")
+                    for candidate in sorted_candidates:
+                        f.write(f"{candidate.get('name', 'Unknown')} ({candidate.get('code', 'N/A')}) - {candidate.get('score', 0)}점\n")
+                logger.info("✅ 대안으로 trading_list.txt에 저장 완료")
+            except Exception as txt_error:
+                logger.error(f"❌ 텍스트 파일 저장도 실패: {txt_error}")
+                
+    except Exception as e:
+        logger.error(f"❌ 전체 저장 프로세스 실패: {e}")
+        logger.error(f"오류 상세: {type(e).__name__}: {str(e)}")
 
 
 def send_discord_message(message, webhook_url):
@@ -115,10 +220,10 @@ def format_multi_signal_message(grade, stocks):
     header = f"{info['icon']} **[{info['name']} ({info['desc']})]**\n"
     
     stock_lines = []
-    for stock in sorted(stocks, key=lambda x: x['score'], reverse=True):
-        signals_text = ", ".join(stock['signals'])
+    for stock in sorted(stocks, key=lambda x: x.get('score', 0), reverse=True):
+        signals_text = ", ".join(stock.get('signals', []))
         
-        line = f"- {stock['name']} ({stock['code']}) - {stock['score']}점\n"
+        line = f"- {stock.get('name', 'Unknown')} ({stock.get('code', 'N/A')}) - {stock.get('score', 0)}점\n"
         line += f"  📊 [{signals_text}]"
         if 'foreign' in stock and stock['foreign']:
             line += f"\n  💰 외국인: {stock['foreign']}"
@@ -146,35 +251,6 @@ def format_signal_combination_message(combinations):
                 combo_lines.append(f"  → 외 {len(stocks)-5}개 종목")
     
     return header + "\n".join(combo_lines) if combo_lines else ""
-
-
-def save_backtest_candidates(candidates, logger):
-    """백테스트 후보 종목을 JSON 파일로 저장"""
-    try:
-        # score 기준으로 내림차순 정렬 후 상위 10개만 선택
-        sorted_candidates = sorted(candidates, key=lambda x: x['score'], reverse=True)[:10]
-        
-        logger.debug(f"저장할 데이터 개수: {len(sorted_candidates)}")
-        
-        # 안전한 JSON 저장
-        success, error = safe_json_save(sorted_candidates, "trading_list.json")
-        
-        if success:
-            logger.info(f"✅ trading_list.json 저장 완료: {len(sorted_candidates)}개 종목")
-        else:
-            logger.error(f"❌ trading_list.json 저장 실패: {error}")
-            
-            # 실패 시 대안: pickle로 저장
-            try:
-                import pickle
-                with open("trading_list.pkl", "wb") as f:
-                    pickle.dump(sorted_candidates, f)
-                logger.info("✅ 대안으로 trading_list.pkl에 저장 완료")
-            except Exception as pickle_error:
-                logger.error(f"❌ pickle 저장도 실패: {pickle_error}")
-                
-    except Exception as e:
-        logger.error(f"❌ 전체 저장 프로세스 실패: {e}")
 
 
 def load_stock_codes_from_file(file_path):

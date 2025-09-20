@@ -581,12 +581,12 @@
   },
   {
     "date": "2025-09-19",
-    "timestamp": "2025-09-19T14:38:38.791810",
-    "total_assets": 856927.0,
+    "timestamp": "2025-09-19T16:31:13.002774",
+    "total_assets": 858247.0,
     "cash": 25517.0,
-    "stock_value": 831410.0,
-    "total_profit_loss": -12165.0,
-    "total_return_pct": -1.4420768752037458,
+    "stock_value": 832730.0,
+    "total_profit_loss": -10845.0,
+    "total_return_pct": -1.285599976291379,
     "position_count": 4,
     "position_details": [
       {
@@ -594,10 +594,10 @@
         "stock_name": "제주은행",
         "quantity": 3,
         "avg_price": 14500.0,
-        "current_price": 14070.0,
-        "total_value": 42210.0,
-        "profit_loss": -1290.0,
-        "profit_loss_pct": -2.9655172413793105
+        "current_price": 13910.0,
+        "total_value": 41730.0,
+        "profit_loss": -1770.0,
+        "profit_loss_pct": -4.068965517241379
       },
       {
         "symbol": "034230",
@@ -614,20 +614,20 @@
         "stock_name": "LG전자",
         "quantity": 6,
         "avg_price": 81700.0,
-        "current_price": 79200.0,
-        "total_value": 475200.0,
-        "profit_loss": -15000.0,
-        "profit_loss_pct": -3.0599755201958385
+        "current_price": 79100.0,
+        "total_value": 474600.0,
+        "profit_loss": -15600.0,
+        "profit_loss_pct": -3.182374541003672
       },
       {
         "symbol": "241560",
         "stock_name": "두산밥캣",
         "quantity": 4,
         "avg_price": 55087.5,
-        "current_price": 55600.0,
-        "total_value": 222400.0,
-        "profit_loss": 2050.0,
-        "profit_loss_pct": 0.9303380984796914
+        "current_price": 56200.0,
+        "total_value": 224800.0,
+        "profit_loss": 4450.0,
+        "profit_loss_pct": 2.0195144088949397
       }
     ],
     "today_trades": [],

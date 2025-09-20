@@ -1,5 +1,5 @@
 """
-기술적 지표 분석 모듈
+기술적 지표 분석 모듈 (이동평균선 함수 추가)
 각종 매수 신호 감지 함수들
 """
 import pandas as pd
@@ -43,6 +43,294 @@ class TechnicalIndicators:
         except Exception as e:
             logger.error(f"❌ 골든크로스 계산 오류: {e}")
             return False
+
+    @staticmethod
+    def is_ma5_crossing_above_ma20(df):
+        """
+        5일 이동평균선이 20일 이동평균선을 상향 돌파하는 시점 감지 (골든크로스)
+        
+        Args:
+            df: 주가 데이터프레임 (stck_clpr 컬럼 필요)
+        
+        Returns:
+            bool: 5일선이 20일선을 상향 돌파하면 True
+        """
+        try:
+            if df is None or df.empty or len(df) < 21:
+                return False
+            if 'stck_clpr' not in df.columns:
+                return False
+                
+            df = df.copy()
+            
+            # 이동평균선 계산
+            df["ma5"] = df["stck_clpr"].rolling(window=5).mean()
+            df["ma20"] = df["stck_clpr"].rolling(window=20).mean()
+            
+            if len(df) < 2:
+                return False
+                
+            # 오늘과 어제 데이터
+            today = df.iloc[-1]
+            yesterday = df.iloc[-2]
+            
+            # NaN 값 체크
+            if (pd.isna(today["ma5"]) or pd.isna(today["ma20"]) or
+                pd.isna(yesterday["ma5"]) or pd.isna(yesterday["ma20"])):
+                return False
+            
+            # 골든크로스 조건
+            # 1. 어제: 5일선이 20일선 아래
+            # 2. 오늘: 5일선이 20일선 위로 돌파
+            cross_condition = (yesterday["ma5"] <= yesterday["ma20"] and 
+                              today["ma5"] > today["ma20"])
+            
+            # 추가 확인: 5일선이 상승 추세인지
+            upward_trend = today["ma5"] > yesterday["ma5"]
+            
+            # 거래량 확인 (선택사항)
+            if 'acml_vol' in df.columns and len(df) >= 10:
+                avg_volume = df["acml_vol"].rolling(window=10).mean().iloc[-1]
+                current_volume = df["acml_vol"].iloc[-1]
+                volume_surge = current_volume > avg_volume * 1.2
+                
+                return cross_condition and upward_trend and volume_surge
+            else:
+                return cross_condition and upward_trend
+                
+        except Exception as e:
+            logger.error(f"❌ 5일선 20일선 상향돌파 계산 오류: {e}")
+            return False
+
+    @staticmethod
+    def is_ma5_crossing_below_ma20(df):
+        """
+        5일 이동평균선이 20일 이동평균선을 하향 돌파하는 시점 감지 (데드크로스)
+        
+        Args:
+            df: 주가 데이터프레임 (stck_clpr 컬럼 필요)
+        
+        Returns:
+            bool: 5일선이 20일선을 하향 돌파하면 True
+        """
+        try:
+            if df is None or df.empty or len(df) < 21:
+                return False
+            if 'stck_clpr' not in df.columns:
+                return False
+                
+            df = df.copy()
+            
+            # 이동평균선 계산
+            df["ma5"] = df["stck_clpr"].rolling(window=5).mean()
+            df["ma20"] = df["stck_clpr"].rolling(window=20).mean()
+            
+            if len(df) < 2:
+                return False
+                
+            # 오늘과 어제 데이터
+            today = df.iloc[-1]
+            yesterday = df.iloc[-2]
+            
+            # NaN 값 체크
+            if (pd.isna(today["ma5"]) or pd.isna(today["ma20"]) or
+                pd.isna(yesterday["ma5"]) or pd.isna(yesterday["ma20"])):
+                return False
+            
+            # 데드크로스 조건
+            # 1. 어제: 5일선이 20일선 위
+            # 2. 오늘: 5일선이 20일선 아래로 하락
+            cross_condition = (yesterday["ma5"] >= yesterday["ma20"] and 
+                              today["ma5"] < today["ma20"])
+            
+            # 추가 확인: 5일선이 하락 추세인지
+            downward_trend = today["ma5"] < yesterday["ma5"]
+            
+            return cross_condition and downward_trend
+            
+        except Exception as e:
+            logger.error(f"❌ 5일선 20일선 하향돌파 계산 오류: {e}")
+            return False
+
+    @staticmethod
+    def is_price_below_ma20(df):
+        """
+        현재 주가가 20일 이동평균선 아래에 있는지 확인
+        
+        Args:
+            df: 주가 데이터프레임 (stck_clpr 컬럼 필요)
+        
+        Returns:
+            bool: 현재가가 20일선 아래 있으면 True
+        """
+        try:
+            if df is None or df.empty or len(df) < 21:
+                return False
+            if 'stck_clpr' not in df.columns:
+                return False
+                
+            df = df.copy()
+            
+            # 20일 이동평균선 계산
+            df["ma20"] = df["stck_clpr"].rolling(window=20).mean()
+            
+            # 최신 데이터
+            current = df.iloc[-1]
+            
+            # NaN 값 체크
+            if pd.isna(current["ma20"]):
+                return False
+            
+            current_price = current["stck_clpr"]
+            ma20_value = current["ma20"]
+            
+            # 현재가가 20일선 아래 있는지 확인
+            below_ma20 = current_price < ma20_value
+            
+            # 추가 조건: 20일선과의 거리 (선택사항)
+            distance_ratio = (ma20_value - current_price) / ma20_value
+            
+            # 20일선 아래에 있고, 어느 정도 의미있는 거리(1% 이상)가 있는 경우
+            meaningful_distance = distance_ratio >= 0.01
+            
+            return below_ma20 and meaningful_distance
+            
+        except Exception as e:
+            logger.error(f"❌ 20일선 아래 위치 확인 오류: {e}")
+            return False
+
+    @staticmethod
+    def is_ma5_below_ma20(df):
+        """
+        5일 이동평균선이 20일 이동평균선 아래에 있는지 확인
+        
+        Args:
+            df: 주가 데이터프레임 (stck_clpr 컬럼 필요)
+        
+        Returns:
+            bool: 5일선이 20일선 아래 있으면 True
+        """
+        try:
+            if df is None or df.empty or len(df) < 21:
+                return False
+            if 'stck_clpr' not in df.columns:
+                return False
+                
+            df = df.copy()
+            
+            # 이동평균선 계산
+            df["ma5"] = df["stck_clpr"].rolling(window=5).mean()
+            df["ma20"] = df["stck_clpr"].rolling(window=20).mean()
+            
+            # 최신 데이터
+            current = df.iloc[-1]
+            
+            # NaN 값 체크
+            if pd.isna(current["ma5"]) or pd.isna(current["ma20"]):
+                return False
+            
+            # 5일선이 20일선 아래 있는지 확인
+            return current["ma5"] < current["ma20"]
+            
+        except Exception as e:
+            logger.error(f"❌ 5일선 20일선 아래 위치 확인 오류: {e}")
+            return False
+
+    @staticmethod
+    def get_ma_position_info(df):
+        """
+        이동평균선 위치 정보 종합 분석
+        
+        Args:
+            df: 주가 데이터프레임 (stck_clpr 컬럼 필요)
+        
+        Returns:
+            dict: 이동평균선 관련 모든 정보
+        """
+        try:
+            if df is None or df.empty or len(df) < 21:
+                return {
+                    'valid': False,
+                    'error': '데이터 부족'
+                }
+            
+            df = df.copy()
+            
+            # 이동평균선 계산
+            df["ma5"] = df["stck_clpr"].rolling(window=5).mean()
+            df["ma20"] = df["stck_clpr"].rolling(window=20).mean()
+            
+            current = df.iloc[-1]
+            yesterday = df.iloc[-2] if len(df) >= 2 else None
+            
+            current_price = current["stck_clpr"]
+            ma5_current = current["ma5"]
+            ma20_current = current["ma20"]
+            
+            # 기본 정보
+            info = {
+                'valid': True,
+                'current_price': current_price,
+                'ma5': ma5_current,
+                'ma20': ma20_current,
+                'price_vs_ma5': 'above' if current_price > ma5_current else 'below',
+                'price_vs_ma20': 'above' if current_price > ma20_current else 'below',
+                'ma5_vs_ma20': 'above' if ma5_current > ma20_current else 'below',
+                'is_golden_cross': False,
+                'is_dead_cross': False,
+                'ma5_trend': 'flat',
+                'ma20_trend': 'flat'
+            }
+            
+            # 크로스 상황 체크
+            if yesterday is not None:
+                ma5_yesterday = yesterday["ma5"]
+                ma20_yesterday = yesterday["ma20"]
+                
+                # 골든크로스 체크
+                if (ma5_yesterday <= ma20_yesterday and ma5_current > ma20_current):
+                    info['is_golden_cross'] = True
+                
+                # 데드크로스 체크
+                if (ma5_yesterday >= ma20_yesterday and ma5_current < ma20_current):
+                    info['is_dead_cross'] = True
+                
+                # 이동평균선 추세
+                if ma5_current > ma5_yesterday:
+                    info['ma5_trend'] = 'up'
+                elif ma5_current < ma5_yesterday:
+                    info['ma5_trend'] = 'down'
+                
+                if ma20_current > ma20_yesterday:
+                    info['ma20_trend'] = 'up'
+                elif ma20_current < ma20_yesterday:
+                    info['ma20_trend'] = 'down'
+            
+            # 거리 정보 (백분율)
+            info['price_ma5_distance'] = ((current_price - ma5_current) / ma5_current * 100) if ma5_current > 0 else 0
+            info['price_ma20_distance'] = ((current_price - ma20_current) / ma20_current * 100) if ma20_current > 0 else 0
+            info['ma5_ma20_distance'] = ((ma5_current - ma20_current) / ma20_current * 100) if ma20_current > 0 else 0
+            
+            # 매수/매도 신호 종합 판단
+            signals = []
+            if info['is_golden_cross']:
+                signals.append('골든크로스')
+            if info['is_dead_cross']:
+                signals.append('데드크로스')
+            if info['price_vs_ma5'] == 'above' and info['price_vs_ma20'] == 'above':
+                signals.append('이평선상단')
+            elif info['price_vs_ma5'] == 'below' and info['price_vs_ma20'] == 'below':
+                signals.append('이평선하단')
+            
+            info['signals'] = signals
+            
+            return info
+            
+        except Exception as e:
+            return {
+                'valid': False,
+                'error': f'계산 오류: {e}'
+            }
 
     @staticmethod
     def is_bollinger_rebound(df):
@@ -94,7 +382,7 @@ class TechnicalIndicators:
             else:
                 # 수동 MACD 계산
                 ema12 = close.ewm(span=12).mean()
-                ema26 = close.ewm(span=16).mean()
+                ema26 = close.ewm(span=26).mean()
                 macd = ema12 - ema26
                 signal = macd.ewm(span=9).mean()
 
@@ -407,7 +695,7 @@ class SignalAnalyzer:
         self.ti = TechnicalIndicators()
     
     def calculate_buy_signal_score(self, df, name, code, foreign_trend=None):
-        """종합 매수 신호 점수 계산"""
+        """종합 매수 신호 점수 계산 (새로운 이동평균선 신호 포함)"""
         try:
             if df is None or df.empty:
                 return 0, []
@@ -429,7 +717,11 @@ class SignalAnalyzer:
                 "컵앤핸들": self.ti.is_cup_handle_pattern(df),
                 "MACD골든크로스": self.ti.is_macd_golden_cross(df),
                 "외국인매수추세": foreign_trend == "steady_buying",
-                "기관매수추세": is_institution_positive
+                "기관매수추세": is_institution_positive,
+                # 새로운 이동평균선 신호들 추가
+                "5일선20일선돌파": self.ti.is_ma5_crossing_above_ma20(df),
+                "현재가20일선아래": self.ti.is_price_below_ma20(df),
+                "5일선20일선아래": self.ti.is_ma5_below_ma20(df)
             }
 
             score = sum(signals.values())
@@ -441,7 +733,7 @@ class SignalAnalyzer:
             return 0, []
     
     def get_individual_signals(self, df):
-        """개별 신호 체크 결과 반환"""
+        """개별 신호 체크 결과 반환 (새로운 이동평균선 신호 포함)"""
         signals = {}
         if df is None or df.empty:
             return signals
@@ -457,6 +749,10 @@ class SignalAnalyzer:
         signals["일목균형표"] = self.ti.is_ichimoku_bullish_signal(df)
         signals["컵앤핸들"] = self.ti.is_cup_handle_pattern(df)
         signals["MACD골든크로스"] = self.ti.is_macd_golden_cross(df)
+        # 새로운 이동평균선 신호들 추가
+        signals["5일선20일선돌파"] = self.ti.is_ma5_crossing_above_ma20(df)
+        signals["현재가20일선아래"] = self.ti.is_price_below_ma20(df)
+        signals["5일선20일선아래"] = self.ti.is_ma5_below_ma20(df)
         
         return signals
 

@@ -196,7 +196,7 @@ class DataFetcher(KISAPIClient):
     def get_top_200_stocks(self):
         """네이버에서 시가총액 상위 200개 종목 조회"""
         stocks = {}
-        exclude_keywords = ["KODEX", "TIGER", "PLUS", "ACE", "ETF", "ETN", "리츠", "우", "스팩"]
+        exclude_keywords = ["KODEX", "TIGER", "PLUS", "ACE", "TIMEFOLIO", "ETF", "ETN", "리츠", "우", "스팩","채권", "국채"]
         
         try:
             for page in range(1, 11):  # 10페이지까지 조회

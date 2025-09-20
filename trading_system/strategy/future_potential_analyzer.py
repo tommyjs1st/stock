@@ -196,7 +196,8 @@ class FuturePotentialAnalyzer:
                 reasons.append("20일선위")
             
             # 4) 볼린저밴드 점수 (6점)
-            bb_position = (current_price - latest['bb_lower']) / (latest['bb_upper'] - latest['bb_lower'])
+            #bb_position = (current_price - latest['bb_lower']) / (latest['bb_upper'] - latest['bb_lower'])
+            bb_position = (current_price - latest['bb_lower']) / (latest['bb_upper'] - latest['bb_lower']) if (latest['bb_upper'] - latest['bb_lower']) != 0 else 0.5
             if bb_position <= 0.2:  # 하단 20%
                 score += 6
                 reasons.append("볼밴하단매수")

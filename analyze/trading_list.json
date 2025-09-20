@@ -1,1 +1,403 @@
-[]
+[
+  {
+    "code": "042660",
+    "name": "한화오션",
+    "score": 5,
+    "signals": [
+      "이중바닥",
+      "컵앤핸들",
+      "기관매수추세",
+      "현재가20일선아래",
+      "5일선20일선아래"
+    ],
+    "price": 111700,
+    "volume": 1487037,
+    "foreign_netbuy": [
+      152148,
+      -257044,
+      -127628,
+      118089,
+      -215382
+    ],
+    "ma_info": {
+      "valid": true,
+      "current_price": 111700,
+      "ma5": 111200.0,
+      "ma20": 112875.0,
+      "price_vs_ma5": "above",
+      "price_vs_ma20": "below",
+      "ma5_vs_ma20": "below",
+      "is_golden_cross": false,
+      "is_dead_cross": false,
+      "ma5_trend": "down",
+      "ma20_trend": "down",
+      "price_ma5_distance": 0.44964028776978415,
+      "price_ma20_distance": -1.0409745293466224,
+      "ma5_ma20_distance": -1.4839424141749724,
+      "signals": []
+    },
+    "analysis_date": "2025-09-19 22:38:23"
+  },
+  {
+    "code": "017800",
+    "name": "현대엘리베이터",
+    "score": 5,
+    "signals": [
+      "이중바닥",
+      "컵앤핸들",
+      "외국인매수추세",
+      "기관매수추세",
+      "5일선20일선아래"
+    ],
+    "price": 80200,
+    "volume": 192215,
+    "foreign_netbuy": [
+      35783,
+      21535,
+      21072,
+      41156,
+      25471
+    ],
+    "ma_info": {
+      "valid": true,
+      "current_price": 80200,
+      "ma5": 78480.0,
+      "ma20": 78875.0,
+      "price_vs_ma5": "above",
+      "price_vs_ma20": "above",
+      "ma5_vs_ma20": "below",
+      "is_golden_cross": false,
+      "is_dead_cross": false,
+      "ma5_trend": "up",
+      "ma20_trend": "up",
+      "price_ma5_distance": 2.1916411824668707,
+      "price_ma20_distance": 1.6798732171156894,
+      "ma5_ma20_distance": -0.5007923930269413,
+      "signals": [
+        "이평선상단"
+      ]
+    },
+    "analysis_date": "2025-09-19 22:40:38"
+  },
+  {
+    "code": "008770",
+    "name": "호텔신라",
+    "score": 5,
+    "signals": [
+      "거래량급증",
+      "이중바닥",
+      "컵앤핸들",
+      "외국인매수추세",
+      "기관매수추세"
+    ],
+    "price": 54700,
+    "volume": 1815713,
+    "foreign_netbuy": [
+      409057,
+      87339,
+      240305,
+      42075,
+      15326
+    ],
+    "ma_info": {
+      "valid": true,
+      "current_price": 54700,
+      "ma5": 52420.0,
+      "ma20": 49065.0,
+      "price_vs_ma5": "above",
+      "price_vs_ma20": "above",
+      "ma5_vs_ma20": "above",
+      "is_golden_cross": false,
+      "is_dead_cross": false,
+      "ma5_trend": "up",
+      "ma20_trend": "up",
+      "price_ma5_distance": 4.349484929416254,
+      "price_ma20_distance": 11.484765107510446,
+      "ma5_ma20_distance": 6.837868134107817,
+      "signals": [
+        "이평선상단"
+      ]
+    },
+    "analysis_date": "2025-09-19 22:41:27"
+  },
+  {
+    "code": "006400",
+    "name": "삼성SDI",
+    "score": 4,
+    "signals": [
+      "거래량급증",
+      "이중바닥",
+      "현재가20일선아래",
+      "5일선20일선아래"
+    ],
+    "price": 203000,
+    "volume": 858121,
+    "foreign_netbuy": [
+      -142223,
+      36265,
+      -48287,
+      -18353,
+      -238737
+    ],
+    "ma_info": {
+      "valid": true,
+      "current_price": 203000,
+      "ma5": 204300.0,
+      "ma20": 205890.0,
+      "price_vs_ma5": "below",
+      "price_vs_ma20": "below",
+      "ma5_vs_ma20": "below",
+      "is_golden_cross": false,
+      "is_dead_cross": false,
+      "ma5_trend": "down",
+      "ma20_trend": "down",
+      "price_ma5_distance": -0.6363191385217817,
+      "price_ma20_distance": -1.4036621496915829,
+      "ma5_ma20_distance": -0.7722570304531545,
+      "signals": [
+        "이평선하단"
+      ]
+    },
+    "analysis_date": "2025-09-19 22:38:50"
+  },
+  {
+    "code": "278470",
+    "name": "에이피알",
+    "score": 4,
+    "signals": [
+      "이중바닥",
+      "컵앤핸들",
+      "기관매수추세",
+      "5일선20일선아래"
+    ],
+    "price": 223500,
+    "volume": 537167,
+    "foreign_netbuy": [
+      177349,
+      -32218,
+      40351,
+      77418,
+      169467
+    ],
+    "ma_info": {
+      "valid": true,
+      "current_price": 223500,
+      "ma5": 217200.0,
+      "ma20": 221275.0,
+      "price_vs_ma5": "above",
+      "price_vs_ma20": "above",
+      "ma5_vs_ma20": "below",
+      "is_golden_cross": false,
+      "is_dead_cross": false,
+      "ma5_trend": "up",
+      "ma20_trend": "down",
+      "price_ma5_distance": 2.9005524861878453,
+      "price_ma20_distance": 1.0055360976160885,
+      "ma5_ma20_distance": -1.8415998192294656,
+      "signals": [
+        "이평선상단"
+      ]
+    },
+    "analysis_date": "2025-09-19 22:39:29"
+  },
+  {
+    "code": "021240",
+    "name": "코웨이",
+    "score": 4,
+    "signals": [
+      "거래량급증",
+      "컵앤핸들",
+      "기관매수추세",
+      "5일선20일선아래"
+    ],
+    "price": 105600,
+    "volume": 312968,
+    "foreign_netbuy": [
+      -10574,
+      12007,
+      -14226,
+      5727,
+      -1624
+    ],
+    "ma_info": {
+      "valid": true,
+      "current_price": 105600,
+      "ma5": 102140.0,
+      "ma20": 102720.0,
+      "price_vs_ma5": "above",
+      "price_vs_ma20": "above",
+      "ma5_vs_ma20": "below",
+      "is_golden_cross": false,
+      "is_dead_cross": false,
+      "ma5_trend": "up",
+      "ma20_trend": "up",
+      "price_ma5_distance": 3.3875073428627376,
+      "price_ma20_distance": 2.803738317757009,
+      "ma5_ma20_distance": -0.5646417445482865,
+      "signals": [
+        "이평선상단"
+      ]
+    },
+    "analysis_date": "2025-09-19 22:39:33"
+  },
+  {
+    "code": "012750",
+    "name": "에스원",
+    "score": 4,
+    "signals": [
+      "거래량급증",
+      "이중바닥",
+      "컵앤핸들",
+      "외국인매수추세"
+    ],
+    "price": 86100,
+    "volume": 163654,
+    "foreign_netbuy": [
+      51027,
+      14977,
+      31988,
+      19790,
+      10673
+    ],
+    "ma_info": {
+      "valid": true,
+      "current_price": 86100,
+      "ma5": 82800.0,
+      "ma20": 80690.0,
+      "price_vs_ma5": "above",
+      "price_vs_ma20": "above",
+      "ma5_vs_ma20": "above",
+      "is_golden_cross": false,
+      "is_dead_cross": false,
+      "ma5_trend": "up",
+      "ma20_trend": "up",
+      "price_ma5_distance": 3.985507246376811,
+      "price_ma20_distance": 6.704672202255546,
+      "ma5_ma20_distance": 2.6149460899739743,
+      "signals": [
+        "이평선상단"
+      ]
+    },
+    "analysis_date": "2025-09-19 22:40:37"
+  },
+  {
+    "code": "008930",
+    "name": "한미사이언스",
+    "score": 4,
+    "signals": [
+      "거래량급증",
+      "이중바닥",
+      "컵앤핸들",
+      "5일선20일선아래"
+    ],
+    "price": 41600,
+    "volume": 467135,
+    "foreign_netbuy": [
+      -54797,
+      20084,
+      -5547,
+      -13034,
+      16557
+    ],
+    "ma_info": {
+      "valid": true,
+      "current_price": 41600,
+      "ma5": 40090.0,
+      "ma20": 40187.5,
+      "price_vs_ma5": "above",
+      "price_vs_ma20": "above",
+      "ma5_vs_ma20": "below",
+      "is_golden_cross": false,
+      "is_dead_cross": false,
+      "ma5_trend": "up",
+      "ma20_trend": "up",
+      "price_ma5_distance": 3.766525318034423,
+      "price_ma20_distance": 3.5147744945567654,
+      "ma5_ma20_distance": -0.24261275272161742,
+      "signals": [
+        "이평선상단"
+      ]
+    },
+    "analysis_date": "2025-09-19 22:40:50"
+  },
+  {
+    "code": "081660",
+    "name": "미스토홀딩스",
+    "score": 4,
+    "signals": [
+      "컵앤핸들",
+      "기관매수추세",
+      "현재가20일선아래",
+      "5일선20일선아래"
+    ],
+    "price": 40400,
+    "volume": 146320,
+    "foreign_netbuy": [
+      3367,
+      1553,
+      -2641,
+      -27421,
+      4319
+    ],
+    "ma_info": {
+      "valid": true,
+      "current_price": 40400,
+      "ma5": 40820.0,
+      "ma20": 41010.0,
+      "price_vs_ma5": "below",
+      "price_vs_ma20": "below",
+      "ma5_vs_ma20": "below",
+      "is_golden_cross": false,
+      "is_dead_cross": false,
+      "ma5_trend": "up",
+      "ma20_trend": "up",
+      "price_ma5_distance": -1.02890739833415,
+      "price_ma20_distance": -1.4874420872957814,
+      "ma5_ma20_distance": -0.4633016337478664,
+      "signals": [
+        "이평선하단"
+      ]
+    },
+    "analysis_date": "2025-09-19 22:41:05"
+  },
+  {
+    "code": "020560",
+    "name": "아시아나항공",
+    "score": 4,
+    "signals": [
+      "거래량급증",
+      "MACD골든크로스",
+      "외국인매수추세",
+      "5일선20일선아래"
+    ],
+    "price": 9580,
+    "volume": 359410,
+    "foreign_netbuy": [
+      30874,
+      11565,
+      31915,
+      5402,
+      9424
+    ],
+    "ma_info": {
+      "valid": true,
+      "current_price": 9580,
+      "ma5": 9516.0,
+      "ma20": 9532.0,
+      "price_vs_ma5": "above",
+      "price_vs_ma20": "above",
+      "ma5_vs_ma20": "below",
+      "is_golden_cross": false,
+      "is_dead_cross": false,
+      "ma5_trend": "up",
+      "ma20_trend": "down",
+      "price_ma5_distance": 0.6725514922236233,
+      "price_ma20_distance": 0.5035669324381032,
+      "ma5_ma20_distance": -0.1678556441460344,
+      "signals": [
+        "이평선상단"
+      ]
+    },
+    "analysis_date": "2025-09-19 22:41:40"
+  }
+]
