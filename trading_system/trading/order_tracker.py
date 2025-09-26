@@ -41,7 +41,13 @@ class OrderTracker:
     
     def add_pending_order(self, order_no: str, symbol: str, side: str, quantity: int, 
                          limit_price: int, strategy: str, stock_name: str = ""):
-        """미체결 주문 추가"""
+        """미체결 주문 추가 (Unknown 주문 번호 처리 개선)"""
+        
+        # Unknown 주문 번호인 경우 추적하지 않음
+        if not order_no or order_no.lower() == 'unknown' or order_no == '':
+            self.logger.warning(f"⚠️ {symbol}({stock_name}) 유효하지 않은 주문번호로 추적 제외: {order_no}")
+            return
+        
         order_info = {
             'order_no': order_no,
             'symbol': symbol,
@@ -59,6 +65,7 @@ class OrderTracker:
         self.save_pending_orders()
         
         self.logger.info(f"📝 미체결 주문 등록: {symbol}({stock_name}) {side} {quantity}주 @ {limit_price:,}원")
+    
     
     def check_order_execution(self, order_no: str) -> Dict:
         """개별 주문 체결 상태 확인"""
@@ -134,7 +141,7 @@ class OrderTracker:
         return {'status': 'error'}
     
     def check_all_pending_orders(self, position_manager, get_stock_name_func=None):
-        """모든 미체결 주문 확인"""
+        """모든 미체결 주문 확인 (Unknown 처리 개선)"""
         if not self.pending_orders:
             return
         
@@ -146,6 +153,12 @@ class OrderTracker:
             try:
                 symbol = order_info['symbol']
                 stock_name = order_info.get('stock_name', '') or (get_stock_name_func(symbol) if get_stock_name_func else symbol)
+                
+                # Unknown 주문 번호인 경우 바로 제거
+                if not order_no or order_no.lower() == 'unknown' or order_no == '':
+                    self.logger.warning(f"❌ {symbol}({stock_name}) 유효하지 않은 주문번호 제거: {order_no}")
+                    completed_orders.append(order_no)
+                    continue
                 
                 # 체결 확인
                 result = self.check_order_execution(order_no)
@@ -187,9 +200,18 @@ class OrderTracker:
                     order_info['quantity'] = remaining_qty
                 
                 elif result['status'] == 'not_found':
-                    # 주문이 취소되었거나 만료됨
-                    self.logger.warning(f"❌ {symbol}({stock_name}) 주문 취소/만료: {order_no}")
+                    # 주문이 취소되었거나 만료됨 (더 자세한 로그)
+                    self.logger.warning(f"❌ {symbol}({stock_name}) 주문 취소/만료: {order_no} "
+                                      f"(확인횟수: {order_info['check_count']})")
                     completed_orders.append(order_no)
+                
+                elif result['status'] == 'error':
+                    # API 오류 발생
+                    order_info['check_count'] += 1
+                    if order_info['check_count'] >= 10:  # 10번 실패하면 포기
+                        self.logger.error(f"❌ {symbol}({stock_name}) 주문 확인 포기: {order_no} "
+                                        f"(10회 연속 실패)")
+                        completed_orders.append(order_no)
                 
                 # 오래된 미체결 주문 취소 (24시간 경과)
                 order_time = datetime.fromisoformat(order_info['order_time'])
@@ -202,6 +224,11 @@ class OrderTracker:
                 
             except Exception as e:
                 self.logger.error(f"주문 {order_no} 확인 중 오류: {e}")
+                # 5번 연속 오류 발생시 해당 주문 제거
+                order_info['check_count'] += 1
+                if order_info['check_count'] >= 5:
+                    self.logger.error(f"❌ {symbol}({stock_name}) 주문 확인 오류로 제거: {order_no}")
+                    completed_orders.append(order_no)
         
         # 완료된 주문 제거
         for order_no in completed_orders:

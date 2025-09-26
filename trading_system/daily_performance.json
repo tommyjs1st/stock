@@ -636,23 +636,43 @@
   },
   {
     "date": "2025-09-26",
-    "timestamp": "2025-09-26T10:47:47.564695",
-    "total_assets": 833292.0,
-    "cash": 220892.0,
-    "stock_value": 612400.0,
-    "total_profit_loss": -1550.0,
-    "total_return_pct": -0.252463555664142,
-    "position_count": 3,
+    "timestamp": "2025-09-26T13:12:50.624789",
+    "total_assets": 843023.0,
+    "cash": 28473.0,
+    "stock_value": 814550.0,
+    "total_profit_loss": -4349.0,
+    "total_return_pct": -0.5310789242629432,
+    "position_count": 5,
     "position_details": [
+      {
+        "symbol": "001530",
+        "stock_name": "DI동일",
+        "quantity": 1,
+        "avg_price": 21700.0,
+        "current_price": 21700.0,
+        "total_value": 21700.0,
+        "profit_loss": 0.0,
+        "profit_loss_pct": 0.0
+      },
+      {
+        "symbol": "003540",
+        "stock_name": "대신증권",
+        "quantity": 7,
+        "avg_price": 26178.5714,
+        "current_price": 26050.0,
+        "total_value": 182350.0,
+        "profit_loss": -899.0,
+        "profit_loss_pct": -0.49058930744506113
+      },
       {
         "symbol": "017800",
         "stock_name": "현대엘리베이터",
         "quantity": 3,
         "avg_price": 80700.0,
-        "current_price": 81500.0,
-        "total_value": 244500.0,
-        "profit_loss": 2400.0,
-        "profit_loss_pct": 0.9913258983890955
+        "current_price": 81000.0,
+        "total_value": 243000.0,
+        "profit_loss": 900.0,
+        "profit_loss_pct": 0.37174721189591076
       },
       {
         "symbol": "030200",
@@ -669,10 +689,10 @@
         "stock_name": "두산밥캣",
         "quantity": 4,
         "avg_price": 55087.5,
-        "current_price": 54100.0,
-        "total_value": 216400.0,
-        "profit_loss": -3950.0,
-        "profit_loss_pct": -1.7926026775584298
+        "current_price": 54000.0,
+        "total_value": 216000.0,
+        "profit_loss": -4350.0,
+        "profit_loss_pct": -1.9741320626276377
       }
     ],
     "today_trades": [],

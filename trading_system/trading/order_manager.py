@@ -289,7 +289,7 @@ class OrderManager:
 
     def place_order_with_tracking(self, symbol: str, side: str, quantity: int, 
                                  strategy: str = "limit", order_tracker=None) -> Dict:
-        """추적 기능이 포함된 주문 실행"""
+        """추적 기능이 포함된 주문 실행 (개선된 처리)"""
         stock_name = self.get_stock_name(symbol)
         
         self.logger.info(f"📝 {symbol}({stock_name}) {side} 주문 실행 시작: {quantity}주, 전략: {strategy}")
@@ -311,26 +311,39 @@ class OrderManager:
         
         # 결과 처리
         if result.get('success'):
-            order_no = result.get('order_no', 'Unknown')
+            order_no = result.get('order_no', '')
             
-            if limit_price > 0 and order_tracker:
-                # 지정가 주문인 경우 추적 대상에 추가
-                order_tracker.add_pending_order(
-                    order_no=order_no,
-                    symbol=symbol,
-                    side=side,
-                    quantity=quantity,
-                    limit_price=limit_price,
-                    strategy=strategy,
-                    stock_name=stock_name
-                )
+            # 주문번호별 처리
+            if order_no == 'MARKET_ORDER_IMMEDIATE':
+                # 시장가 즉시 체결
+                self.logger.info(f"⚡ {symbol}({stock_name}) {side} 시장가 즉시체결: {quantity}주")
                 
-                self.logger.info(f"⏳ {symbol}({stock_name}) {side} 지정가 주문 접수: "
-                               f"{quantity}주 @ {limit_price:,}원 (주문번호: {order_no})")
+            elif order_no and order_no.lower() not in ['unknown', '', 'none']:
+                # 유효한 주문번호가 있는 경우
+                if limit_price > 0 and order_tracker:
+                    # 지정가 주문 추적
+                    order_tracker.add_pending_order(
+                        order_no=order_no,
+                        symbol=symbol,
+                        side=side,
+                        quantity=quantity,
+                        limit_price=limit_price,
+                        strategy=strategy,
+                        stock_name=stock_name
+                    )
+                    
+                    self.logger.info(f"⏳ {symbol}({stock_name}) {side} 지정가 주문 접수: "
+                                   f"{quantity}주 @ {limit_price:,}원 (주문번호: {order_no})")
+                else:
+                    # 시장가 주문
+                    self.logger.info(f"✅ {symbol}({stock_name}) {side} 시장가 주문 완료: "
+                                   f"{quantity}주 (주문번호: {order_no})")
             else:
-                # 시장가 주문은 즉시 체결로 간주
-                self.logger.info(f"✅ {symbol}({stock_name}) {side} 시장가 주문 완료: "
-                               f"{quantity}주 (주문번호: {order_no})")
+                # 주문번호가 유효하지 않음
+                self.logger.warning(f"⚠️ {symbol}({stock_name}) 주문 성공하지만 주문번호 무효: '{order_no}'")
+                if limit_price == 0:  # 시장가인 경우
+                    self.logger.info(f"⚡ {symbol}({stock_name}) {side} 시장가로 처리됨: {quantity}주")
+                
         else:
             error_msg = result.get('error', 'Unknown error')
             self.logger.error(f"❌ {symbol}({stock_name}) {side} 주문 실패: {error_msg}")

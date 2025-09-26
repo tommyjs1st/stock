@@ -153,27 +153,20 @@ class EnhancedStockAnalyzer:
                 self.logger.warning(f"⚠️ {name}: 가격 데이터를 가져올 수 없습니다.")
                 return False
             
-            # ===== 절대조건 체크 (가장 먼저 수행) =====
-            passes_filter, filter_reason = self.check_absolute_conditions(
-                name, code, df, foreign_trend, foreign_netbuy_list
-            )
-            
-            if not passes_filter:
-                self.logger.debug(f"🚫 {name}({code}) 절대조건 미통과: {filter_reason}")
-                return True  # 분석은 성공했으나 조건 미통과
-            
-            # ===== 절대조건 통과한 종목만 상세 분석 진행 =====
-            self.logger.info(f"✅ {name}({code}) 절대조건 통과: {filter_reason}")
-            
-            # 종합 점수 계산 (안전한 방식으로)
-            score = 0
-            active_signals = []
-            
+            # ===== SignalAnalyzer에서 절대조건 체크 및 점수 계산을 모두 처리 =====
             try:
-                # 기본 분석 방식 사용
-                score, active_signals = self.signal_analyzer.calculate_buy_signal_score(
-                    df, name, code, foreign_trend=foreign_trend
+                score, active_signals, passes_absolute, filter_reason = self.signal_analyzer.calculate_buy_signal_score(
+                    df, name, code, foreign_trend=foreign_trend, foreign_netbuy_list=foreign_netbuy_list
                 )
+                
+                # 절대조건 미통과시 로깅 후 종료
+                if not passes_absolute:
+                    self.logger.debug(f"🚫 {name}({code}) 절대조건 미통과: {filter_reason}")
+                    return True  # 분석은 성공했으나 조건 미통과
+                    
+                # 절대조건 통과시 로깅
+                self.logger.info(f"✅ {name}({code}) 절대조건 통과: {filter_reason}")
+                
             except Exception as score_error:
                 self.logger.error(f"❌ {name}({code}) 점수 계산 실패: {score_error}")
                 return False
@@ -213,6 +206,7 @@ class EnhancedStockAnalyzer:
                 "name": name, "code": code, "score": score,
                 "signals": active_signals, "price": current_price, "volume": volume,
                 "foreign": foreign_netbuy_list,
+                "filter_status": "절대조건통과",
                 "filter_reason": filter_reason  # 통과 사유 추가
             }
             self._classify_multi_signal_stock_filtered(stock_info)

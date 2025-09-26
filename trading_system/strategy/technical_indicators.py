@@ -238,3 +238,4 @@ class TechnicalIndicators:
                     df_with_rsi['rsi'].iloc[-1] > recovery_threshold)
         except Exception:
             return False
+

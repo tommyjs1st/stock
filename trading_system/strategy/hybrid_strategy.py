@@ -983,4 +983,52 @@ RSI: {daily_analysis.get('rsi', 0):.1f}
         color = 0x00ff00 if action == "BUY" else 0xff6600
         self.notifier.send_notification(title, message, color)
 
-
+    
+    def check_ma5_divergence_sell(self, symbol, current_price, stock_name):
+        """
+        5일선과 이격도가 120% 이상일 때 매도 판단
+        
+        Args:
+            symbol: 종목 코드
+            current_price: 현재 가격
+            stock_name: 종목명
+        
+        Returns:
+            dict: {'should_sell': bool, 'reason': str, 'divergence_ratio': float}
+        """
+        try:
+            # 일봉 데이터 가져오기 (최소 10일)
+            daily_df = self.api_client.get_daily_data(symbol, days=10)
+            
+            if daily_df.empty or len(daily_df) < 5:
+                return {'should_sell': False, 'reason': '데이터 부족', 'divergence_ratio': 0}
+            
+            # 5일 이동평균선 계산
+            daily_df['ma5'] = daily_df['stck_prpr'].rolling(window=5).mean()
+            
+            # 최신 5일선 값
+            latest_ma5 = daily_df['ma5'].iloc[-1]
+            
+            if pd.isna(latest_ma5) or latest_ma5 <= 0:
+                return {'should_sell': False, 'reason': '5일선 계산 오류', 'divergence_ratio': 0}
+            
+            # 현재가와 5일선의 이격도 계산 (현재가 / 5일선 * 100)
+            divergence_ratio = (current_price / latest_ma5) * 100
+            
+            # 120% 이상일 때 매도 신호
+            if divergence_ratio >= 120.0:
+                self.logger.info(f"📏 {stock_name}({symbol}) 5일선 이격도 과열: "
+                               f"{divergence_ratio:.1f}% (5일선: {latest_ma5:,.0f}원)")
+                
+                return {
+                    'should_sell': True, 
+                    'reason': f'5일선이격도과열({divergence_ratio:.1f}%)',
+                    'divergence_ratio': divergence_ratio
+                }
+            
+            return {'should_sell': False, 'reason': '이격도정상', 'divergence_ratio': divergence_ratio}
+            
+        except Exception as e:
+            self.logger.error(f"❌ 5일선 이격도 체크 오류 {symbol}: {e}")
+            return {'should_sell': False, 'reason': '계산 오류', 'divergence_ratio': 0}
+    

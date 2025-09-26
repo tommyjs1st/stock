@@ -1,60 +1,27 @@
-    def get_filtered_candidates(self, candidates: List[Dict], min_future_score: int = 60) -> List[Dict]:
-            """
-            기존 후보군에 미래 분석을 적용하여 필터링
+    @staticmethod
+    def calculate_ma5_divergence(df, price_column='stck_prpr'):
+        """
+        5일 이동평균선과의 이격도 계산
+        
+        Args:
+            df: 주가 데이터프레임
+            price_column: 가격 컬럼명
+        
+        Returns:
+            pandas.Series: 이격도 비율 (%)
+        """
+        try:
+            if df.empty or len(df) < 5:
+                return pd.Series(dtype=float)
             
-            Args:
-                candidates: 기존 분석으로 선별된 후보 리스트
-                min_future_score: 미래 점수 최소 기준 (기본값: 60점, B등급)
+            df = df.copy()
+            df['ma5'] = df[price_column].rolling(window=5).mean()
             
-            Returns:
-                필터링된 후보 리스트
-            """
-            if not self.enabled:
-                self.logger.warning("미래 분석 비활성화 - 원본 후보 반환")
-                return candidates
+            # 이격도 = (현재가 / 5일선) * 100
+            divergence = (df[price_column] / df['ma5']) * 100
             
-            filtered_candidates = []
+            return divergence
             
-            for candidate in candidates:
-                symbol = candidate.get('code')
-                if not symbol:
-                    continue
-                
-                try:
-                    # 미래 분석 수행
-                    future_analysis = self.calculate_future_potential(symbol)
-                    future_score = future_analysis.get('total_score', 50)
-                    
-                    # 필터링 기준 적용
-                    if future_score >= min_future_score:
-                        # 기존 데이터에 미래 분석 결과 추가
-                        enhanced_candidate = candidate.copy()
-                        enhanced_candidate.update({
-                            'future_score': future_score,
-                            'future_grade': future_analysis.get('grade', 'B'),
-                            'future_reasons': future_analysis.get('top_reasons', []),
-                            'combined_score': candidate.get('score', 3) * 0.7 + (future_score / 20) * 0.3
-                        })
-                        filtered_candidates.append(enhanced_candidate)
-                    else:
-                        self.logger.debug(f"🚫 {candidate.get('name')}({symbol}) "
-                                        f"미래점수 부족으로 제외: {future_score:.1f}점")
-                except Exception as e:
-                    self.logger.error(f"❌ {candidate.get('name')}({symbol}) 미래 분석 오류: {e}")
-                    # 오류 발생시에도 기존 후보는 유지 (보수적 접근)
-                    candidate_copy = candidate.copy()
-                    candidate_copy.update({
-                        'future_score': 50,  # 기본값
-                        'future_grade': 'B (분석실패)',
-                        'future_reasons': ['분석 실패'],
-                        'combined_score': candidate.get('score', 3)
-                    })
-                    filtered_candidates.append(candidate_copy)
-            
-            # 종합 점수 순으로 정렬
-            filtered_candidates.sort(key=lambda x: x.get('combined_score', 0), reverse=True)
-            
-            self.logger.info(f"📊 미래 분석 필터링: {len(candidates)}개 → {len(filtered_candidates)}개 "
-                            f"(기준: {min_future_score}점 이상)")
-            
-            return filtered_candidates
+        except Exception as e:
+            logger.error(f"❌ 5일선 이격도 계산 오류: {e}")
+            return pd.Series(dtype=float)

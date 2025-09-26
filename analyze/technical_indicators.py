@@ -661,3 +661,56 @@ class SignalAnalyzer:
             logger.error(f"❌ {name}: 매수 신호 점수 계산 오류: {e}")
             return 0, [], False, f"계산 오류: {e}"
 
+    def get_individual_signals(self, df):
+        """
+        개별 기술적 신호들을 딕셔너리로 반환
+        
+        Args:
+            df: 주가 데이터프레임
+            
+        Returns:
+            dict: 각 신호의 활성화 여부
+        """
+        try:
+            signals = {
+                "골든크로스": self.ti.is_golden_cross(df),
+                "볼린저밴드복귀": self.ti.is_bollinger_rebound(df),
+                "MACD상향돌파": False,  # 구현 필요시 추가
+                "RSI과매도회복": False,  # 구현 필요시 추가
+                "스토캐스틱회복": False,  # 구현 필요시 추가
+                "거래량급증": self.ti.is_volume_breakout(df),
+                "Williams%R회복": self.ti.is_williams_r_oversold_recovery(df),
+                "이중바닥": self.ti.is_double_bottom_pattern(df),
+                "일목균형표": self.ti.is_ichimoku_bullish_signal(df),
+                "컵앤핸들": self.ti.is_cup_handle_pattern(df),
+                "MACD골든크로스": False,  # 구현 필요시 추가
+                "외국인매수추세": False,  # 별도 처리 필요
+                "기관매수추세": False,  # 별도 처리 필요
+                "5일선20일선돌파": self.ti.is_ma5_crossing_above_ma20(df),
+                "현재가20일선아래": self.ti.is_price_below_ma20(df),
+                "5일선20일선아래": self.ti.is_ma5_below_ma20(df)
+            }
+            
+            return signals
+            
+        except Exception as e:
+            logger.error(f"개별 신호 분석 오류: {e}")
+            # 빈 딕셔너리 반환 (모든 신호 False)
+            return {
+                "골든크로스": False,
+                "볼린저밴드복귀": False,
+                "MACD상향돌파": False,
+                "RSI과매도회복": False,
+                "스토캐스틱회복": False,
+                "거래량급증": False,
+                "Williams%R회복": False,
+                "이중바닥": False,
+                "일목균형표": False,
+                "컵앤핸들": False,
+                "MACD골든크로스": False,
+                "외국인매수추세": False,
+                "기관매수추세": False,
+                "5일선20일선돌파": False,
+                "현재가20일선아래": False,
+                "5일선20일선아래": False
+            }

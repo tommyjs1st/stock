@@ -451,7 +451,7 @@ class KISAPIClient:
         return {}
     
     def place_order(self, symbol: str, side: str, quantity: int, price: int = 0) -> Dict:
-        """주문 실행"""
+        """주문 실행 (주문번호 파싱 개선)"""
         url = f"{self.base_url}/uapi/domestic-stock/v1/trading/order-cash"
         
         is_mock = "vts" in self.base_url.lower()
@@ -462,10 +462,10 @@ class KISAPIClient:
             tr_id = "TTTC0802U" if side == "BUY" else "TTTC0801U"
         
         if price == 0:
-            ord_dvsn = "01"
+            ord_dvsn = "01"  # 시장가
             ord_unpr = "0"
         else:
-            ord_dvsn = "00"
+            ord_dvsn = "00"  # 지정가
             ord_unpr = str(price)
         
         headers = {
@@ -475,7 +475,7 @@ class KISAPIClient:
             "appsecret": self.app_secret,
             "tr_id": tr_id
         }
-
+    
         data = {
             "CANO": self.account_no.split('-')[0],
             "ACNT_PRDT_CD": self.account_no.split('-')[1],
@@ -484,21 +484,74 @@ class KISAPIClient:
             "ORD_QTY": str(quantity),
             "ORD_UNPR": ord_unpr
         }
-
+    
         try:
             response = requests.post(url, headers=headers, data=json.dumps(data), timeout=30)
             response.raise_for_status()
             result = response.json()
-
+    
+            # 디버깅을 위한 응답 구조 로그
+            #print(f"🔍 API 응답 구조: {json.dumps(result, indent=2, ensure_ascii=False)}")
+    
             if result.get('rt_cd') == '0':
-                order_no = result.get('output', {}).get('odno', 'Unknown')
-                return {'success': True, 'order_no': order_no, 'limit_price': price}
+                # 다양한 가능한 주문번호 위치 확인
+                output = result.get('output', {})
+                output1 = result.get('output1', {})
+                
+                # 주문번호 추출 시도 (여러 가능한 키 확인)
+                order_no = None
+                
+                # 1. output.odno
+                if isinstance(output, dict) and 'odno' in output:
+                    order_no = output.get('odno')
+                    #print(f"✅ 주문번호 output.odno에서 발견: {order_no}")
+                    
+                # 2. output1.odno  
+                elif isinstance(output1, dict) and 'odno' in output1:
+                    order_no = output1.get('odno')
+                    #print(f"✅ 주문번호 output1.odno에서 발견: {order_no}")
+                    
+                # 3. 루트 레벨에서 직접
+                elif 'odno' in result:
+                    order_no = result.get('odno')
+                    #print(f"✅ 주문번호 루트에서 발견: {order_no}")
+                    
+                # 4. KRX_FWDG_ORD_ORGNO (원주문번호)
+                elif isinstance(output, dict) and 'KRX_FWDG_ORD_ORGNO' in output:
+                    order_no = output.get('KRX_FWDG_ORD_ORGNO')
+                    #print(f"✅ 주문번호 KRX_FWDG_ORD_ORGNO에서 발견: {order_no}")
+                    
+                # 5. ODNO (대문자)
+                elif isinstance(output, dict) and 'ODNO' in output:
+                    order_no = output.get('ODNO')
+                    #print(f"✅ 주문번호 ODNO에서 발견: {order_no}")
+                    
+                # 6. ord_no (다른 가능한 키)
+                elif isinstance(output, dict) and 'ord_no' in output:
+                    order_no = output.get('ord_no')
+                    #print(f"✅ 주문번호 ord_no에서 발견: {order_no}")
+                
+                # 주문번호 검증
+                if order_no and str(order_no).strip() and str(order_no).strip().lower() != 'unknown':
+                    #print(f"✅ 유효한 주문번호 확인: {order_no}")
+                    return {'success': True, 'order_no': str(order_no).strip(), 'limit_price': price}
+                else:
+                    # 주문번호를 찾을 수 없는 경우 - 시장가는 즉시 체결로 처리
+                    if ord_dvsn == "01":  # 시장가 주문
+                        print(f"⚡ 시장가 주문 - 주문번호 없음 (즉시체결)")
+                        return {'success': True, 'order_no': 'MARKET_ORDER_IMMEDIATE', 'limit_price': 0}
+                    else:
+                        print(f"❌ 지정가 주문이지만 주문번호를 찾을 수 없음")
+                        return {'success': False, 'error': '주문번호 파싱 실패'}
             else:
-                error_msg = result.get('msg1', 'Unknown error')
+                error_msg = result.get('msg1', result.get('message', 'Unknown error'))
+                print(f"❌ 주문 실패: {error_msg}")
                 return {'success': False, 'error': error_msg}
-
+    
         except Exception as e:
+            print(f"❌ 주문 실행 중 오류: {e}")
             return {'success': False, 'error': str(e)}
+    
 
     def get_stock_basic_info(self, symbol: str) -> Dict:
         """종목 기본정보 조회 (종목명 포함)"""

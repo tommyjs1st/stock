@@ -206,11 +206,26 @@ class AutoTrader:
                         self.execute_sell(symbol, quantity, "aggressive_limit", "기술적익절")
                         return
             
-            # 🆕 3순위: 현재 상승 중이면 미래 점수 무시하고 보유 (NEW!)
+            # 3순위: 5일선과 이격도가 120%이상일때 매도
+            ma5_check = self.hybrid_strategy.check_ma5_divergence_sell(symbol, current_price, stock_name)
+            if ma5_check['should_sell']:
+                can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
+                if can_sell:
+                    self.logger.warning(f"📏 {stock_name}({symbol}) 5일선 이격도 매도: "
+                                      f"{ma5_check['divergence_ratio']:.1f}% ({profit_loss_pct:+.2f}%)")
+                    self.execute_sell(symbol, quantity, "aggressive_limit", ma5_check['reason'])
+                    return
+            
+            # 🆕 4순위: 현재 상승 중이면 미래 점수 무시하고 보유 
             daily_analysis = self.hybrid_strategy.analyze_daily_strategy(symbol)
             if daily_analysis['signal'] == 'BUY' and daily_analysis['strength'] >= 3.0:
-                self.logger.info(f"📈 {stock_name}({symbol}) 상승신호로 보유유지: "
-                               f"매수신호 {daily_analysis['strength']:.1f}점 ({profit_loss_pct:+.2f}%)")
+                # 단, 이격도가 115% 이상이면 부분 경고
+                if ma5_check['divergence_ratio'] >= 115.0:
+                    self.logger.warning(f"⚠️ {stock_name}({symbol}) 상승신호지만 이격도 주의: "
+                                       f"{ma5_check['divergence_ratio']:.1f}% ({profit_loss_pct:+.2f}%)")
+                else:
+                    self.logger.info(f"📈 {stock_name}({symbol}) 상승신호로 보유유지: "
+                                   f"매수신호 {daily_analysis['strength']:.1f}점 ({profit_loss_pct:+.2f}%)")
                 return
             
             # 🆕 추가 조건: 당일 상승률로도 판단
@@ -239,7 +254,8 @@ class AutoTrader:
                                    f"RSI {current_rsi:.1f}, 수익률 {profit_loss_pct:+.2f}%")
                     return
 
-            # 🆕 4순위: 매우 보수적인 절대 점수 기준 (25점 미만으로 완화)
+
+            # 🆕 5순위: 매우 보수적인 절대 점수 기준 (25점 미만으로 완화)
             try:
                 future_analysis = self.future_analyzer.calculate_future_potential(symbol)
                 future_score = future_analysis['total_score']
