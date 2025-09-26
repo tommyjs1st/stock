@@ -127,7 +127,6 @@ class AutoTrader:
     
         self.logger.info("✅ 개선된 자동매매 시스템 초기화 완료")
 
-
     def check_market_close_shutdown(self, current_time=None):
         """장 마감 시 자동 종료 확인"""
         if current_time is None:
@@ -988,6 +987,13 @@ class AutoTrader:
                         self.logger.info(f"🎯 고점 방지 매수 분석 시작 (총 {len(self.symbols)}개)")
                         
                         for i, symbol in enumerate(self.symbols, 1):
+
+                            current_holdings = len([s for s, p in self.positions.items() 
+                                                   if p.get('quantity', 0) > 0])
+                            if current_holdings >= 5:
+                                self.logger.warning(f"⚠️ 최대 5개 종목 보유 중 - 신규 매수 중단")
+                                break
+    
                             stock_name = self.get_stock_name(symbol)
                             self.logger.info(f"🔍 [{i}/{len(self.symbols)}] {stock_name}({symbol}) 분석 시작")
                             

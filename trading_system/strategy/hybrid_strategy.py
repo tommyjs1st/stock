@@ -523,10 +523,21 @@ class HybridStrategy:
         }
     
     def execute_hybrid_trade(self, symbol: str, positions: Dict) -> bool:
-        """
-        간소화된 하이브리드 매매 실행 - trading_list.json에 이미 선별된 종목이므로 분봉 타이밍만 확인
-        """
         stock_name = self.get_stock_name(symbol)
+
+        current_position = positions.get(symbol, {})
+        current_quantity = current_position.get('quantity', 0)
+    
+        # 실제 보유 중인 종목만 카운트 (수량이 0보다 큰 것만)
+        total_holdings = len([s for s, p in positions.items() 
+                             if p.get('quantity', 0) > 0])
+    
+        can_buy, reason = self.position_manager.can_purchase_symbol(
+            symbol, current_quantity, total_holdings)
+
+        if not can_buy:
+            self.logger.info(f"🚫 {stock_name}({symbol}) 매수 차단: {reason}")
+            return False
         
         # 🔥 재매수 금지 체크를 가장 먼저 실행
         current_position = positions.get(symbol, {})
