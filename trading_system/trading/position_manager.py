@@ -3,7 +3,7 @@
 """
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import Dict, Tuple, List
 
 
@@ -123,6 +123,22 @@ class PositionManager:
         if purchase_count >= self.max_purchases_per_symbol:
             return False, f"최대 매수 횟수 초과 ({purchase_count}/{self.max_purchases_per_symbol}회)"
         
+        today = date.today().strftime('%Y-%m-%d')
+        trades_file = "daily_trades.json"
+        if os.path.exists(trades_file):
+            with open(trades_file, 'r', encoding='utf-8') as f:
+                all_trades = json.load(f)
+        
+            # 오늘 해당 종목 매도 내역 확인
+            today_sells = [t for t in all_trades 
+                          if (t.get('symbol') == symbol and 
+                              t.get('action') == 'SELL' and 
+                              t.get('timestamp', '').startswith(today))]
+        
+            if today_sells:
+                sell_time = today_sells[-1]['timestamp'][-8:-3]  # HH:MM 형식
+                return False, f"당일 매도 종목 재매수 금지 (매도시간: {sell_time})"
+
         # 재매수 금지 기간 확인
         last_purchase_time = history.get('last_purchase_time')
         if last_purchase_time:
@@ -146,20 +162,29 @@ class PositionManager:
     
         return True, "매수 가능"
 
-    def _get_recent_sales(self, symbol: str, days: int = 7) -> List[Dict]:
-        """최근 매도 내역 조회"""
-        if symbol not in self.position_history:
+    def _get_recent_sales(self, symbol: str) -> List[Dict]:
+        """최근 매도 내역 조회 - 파일에서 읽기"""
+        try:
+            trades_file = "trades.json"  # 또는 실제 거래 로그 파일 경로
+            if not os.path.exists(trades_file):
+                return []
+            
+            with open(trades_file, 'r', encoding='utf-8') as f:
+                all_trades = json.load(f)
+            
+            # 해당 종목의 매도 내역만 필터링
+            recent_sales = []
+            for trade in all_trades:
+                if (trade.get('symbol') == symbol and 
+                    trade.get('action') == 'SELL'):
+                    recent_sales.append(trade)
+            
+            # 최근 순으로 정렬
+            return sorted(recent_sales, key=lambda x: x['timestamp'], reverse=True)
+            
+        except Exception as e:
+            self.logger.error(f"매도 기록 조회 실패 ({symbol}): {e}")
             return []
-    
-        cutoff_date = datetime.now() - timedelta(days=days)
-        recent_sales = []
-    
-        for record in self.position_history[symbol]['purchases']:
-            if (record.get('order_type') == 'SELL' and 
-                datetime.fromisoformat(record['timestamp']) > cutoff_date):
-                recent_sales.append(record)
-    
-        return sorted(recent_sales, key=lambda x: x['timestamp'])
 
     def can_sell_symbol(self, symbol: str, current_quantity: int = 0) -> Tuple[bool, str]:
         """종목 매도 가능 여부 확인"""

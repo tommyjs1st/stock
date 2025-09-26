@@ -1,5 +1,32 @@
 [
   {
+    "code": "001530",
+    "name": "DI동일",
+    "score": 4,
+    "signals": [
+      "볼린저밴드복귀",
+      "거래량급증",
+      "현재가20일선아래",
+      "5일선20일선아래"
+    ],
+    "price": 21950,
+    "volume": 779497,
+    "foreign_netbuy": [
+      36022,
+      -56065,
+      79864,
+      45023,
+      -7001
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2025-09-26 15:37:18",
+    "saved_at": "2025-09-26T15:37:41.316575",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
     "code": "001720",
     "name": "신영증권",
     "score": 3,
@@ -8,8 +35,8 @@
       "현재가20일선아래",
       "5일선20일선아래"
     ],
-    "price": 131900,
-    "volume": 18840,
+    "price": 131600,
+    "volume": 29212,
     "foreign_netbuy": [
       4043,
       1897,
@@ -18,8 +45,8 @@
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-09-26 11:33:10",
-    "saved_at": "2025-09-26T11:37:45.769200",
+    "analysis_date": "2025-09-26 15:33:06",
+    "saved_at": "2025-09-26T15:37:41.316605",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
@@ -34,7 +61,7 @@
       "5일선20일선아래"
     ],
     "price": 26150,
-    "volume": 80472,
+    "volume": 178234,
     "foreign_netbuy": [
       48873,
       -1313,
@@ -43,58 +70,111 @@
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-09-26 11:34:14",
-    "saved_at": "2025-09-26T11:37:45.769212",
+    "analysis_date": "2025-09-26 15:34:12",
+    "saved_at": "2025-09-26T15:37:41.316611",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "005300",
-    "name": "롯데칠성",
+    "code": "030190",
+    "name": "NICE평가정보",
     "score": 3,
     "signals": [
       "볼린저밴드복귀",
       "현재가20일선아래",
       "5일선20일선아래"
     ],
-    "price": 115600,
-    "volume": 6419,
+    "price": 13400,
+    "volume": 98885,
     "foreign_netbuy": [
-      1163,
-      -1866,
-      766,
-      2899
+      48308,
+      79259,
+      34392,
+      35540
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-09-26 11:34:46",
-    "saved_at": "2025-09-26T11:37:45.769216",
+    "analysis_date": "2025-09-26 15:35:23",
+    "saved_at": "2025-09-26T15:37:41.316616",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "001530",
-    "name": "DI동일",
+    "code": "010780",
+    "name": "아이에스동서",
     "score": 3,
     "signals": [
       "거래량급증",
       "현재가20일선아래",
       "5일선20일선아래"
     ],
-    "price": 21650,
-    "volume": 563774,
+    "price": 17850,
+    "volume": 49430,
     "foreign_netbuy": [
-      -56065,
-      79864,
-      45023,
-      -7001
+      3917,
+      9393,
+      -1188,
+      -4480,
+      836
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-09-26 11:37:26",
-    "saved_at": "2025-09-26T11:37:45.769219",
+    "analysis_date": "2025-09-26 15:36:27",
+    "saved_at": "2025-09-26T15:37:41.316621",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "002020",
+    "name": "코오롱",
+    "score": 3,
+    "signals": [
+      "현재가20일선아래",
+      "5일선20일선아래",
+      "외국인매수추세"
+    ],
+    "price": 40000,
+    "volume": 159864,
+    "foreign_netbuy": [
+      10541,
+      21242,
+      2852,
+      3493,
+      9806
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2025-09-26 15:36:43",
+    "saved_at": "2025-09-26T15:37:41.316626",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "016590",
+    "name": "신대양제지",
+    "score": 3,
+    "signals": [
+      "거래량급증",
+      "현재가20일선아래",
+      "5일선20일선아래"
+    ],
+    "price": 10820,
+    "volume": 48583,
+    "foreign_netbuy": [
+      7147,
+      -2590,
+      6861,
+      1631,
+      -1191
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2025-09-26 15:37:19",
+    "saved_at": "2025-09-26T15:37:41.316631",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true

@@ -1,62 +1,23 @@
-    def place_order_with_tracking(self, symbol: str, side: str, quantity: int, 
-                                 strategy: str = "limit", order_tracker=None) -> Dict:
-        """추적 기능이 포함된 주문 실행 (개선된 처리)"""
-        stock_name = self.get_stock_name(symbol)
-        
-        self.logger.info(f"📝 {symbol}({stock_name}) {side} 주문 실행 시작: {quantity}주, 전략: {strategy}")
-        
-        # 기존 주문 로직
-        if strategy == "market":
-            result = self.api_client.place_order(symbol, side, quantity, price=0)
-            limit_price = 0
-        else:
-            try:
-                limit_price = self.calculate_smart_limit_price(symbol, side, 
-                                                             "urgent" if strategy == "urgent" else "normal")
-                result = self.api_client.place_order(symbol, side, quantity, price=limit_price)
-                result['limit_price'] = limit_price
-            except Exception as e:
-                self.logger.warning(f"⚠️ {symbol}({stock_name}) 지정가 계산 실패, 시장가로 변경: {e}")
-                result = self.api_client.place_order(symbol, side, quantity, price=0)
-                limit_price = 0
-        
-        # 결과 처리
-        if result.get('success'):
-            order_no = result.get('order_no', '')
+    def _get_recent_sales(self, symbol: str) -> List[Dict]:
+        """최근 매도 내역 조회 - 파일에서 읽기"""
+        try:
+            trades_file = "trading_system/trades.json"  # 또는 실제 거래 로그 파일 경로
+            if not os.path.exists(trades_file):
+                return []
             
-            # 주문번호별 처리
-            if order_no == 'MARKET_ORDER_IMMEDIATE':
-                # 시장가 즉시 체결
-                self.logger.info(f"⚡ {symbol}({stock_name}) {side} 시장가 즉시체결: {quantity}주")
-                
-            elif order_no and order_no.lower() not in ['unknown', '', 'none']:
-                # 유효한 주문번호가 있는 경우
-                if limit_price > 0 and order_tracker:
-                    # 지정가 주문 추적
-                    order_tracker.add_pending_order(
-                        order_no=order_no,
-                        symbol=symbol,
-                        side=side,
-                        quantity=quantity,
-                        limit_price=limit_price,
-                        strategy=strategy,
-                        stock_name=stock_name
-                    )
-                    
-                    self.logger.info(f"⏳ {symbol}({stock_name}) {side} 지정가 주문 접수: "
-                                   f"{quantity}주 @ {limit_price:,}원 (주문번호: {order_no})")
-                else:
-                    # 시장가 주문
-                    self.logger.info(f"✅ {symbol}({stock_name}) {side} 시장가 주문 완료: "
-                                   f"{quantity}주 (주문번호: {order_no})")
-            else:
-                # 주문번호가 유효하지 않음
-                self.logger.warning(f"⚠️ {symbol}({stock_name}) 주문 성공하지만 주문번호 무효: '{order_no}'")
-                if limit_price == 0:  # 시장가인 경우
-                    self.logger.info(f"⚡ {symbol}({stock_name}) {side} 시장가로 처리됨: {quantity}주")
-                
-        else:
-            error_msg = result.get('error', 'Unknown error')
-            self.logger.error(f"❌ {symbol}({stock_name}) {side} 주문 실패: {error_msg}")
-        
-        return result
+            with open(trades_file, 'r', encoding='utf-8') as f:
+                all_trades = json.load(f)
+            
+            # 해당 종목의 매도 내역만 필터링
+            recent_sales = []
+            for trade in all_trades:
+                if (trade.get('symbol') == symbol and 
+                    trade.get('action') == 'SELL'):
+                    recent_sales.append(trade)
+            
+            # 최근 순으로 정렬
+            return sorted(recent_sales, key=lambda x: x['timestamp'], reverse=True)
+            
+        except Exception as e:
+            self.logger.error(f"매도 기록 조회 실패 ({symbol}): {e}")
+            return []

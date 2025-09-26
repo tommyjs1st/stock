@@ -102,6 +102,8 @@ class AutoTrader:
         
         # 주문 추적기 초기화
         self.order_tracker = OrderTracker(self.api_client, self.logger)
+        from monitoring.daily_performance import DailyPerformanceTracker as DPT
+        self.daily_tracker = DPT(self.api_client, self.logger)
 
         # 하이브리드 전략 초기화 (get_stock_name 메서드가 이제 존재함)
         self.hybrid_strategy = HybridStrategy(
@@ -111,7 +113,8 @@ class AutoTrader:
             notifier=self.notifier,
             logger=self.logger,
             order_tracker=self.order_tracker, 
-            get_stock_name_func=self.get_stock_name
+            get_stock_name_func=self.get_stock_name,
+            daily_tracker=self.daily_tracker 
         )
         self.future_analyzer = FuturePotentialAnalyzer(self.api_client, self.logger)
 
@@ -123,7 +126,6 @@ class AutoTrader:
 
         # 일일 성과 추적기 추가
         from monitoring.daily_performance import DailyPerformanceTracker
-        self.daily_tracker = DailyPerformanceTracker(self.api_client, self.logger)
     
         self.logger.info("✅ 개선된 자동매매 시스템 초기화 완료")
 
@@ -834,8 +836,22 @@ class AutoTrader:
                 if current_price_data and current_price_data.get('output'):
                     executed_price = float(current_price_data['output'].get('stck_prpr', 0))
             
+            self.daily_tracker.record_trade(
+                        symbol=symbol,
+                        action='SELL',
+                        quantity=quantity,
+                        price=executed_price,
+                        reason=reason,
+                        stock_name=stock_name
+                    )
+            self.logger.info(f"✅ {stock_name}({symbol}) 매도 완료 및 기록: {quantity}주 @ {executed_price:,}원")
+
             order_no = result.get('order_no', 'Unknown')
             
+            self.daily_performance.record_trade(
+                        symbol, 'SELL', quantity, executed_price, reason, stock_name
+                    )
+
             # 시장가는 즉시 포지션에서 제거
             if order_strategy == 'market':
                 self.position_manager.record_sale(symbol, quantity, executed_price, reason)
@@ -847,6 +863,7 @@ class AutoTrader:
                     del self.all_positions[symbol]
             
             self.logger.info(f"✅ {stock_name}({symbol}) 매도 완료: {quantity}주 @ {executed_price:,}원 - {reason}")
+
             
             # 강제 알림 전송
             if self.notifier.webhook_url:

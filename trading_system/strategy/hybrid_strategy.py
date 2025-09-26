@@ -10,7 +10,7 @@ class HybridStrategy:
     """일봉 전략 + 분봉 실행 하이브리드 시스템"""
     
     def __init__(self, api_client, order_manager, position_manager, notifier, logger, 
-                       order_tracker=None, get_stock_name_func=None):
+                       order_tracker=None, get_stock_name_func=None, daily_tracker=None):
         self.api_client = api_client
         self.order_manager = order_manager
         self.position_manager = position_manager
@@ -23,6 +23,7 @@ class HybridStrategy:
         self.last_daily_analysis = {}
 
         self.order_tracker = order_tracker
+        self.daily_tracker = daily_tracker
         
     def evaluate_buy_timing(self, df: pd.DataFrame, latest: pd.Series, 
                            current_price: float, symbol: str = None) -> Dict:
@@ -630,6 +631,16 @@ class HybridStrategy:
                 executed_price = current_price
                 self.position_manager.record_purchase(symbol, quantity, executed_price, "timing_strategy")
             
+            if self.daily_tracker:
+                self.daily_tracker.record_trade(
+                    symbol=symbol,
+                    action='BUY', 
+                    quantity=quantity,
+                    price=executed_price,
+                    reason="hybrid_strategy",
+                    stock_name=stock_name
+                )
+
             # 강제 알림 전송
             if self.notifier and self.notifier.webhook_url:
                 self.notifier.notify_trade_success('BUY', symbol, quantity, executed_price, order_no, stock_name)
@@ -943,6 +954,15 @@ class HybridStrategy:
                     symbol, quantity, executed_price, "hybrid_strategy"
                 )
         
+            if self.daily_tracker:
+                self.daily_tracker.record_trade(
+                    symbol=symbol,
+                    action='SELL',
+                    quantity=quantity,
+                    price=executed_price,
+                    reason="hybrid_strategy",
+                    stock_name=stock_name
+                )
             self.notify_hybrid_trade(symbol, 'SELL', daily_analysis, timing_analysis, quantity, executed_price)
             
             return True
