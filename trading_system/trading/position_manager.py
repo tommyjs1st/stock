@@ -107,12 +107,10 @@ class PositionManager:
     def can_purchase_symbol(self, symbol: str, current_quantity: int = 0,
                             total_holdings_count: int = 0) -> Tuple[bool, str]:
         """종목 매수 가능 여부 확인"""
-        actual_holdings = len([s for s, info in self.position_history.items() 
-                              if info.get('total_quantity', 0) > 0])
-        real_holdings = max(total_holdings_count, actual_holdings)
+        actual_holdings = total_holdings_count
     
-        if current_quantity == 0 and real_holdings >= self.max_total_holdings:
-            return False, f"최대 보유 종목 수 초과 ({real_holdings}/{self.max_total_holdings}개)"
+        if current_quantity == 0 and actual_holdings >= self.max_total_holdings:
+            return False, f"최대 보유 종목 수 초과 ({actual_holdings}/{self.max_total_holdings}개)"
 
         # 현재 보유 수량 확인
         if current_quantity >= self.max_quantity_per_symbol:

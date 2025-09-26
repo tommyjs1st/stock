@@ -1,1 +1,14 @@
-{}
+{
+  "Unknown": {
+    "order_no": "Unknown",
+    "symbol": "030200",
+    "stock_name": "KT",
+    "side": "BUY",
+    "quantity": 3,
+    "limit_price": 50500,
+    "strategy": "patient_limit",
+    "order_time": "2025-09-26T10:46:37.011942",
+    "check_count": 0,
+    "last_check": null
+  }
+}
