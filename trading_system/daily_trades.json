@@ -1,1 +1,102 @@
-[]
+[
+  {
+    "timestamp": "2025-09-30T12:50:28.191245",
+    "symbol": "003540",
+    "stock_name": "대신증권",
+    "action": "SELL",
+    "quantity": 7,
+    "price": 26150,
+    "amount": 183050,
+    "reason": "D등급매도"
+  },
+  {
+    "timestamp": "2025-09-30T12:50:33.166260",
+    "symbol": "079900",
+    "stock_name": "전진건설로봇",
+    "action": "BUY",
+    "quantity": 2,
+    "price": 45350,
+    "amount": 90700,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2025-09-30T13:20:45.977365",
+    "symbol": "079900",
+    "stock_name": "전진건설로봇",
+    "action": "BUY",
+    "quantity": 1,
+    "price": 45250,
+    "amount": 45250,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2025-10-01T09:30:13.238718",
+    "symbol": "002790",
+    "stock_name": "아모레퍼시픽홀딩스",
+    "action": "BUY",
+    "quantity": 1,
+    "price": 26450,
+    "amount": 26450,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2025-10-01T09:30:16.659599",
+    "symbol": "020560",
+    "stock_name": "아시아나항공",
+    "action": "BUY",
+    "quantity": 2,
+    "price": 9290,
+    "amount": 18580,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2025-10-01T10:00:29.129801",
+    "symbol": "020560",
+    "stock_name": "아시아나항공",
+    "action": "SELL",
+    "quantity": 2,
+    "price": 9270,
+    "amount": 18540,
+    "reason": "D등급매도"
+  },
+  {
+    "timestamp": "2025-10-01T10:00:38.863208",
+    "symbol": "950210",
+    "stock_name": "프레스티지바이오파마",
+    "action": "BUY",
+    "quantity": 1,
+    "price": 13150,
+    "amount": 13150,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2025-10-01T11:01:19.450708",
+    "symbol": "950210",
+    "stock_name": "프레스티지바이오파마",
+    "action": "BUY",
+    "quantity": 1,
+    "price": 13250,
+    "amount": 13250,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2025-10-01T11:31:28.259592",
+    "symbol": "001530",
+    "stock_name": "DI동일",
+    "action": "SELL",
+    "quantity": 1,
+    "price": 20150.0,
+    "amount": 20150.0,
+    "reason": "극한손절"
+  },
+  {
+    "timestamp": "2025-10-01T11:31:40.357949",
+    "symbol": "950210",
+    "stock_name": "프레스티지바이오파마",
+    "action": "BUY",
+    "quantity": 1,
+    "price": 13250,
+    "amount": 13250,
+    "reason": "hybrid_strategy"
+  }
+]
