@@ -175,7 +175,7 @@ class AutoTrader:
             return False
 
     def process_sell_for_symbol(self, symbol: str, position: dict):
-        """보수적 매도 처리 - 좋은 종목 보호 우선"""
+        """개선된 매도 처리 - 추세를 고려한 손절/익절"""
         try:
             if symbol not in self.all_positions:
                 return
@@ -186,39 +186,92 @@ class AutoTrader:
             stock_name = self.get_stock_name(symbol)
             current_price = position['current_price']
             
-            # 🔥 1순위: 극단적 손실 방지 (-7% 이상 손실시 무조건 손절) - 기존 유지
-            if profit_loss_decimal <= -0.07:
+            # 🆕 일봉 추세 분석 먼저 수행 (모든 판단의 기준)
+            daily_analysis = self.hybrid_strategy.analyze_daily_strategy(symbol)
+            
+            # 🔥 1순위: 극단적 손실 (-10% 이상) - 무조건 손절 (기준 강화)
+            if profit_loss_decimal <= -0.10:
                 self.logger.warning(f"🛑 {stock_name}({symbol}) 극한 손절! ({profit_loss_pct:+.2f}%)")
                 self.execute_sell(symbol, quantity, "urgent", "극한손절")
                 return
             
-            # 🔥 2순위: 단계적 익절 시스템 - 기존 유지  
-            if profit_loss_decimal >= 0.15:  # 15% 이상 익절
-                can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
-                if can_sell:
-                    self.logger.info(f"🎯 {stock_name}({symbol}) 1차 익절! ({profit_loss_pct:+.2f}%)")
-                    self.execute_sell(symbol, quantity, "aggressive_limit", "1차익절")
+            # 🔥 2순위: 중간 손실 (-7% ~ -10%) - 추세 확인 후 결정
+            if -0.10 < profit_loss_decimal <= -0.07:
+                # 강한 매수 신호면 보유
+                if daily_analysis['signal'] == 'BUY' and daily_analysis['strength'] >= 4.0:
+                    self.logger.warning(f"⚠️ {stock_name}({symbol}) 손실이지만 강한 상승신호로 보유: "
+                                       f"{profit_loss_pct:+.2f}%, 신호 {daily_analysis['strength']:.1f}점")
                     return
-            elif profit_loss_decimal >= 0.10:  # 10% 이상에서 기술적 확인 후 익절
+                else:
+                    # 추세 약하면 손절
+                    self.logger.warning(f"🛑 {stock_name}({symbol}) 추세 약화로 손절! ({profit_loss_pct:+.2f}%)")
+                    self.execute_sell(symbol, quantity, "urgent", "추세손절")
+                    return
+            
+            # 🔥 3순위: 단계적 익절 (추세 고려)
+            if profit_loss_decimal >= 0.20:  # 20% 이상 → 무조건 일부 익절
+                # 전체 수량의 50% 익절
+                partial_quantity = max(1, quantity // 2)
+                self.logger.info(f"🎯 {stock_name}({symbol}) 1차 부분익절! "
+                               f"{partial_quantity}/{quantity}주 ({profit_loss_pct:+.2f}%)")
+                self.execute_sell(symbol, partial_quantity, "aggressive_limit", "1차부분익절")
+                return
+                
+            elif profit_loss_decimal >= 0.15:  # 15~20% → 추세 확인
+                # 매도 신호가 강하면 전량 익절
+                if daily_analysis['signal'] == 'SELL' and daily_analysis['strength'] >= 3.0:
+                    self.logger.info(f"🎯 {stock_name}({symbol}) 추세전환 전량익절! ({profit_loss_pct:+.2f}%)")
+                    self.execute_sell(symbol, quantity, "aggressive_limit", "추세익절")
+                    return
+                # 상승 추세면 보유
+                elif daily_analysis['signal'] == 'BUY' and daily_analysis['strength'] >= 3.0:
+                    self.logger.info(f"📈 {stock_name}({symbol}) 상승 지속으로 보유: "
+                                   f"{profit_loss_pct:+.2f}%, 신호 {daily_analysis['strength']:.1f}점")
+                    return
+                # 중립이면 익절
+                else:
+                    self.logger.info(f"🎯 {stock_name}({symbol}) 기술적 익절! ({profit_loss_pct:+.2f}%)")
+                    self.execute_sell(symbol, quantity, "aggressive_limit", "기술적익절")
+                    return
+                    
+            elif profit_loss_decimal >= 0.10:  # 10~15% → 매도 신호시만 익절
+                if daily_analysis['signal'] == 'SELL' and daily_analysis['strength'] >= 2.5:
+                    self.logger.info(f"🎯 {stock_name}({symbol}) 조기익절! ({profit_loss_pct:+.2f}%)")
+                    self.execute_sell(symbol, quantity, "aggressive_limit", "조기익절")
+                    return
+
+            # 4순위: 20일선 이격도 매도 (강한 상승 추세 시 기준 완화)
+            ma20_check = self.hybrid_strategy.check_ma20_divergence_sell(symbol, current_price, stock_name)
+            if ma20_check['should_sell']:
+                # 🆕 일봉 분석으로 추세 확인
                 daily_analysis = self.hybrid_strategy.analyze_daily_strategy(symbol)
-                if daily_analysis['signal'] == 'SELL' and daily_analysis['strength'] >= 2.0:
-                    can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
-                    if can_sell:
-                        self.logger.info(f"🎯 {stock_name}({symbol}) 기술적 익절! ({profit_loss_pct:+.2f}%)")
-                        self.execute_sell(symbol, quantity, "aggressive_limit", "기술적익절")
+                
+                # 강한 상승 추세일 때는 이격도 기준 완화
+                if daily_analysis['signal'] == 'BUY' and daily_analysis['strength'] >= 4.0:
+                    # 강한 상승이면 120%까지 허용
+                    if ma20_check['divergence_ratio'] < 120.0:
+                        self.logger.info(f"📈 {stock_name}({symbol}) 강한 상승 추세로 보유유지: "
+                                       f"이격도 {ma20_check['divergence_ratio']:.1f}%, "
+                                       f"매수신호 {daily_analysis['strength']:.1f}점 ({profit_loss_pct:+.2f}%)")
                         return
-            
-            # 3순위: 5일선과 이격도가 120%이상일때 매도
-            ma5_check = self.hybrid_strategy.check_ma5_divergence_sell(symbol, current_price, stock_name)
-            if ma5_check['should_sell']:
+                elif daily_analysis['signal'] == 'BUY' and daily_analysis['strength'] >= 3.0:
+                    # 보통 상승이면 117%까지 허용
+                    if ma20_check['divergence_ratio'] < 117.0:
+                        self.logger.info(f"📊 {stock_name}({symbol}) 상승 추세로 보유유지: "
+                                       f"이격도 {ma20_check['divergence_ratio']:.1f}%, "
+                                       f"매수신호 {daily_analysis['strength']:.1f}점 ({profit_loss_pct:+.2f}%)")
+                        return
+                
+                # 추세가 약하거나 기준 초과 시 매도
                 can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
                 if can_sell:
-                    self.logger.warning(f"📏 {stock_name}({symbol}) 5일선 이격도 매도: "
-                                      f"{ma5_check['divergence_ratio']:.1f}% ({profit_loss_pct:+.2f}%)")
-                    self.execute_sell(symbol, quantity, "aggressive_limit", ma5_check['reason'])
+                    self.logger.warning(f"📏 {stock_name}({symbol}) 20일선 이격도 매도: "
+                                      f"{ma20_check['divergence_ratio']:.1f}% "
+                                      f"(20일선: {ma20_check['ma20']:,.0f}원, 수익률 {profit_loss_pct:+.2f}%)")
+                    self.execute_sell(symbol, quantity, "aggressive_limit", ma20_check['reason'])
                     return
-            
-            # 🆕 4순위: 현재 상승 중이면 미래 점수 무시하고 보유 
+
+            # 🆕 5순위: 현재 상승 중이면 미래 점수 무시하고 보유 
             daily_analysis = self.hybrid_strategy.analyze_daily_strategy(symbol)
             if daily_analysis['signal'] == 'BUY' and daily_analysis['strength'] >= 3.0:
                 # 단, 이격도가 115% 이상이면 부분 경고
@@ -257,61 +310,6 @@ class AutoTrader:
                     return
 
 
-            # 🆕 5순위: 매우 보수적인 절대 점수 기준 (25점 미만으로 완화)
-            try:
-                future_analysis = self.future_analyzer.calculate_future_potential(symbol)
-                future_score = future_analysis['total_score']
-                
-                # 매우 낮은 점수 + 손실인 경우만 매도
-                if future_score < 35 and profit_loss_decimal < -0.02:  # 35점 미만 + 2% 이상 손실
-                    can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
-                    if can_sell:
-                        self.logger.warning(f"📊 {stock_name}({symbol}) 극저점수+손실매도: "
-                                          f"{future_score:.1f}점 + {profit_loss_pct:+.2f}%")
-                        self.execute_sell(symbol, quantity, "aggressive_limit", "극저점수매도")
-                        return
-                
-                # 매우 큰 손실 + 점수 낮음
-                elif profit_loss_decimal < -0.12 and future_score < 40:  # 12% 이상 손실 + 40점 미만
-                    can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
-                    if can_sell:
-                        self.logger.warning(f"📊 {stock_name}({symbol}) 큰손실+점수매도: "
-                                          f"{future_score:.1f}점 + {profit_loss_pct:+.2f}%")
-                        self.execute_sell(symbol, quantity, "aggressive_limit", "큰손실매도")
-                        return
-                elif future_analysis['grade'].startswith('D') and profit_loss_decimal < 0:  # D등급
-                    can_sell, sell_reason = self.position_manager.can_sell_symbol(symbol, quantity)
-                    if can_sell:
-                        self.logger.warning(f"📊 {stock_name}({symbol}) D등급+손실매도: "
-                                          f"{future_score:.1f}점 + {profit_loss_pct:+.2f}%")
-                        self.execute_sell(symbol, quantity, "aggressive_limit", "D등급매도")
-                        return
-                
-                elif future_analysis['grade'].startswith('D'):
-                    # D등급이어도 수익이 나는 경우는 매도하지 않음
-                    if profit_loss_pct > 0:
-                        self.logger.info(f"📊 {stock_name}({symbol}) D등급이지만 수익으로 보유유지: "
-                                       f"{future_score:.1f}점, 수익률 {profit_loss_pct:+.2f}%")
-                        return
-    
-            except Exception as e:
-                self.logger.error(f"미래 점수 계산 오류 ({symbol}): {e}")
-                # 오류 발생시 기존 로직으로 진행
-            
-            # 🔥 5순위: 지능형 손절 판단 (-3% ~ -7% 구간) - 기존 유지
-            if -0.07 < profit_loss_decimal <= -0.03:
-                recovery_analysis = self.analyze_recovery_potential(symbol, current_price)
-                
-                if recovery_analysis['should_hold']:
-                    self.logger.info(f"💎 {stock_name}({symbol}) 손절 보류: {recovery_analysis['reason']} "
-                                   f"(현재: {profit_loss_pct:+.2f}%)")
-                    return
-                else:
-                    self.logger.warning(f"🛑 {stock_name}({symbol}) 지능형 손절: {recovery_analysis['reason']} "
-                                      f"({profit_loss_pct:+.2f}%)")
-                    self.execute_sell(symbol, quantity, "aggressive_limit", "지능형손절")
-                    return
-            
             # 🔥 6순위: 급락 감지 - 기존 유지
             rapid_drop = self.check_rapid_drop(symbol, current_price)
             if rapid_drop['should_sell']:

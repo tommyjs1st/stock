@@ -1052,3 +1052,57 @@ RSI: {daily_analysis.get('rsi', 0):.1f}
             self.logger.error(f"❌ 5일선 이격도 체크 오류 {symbol}: {e}")
             return {'should_sell': False, 'reason': '계산 오류', 'divergence_ratio': 0}
     
+    def check_ma20_divergence_sell(self, symbol, current_price, stock_name):
+        """
+        20일선 이격도 기반 매도 판단 (5일선보다 안정적)
+        
+        Args:
+            symbol: 종목 코드
+            current_price: 현재 가격
+            stock_name: 종목명
+        
+        Returns:
+            dict: {'should_sell': bool, 'reason': str, 'divergence_ratio': float, 'ma20': float}
+        """
+        try:
+            # 일봉 데이터 가져오기 (최소 30일)
+            daily_df = self.api_client.get_daily_data(symbol, days=30)
+            
+            if daily_df.empty or len(daily_df) < 20:
+                return {'should_sell': False, 'reason': '데이터 부족', 'divergence_ratio': 0, 'ma20': 0}
+            
+            # 20일 이동평균선 계산
+            daily_df['ma20'] = daily_df['stck_prpr'].rolling(window=20).mean()
+            
+            # 최신 20일선 값
+            latest_ma20 = daily_df['ma20'].iloc[-1]
+            
+            if pd.isna(latest_ma20) or latest_ma20 <= 0:
+                return {'should_sell': False, 'reason': '20일선 계산 오류', 'divergence_ratio': 0, 'ma20': 0}
+            
+            # 현재가와 20일선의 이격도 계산 (현재가 / 20일선 * 100)
+            divergence_ratio = (current_price / latest_ma20) * 100
+            
+            # 115% 이상일 때 매도 신호 (20일선 기준이므로 5일선보다 낮은 기준)
+            if divergence_ratio >= 115.0:
+                self.logger.info(f"📏 {stock_name}({symbol}) 20일선 이격도 과열: "
+                               f"{divergence_ratio:.1f}% (20일선: {latest_ma20:,.0f}원)")
+                
+                return {
+                    'should_sell': True, 
+                    'reason': f'20일선이격도과열({divergence_ratio:.1f}%)',
+                    'divergence_ratio': divergence_ratio,
+                    'ma20': latest_ma20
+                }
+            
+            return {
+                'should_sell': False, 
+                'reason': '이격도정상', 
+                'divergence_ratio': divergence_ratio,
+                'ma20': latest_ma20
+            }
+            
+        except Exception as e:
+            self.logger.error(f"❌ 20일선 이격도 체크 오류 {symbol}: {e}")
+            return {'should_sell': False, 'reason': '계산 오류', 'divergence_ratio': 0, 'ma20': 0}
+
