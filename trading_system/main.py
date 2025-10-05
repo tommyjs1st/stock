@@ -240,7 +240,7 @@ class AutoTrader:
                     self.execute_sell(symbol, quantity, "aggressive_limit", "조기익절")
                     return
 
-            # 4순위: 20일선 이격도 매도 (강한 상승 추세 시 기준 완화)
+            # 🔥 4순위: 20일선 이격도 매도 (강한 상승 추세 시 기준 완화)
             ma20_check = self.hybrid_strategy.check_ma20_divergence_sell(symbol, current_price, stock_name)
             if ma20_check['should_sell']:
                 # 🆕 일봉 분석으로 추세 확인
