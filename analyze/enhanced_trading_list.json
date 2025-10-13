@@ -1,5 +1,56 @@
 [
   {
+    "code": "005420",
+    "name": "코스모화학",
+    "score": 4,
+    "signals": [
+      "볼린저밴드복귀",
+      "거래량급증",
+      "현재가20일선아래",
+      "5일선20일선아래"
+    ],
+    "price": 15580,
+    "volume": 285470,
+    "foreign_netbuy": [
+      -20899,
+      13937,
+      26731,
+      6371
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2025-10-13 15:31:17",
+    "saved_at": "2025-10-13T15:32:42.515685",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "005830",
+    "name": "DB손해보험",
+    "score": 3,
+    "signals": [
+      "볼린저밴드복귀",
+      "현재가20일선아래",
+      "5일선20일선아래"
+    ],
+    "price": 133500,
+    "volume": 132648,
+    "foreign_netbuy": [
+      32879,
+      30902,
+      13008,
+      13846
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2025-10-13 15:26:21",
+    "saved_at": "2025-10-13T15:32:42.515710",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
     "code": "004020",
     "name": "현대제철",
     "score": 3,
@@ -8,8 +59,8 @@
       "현재가20일선아래",
       "5일선20일선아래"
     ],
-    "price": 33100,
-    "volume": 138804,
+    "price": 32750,
+    "volume": 348511,
     "foreign_netbuy": [
       129975,
       26709,
@@ -18,8 +69,8 @@
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-10-13 11:32:06",
-    "saved_at": "2025-10-13T11:37:46.073982",
+    "analysis_date": "2025-10-13 15:27:07",
+    "saved_at": "2025-10-13T15:32:42.515714",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
@@ -33,8 +84,8 @@
       "현재가20일선아래",
       "5일선20일선아래"
     ],
-    "price": 44900,
-    "volume": 74190,
+    "price": 44300,
+    "volume": 224190,
     "foreign_netbuy": [
       119196,
       118888,
@@ -43,58 +94,8 @@
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-10-13 11:35:15",
-    "saved_at": "2025-10-13T11:37:46.074005",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "057050",
-    "name": "현대홈쇼핑",
-    "score": 3,
-    "signals": [
-      "볼린저밴드복귀",
-      "현재가20일선아래",
-      "5일선20일선아래"
-    ],
-    "price": 53700,
-    "volume": 2606,
-    "foreign_netbuy": [
-      1855,
-      883,
-      -4642,
-      -3565
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-10-13 11:36:03",
-    "saved_at": "2025-10-13T11:37:46.074009",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "005420",
-    "name": "코스모화학",
-    "score": 3,
-    "signals": [
-      "볼린저밴드복귀",
-      "현재가20일선아래",
-      "5일선20일선아래"
-    ],
-    "price": 15070,
-    "volume": 154738,
-    "foreign_netbuy": [
-      -20899,
-      13937,
-      26731,
-      6371
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-10-13 11:36:26",
-    "saved_at": "2025-10-13T11:37:46.074013",
+    "analysis_date": "2025-10-13 15:30:15",
+    "saved_at": "2025-10-13T15:32:42.515717",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
@@ -108,8 +109,8 @@
       "현재가20일선아래",
       "5일선20일선아래"
     ],
-    "price": 25600,
-    "volume": 8042,
+    "price": 25400,
+    "volume": 24051,
     "foreign_netbuy": [
       -1766,
       -1597,
@@ -118,8 +119,8 @@
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-10-13 11:36:29",
-    "saved_at": "2025-10-13T11:37:46.074017",
+    "analysis_date": "2025-10-13 15:31:25",
+    "saved_at": "2025-10-13T15:32:42.515721",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
@@ -133,8 +134,8 @@
       "현재가20일선아래",
       "5일선20일선아래"
     ],
-    "price": 15860,
-    "volume": 93423,
+    "price": 16030,
+    "volume": 140023,
     "foreign_netbuy": [
       6846,
       15099,
@@ -143,8 +144,8 @@
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-10-13 11:37:34",
-    "saved_at": "2025-10-13T11:37:46.074021",
+    "analysis_date": "2025-10-13 15:32:28",
+    "saved_at": "2025-10-13T15:32:42.515725",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true

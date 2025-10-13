@@ -1019,7 +1019,7 @@ class AutoTrader:
                         
                         for i, symbol in enumerate(self.symbols, 1):
 
-                            current_holdings = len([s for s, p in self.positions.items() 
+                            current_holdings = len([s for s, p in self.all_positions.items() 
                                                    if p.get('quantity', 0) > 0])
                             if current_holdings >= 5:
                                 self.logger.warning(f"⚠️ 최대 5개 종목 보유 중 - 신규 매수 중단")
@@ -1030,7 +1030,7 @@ class AutoTrader:
                             
                             try:
 
-                                trade_executed = self.hybrid_strategy.execute_hybrid_trade(symbol, self.positions)
+                                trade_executed = self.hybrid_strategy.execute_hybrid_trade(symbol, self.all_positions)
       
                                 if trade_executed:
                                     daily_trades += 1
