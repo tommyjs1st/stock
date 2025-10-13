@@ -98,5 +98,15 @@
     "price": 13250,
     "amount": 13250,
     "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2025-10-10T14:02:49.361016",
+    "symbol": "089590",
+    "stock_name": "제주항공",
+    "action": "BUY",
+    "quantity": 2,
+    "price": 6230,
+    "amount": 12460,
+    "reason": "hybrid_strategy"
   }
 ]

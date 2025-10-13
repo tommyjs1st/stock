@@ -773,5 +773,80 @@
     "today_trades": [],
     "has_holdings": true,
     "program_trade_only": true
+  },
+  {
+    "date": "2025-10-05",
+    "timestamp": "2025-10-05T10:01:39.090667",
+    "total_assets": 842480.0,
+    "cash": 30320.0,
+    "stock_value": 812160.0,
+    "total_profit_loss": -3840.0,
+    "total_return_pct": -0.4705882352941176,
+    "position_count": 6,
+    "position_details": [
+      {
+        "symbol": "002790",
+        "stock_name": "아모레퍼시픽홀딩스",
+        "quantity": 1,
+        "avg_price": 26450.0,
+        "current_price": 26500.0,
+        "total_value": 26500.0,
+        "profit_loss": 50.0,
+        "profit_loss_pct": 0.1890359168241966
+      },
+      {
+        "symbol": "017800",
+        "stock_name": "현대엘리베이터",
+        "quantity": 3,
+        "avg_price": 80700.0,
+        "current_price": 78100.0,
+        "total_value": 234300.0,
+        "profit_loss": -7800.0,
+        "profit_loss_pct": -3.2218091697645597
+      },
+      {
+        "symbol": "030200",
+        "stock_name": "KT",
+        "quantity": 3,
+        "avg_price": 50500.0,
+        "current_price": 51200.0,
+        "total_value": 153600.0,
+        "profit_loss": 2100.0,
+        "profit_loss_pct": 1.3861386138613863
+      },
+      {
+        "symbol": "079900",
+        "stock_name": "전진건설로봇",
+        "quantity": 3,
+        "avg_price": 45316.6667,
+        "current_price": 44900.0,
+        "total_value": 134700.0,
+        "profit_loss": -1250.0,
+        "profit_loss_pct": -0.9194556822361162
+      },
+      {
+        "symbol": "241560",
+        "stock_name": "두산밥캣",
+        "quantity": 4,
+        "avg_price": 55087.5,
+        "current_price": 56000.0,
+        "total_value": 224000.0,
+        "profit_loss": 3650.0,
+        "profit_loss_pct": 1.656455638756524
+      },
+      {
+        "symbol": "950210",
+        "stock_name": "프레스티지바이오파마",
+        "quantity": 3,
+        "avg_price": 13216.6667,
+        "current_price": 13020.0,
+        "total_value": 39060.0,
+        "profit_loss": -590.0,
+        "profit_loss_pct": -1.4880201765447667
+      }
+    ],
+    "today_trades": [],
+    "has_holdings": true,
+    "program_trade_only": true
   }
 ]
