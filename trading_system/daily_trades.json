@@ -168,5 +168,65 @@
     "price": 43900,
     "amount": 87800,
     "reason": "기술적매도"
+  },
+  {
+    "timestamp": "2025-10-14T10:05:10.388953",
+    "symbol": "029780",
+    "stock_name": "삼성카드",
+    "action": "BUY",
+    "quantity": 3,
+    "price": 49250,
+    "amount": 147750,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2025-10-14T10:05:13.822370",
+    "symbol": "251270",
+    "stock_name": "넷마블",
+    "action": "BUY",
+    "quantity": 2,
+    "price": 56500,
+    "amount": 113000,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2025-10-14T10:05:17.192031",
+    "symbol": "008930",
+    "stock_name": "한미사이언스",
+    "action": "BUY",
+    "quantity": 1,
+    "price": 36650,
+    "amount": 36650,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2025-10-14T10:05:20.399205",
+    "symbol": "020560",
+    "stock_name": "아시아나항공",
+    "action": "BUY",
+    "quantity": 4,
+    "price": 9060,
+    "amount": 36240,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2025-10-14T10:35:29.967246",
+    "symbol": "008930",
+    "stock_name": "한미사이언스",
+    "action": "SELL",
+    "quantity": 1,
+    "price": 36400,
+    "amount": 36400,
+    "reason": "기술적매도"
+  },
+  {
+    "timestamp": "2025-10-14T10:35:32.807472",
+    "symbol": "251270",
+    "stock_name": "넷마블",
+    "action": "SELL",
+    "quantity": 2,
+    "price": 56400,
+    "amount": 112800,
+    "reason": "기술적매도"
   }
 ]

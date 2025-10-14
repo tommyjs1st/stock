@@ -848,5 +848,131 @@
     "today_trades": [],
     "has_holdings": true,
     "program_trade_only": true
+  },
+  {
+    "date": "2025-10-13",
+    "timestamp": "2025-10-13T16:23:34.481332",
+    "total_assets": 512875.0,
+    "cash": 30535.0,
+    "stock_value": 482340.0,
+    "total_profit_loss": 7490.0,
+    "total_return_pct": 1.5773402126987468,
+    "position_count": 5,
+    "position_details": [
+      {
+        "symbol": "057050",
+        "stock_name": "현대홈쇼핑",
+        "quantity": 1,
+        "avg_price": 53600.0,
+        "current_price": 53300.0,
+        "total_value": 53300.0,
+        "profit_loss": -300.0,
+        "profit_loss_pct": -0.5597014925373134
+      },
+      {
+        "symbol": "079900",
+        "stock_name": "전진건설로봇",
+        "quantity": 3,
+        "avg_price": 45316.6667,
+        "current_price": 46550.0,
+        "total_value": 139650.0,
+        "profit_loss": 3700.0,
+        "profit_loss_pct": 2.721588819418904
+      },
+      {
+        "symbol": "241560",
+        "stock_name": "두산밥캣",
+        "quantity": 4,
+        "avg_price": 55087.5,
+        "current_price": 56300.0,
+        "total_value": 225200.0,
+        "profit_loss": 4850.0,
+        "profit_loss_pct": 2.201043793964148
+      },
+      {
+        "symbol": "284740",
+        "stock_name": "쿠쿠홈시스",
+        "quantity": 1,
+        "avg_price": 25300.0,
+        "current_price": 25400.0,
+        "total_value": 25400.0,
+        "profit_loss": 100.0,
+        "profit_loss_pct": 0.3952569169960474
+      },
+      {
+        "symbol": "950210",
+        "stock_name": "프레스티지바이오파마",
+        "quantity": 3,
+        "avg_price": 13216.6667,
+        "current_price": 12930.0,
+        "total_value": 38790.0,
+        "profit_loss": -860.0,
+        "profit_loss_pct": -2.1689785624211857
+      }
+    ],
+    "today_trades": [
+      {
+        "timestamp": "2025-10-13T13:32:11.379458",
+        "symbol": "004020",
+        "stock_name": "현대제철",
+        "action": "BUY",
+        "quantity": 6,
+        "price": 32750,
+        "amount": 196500,
+        "reason": "hybrid_strategy"
+      },
+      {
+        "timestamp": "2025-10-13T13:32:14.669119",
+        "symbol": "499790",
+        "stock_name": "GS피앤엘",
+        "action": "BUY",
+        "quantity": 2,
+        "price": 44400,
+        "amount": 88800,
+        "reason": "hybrid_strategy"
+      },
+      {
+        "timestamp": "2025-10-13T13:32:17.654853",
+        "symbol": "057050",
+        "stock_name": "현대홈쇼핑",
+        "action": "BUY",
+        "quantity": 1,
+        "price": 53600,
+        "amount": 53600,
+        "reason": "hybrid_strategy"
+      },
+      {
+        "timestamp": "2025-10-13T13:32:22.909710",
+        "symbol": "284740",
+        "stock_name": "쿠쿠홈시스",
+        "action": "BUY",
+        "quantity": 1,
+        "price": 25300,
+        "amount": 25300,
+        "reason": "hybrid_strategy"
+      },
+      {
+        "timestamp": "2025-10-13T14:02:29.945995",
+        "symbol": "004020",
+        "stock_name": "현대제철",
+        "action": "SELL",
+        "quantity": 6,
+        "price": 32800,
+        "amount": 196800,
+        "reason": "기술적매도"
+      },
+      {
+        "timestamp": "2025-10-13T14:02:32.435005",
+        "symbol": "499790",
+        "stock_name": "GS피앤엘",
+        "action": "SELL",
+        "quantity": 2,
+        "price": 43900,
+        "amount": 87800,
+        "reason": "기술적매도"
+      }
+    ],
+    "has_holdings": true,
+    "program_trade_only": false
   }
 ]

@@ -1,151 +1,175 @@
 [
   {
-    "code": "005420",
-    "name": "코스모화학",
-    "score": 4,
-    "signals": [
-      "볼린저밴드복귀",
-      "거래량급증",
-      "현재가20일선아래",
-      "5일선20일선아래"
-    ],
-    "price": 15580,
-    "volume": 285470,
-    "foreign_netbuy": [
-      -20899,
-      13937,
-      26731,
-      6371
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-10-13 15:31:17",
-    "saved_at": "2025-10-13T15:32:42.515685",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "005830",
-    "name": "DB손해보험",
+    "code": "029780",
+    "name": "삼성카드",
     "score": 3,
     "signals": [
       "볼린저밴드복귀",
       "현재가20일선아래",
       "5일선20일선아래"
     ],
-    "price": 133500,
-    "volume": 132648,
+    "price": 49250,
+    "volume": 40195,
     "foreign_netbuy": [
-      32879,
-      30902,
-      13008,
-      13846
+      -1228,
+      12719,
+      26059,
+      -6257
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-10-13 15:26:21",
-    "saved_at": "2025-10-13T15:32:42.515710",
+    "analysis_date": "2025-10-14 13:26:46",
+    "saved_at": "2025-10-14T13:32:45.151833",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "004020",
-    "name": "현대제철",
+    "code": "008930",
+    "name": "한미사이언스",
     "score": 3,
     "signals": [
       "볼린저밴드복귀",
       "현재가20일선아래",
       "5일선20일선아래"
     ],
-    "price": 32750,
-    "volume": 348511,
+    "price": 36400,
+    "volume": 81253,
     "foreign_netbuy": [
-      129975,
-      26709,
-      69905,
-      80257
+      103224,
+      29833,
+      28922,
+      -12021
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-10-13 15:27:07",
-    "saved_at": "2025-10-13T15:32:42.515714",
+    "analysis_date": "2025-10-14 13:27:52",
+    "saved_at": "2025-10-14T13:32:45.151852",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "499790",
-    "name": "GS피앤엘",
+    "code": "020560",
+    "name": "아시아나항공",
     "score": 3,
     "signals": [
       "볼린저밴드복귀",
       "현재가20일선아래",
       "5일선20일선아래"
     ],
-    "price": 44300,
-    "volume": 224190,
+    "price": 9050,
+    "volume": 55728,
     "foreign_netbuy": [
-      119196,
-      118888,
-      72937,
-      -652
+      -3258,
+      8274,
+      23532,
+      42307
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-10-13 15:30:15",
-    "saved_at": "2025-10-13T15:32:42.515717",
+    "analysis_date": "2025-10-14 13:28:30",
+    "saved_at": "2025-10-14T13:32:45.151855",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "284740",
-    "name": "쿠쿠홈시스",
+    "code": "282330",
+    "name": "BGF리테일",
     "score": 3,
     "signals": [
       "볼린저밴드복귀",
       "현재가20일선아래",
       "5일선20일선아래"
     ],
-    "price": 25400,
-    "volume": 24051,
+    "price": 105400,
+    "volume": 44425,
     "foreign_netbuy": [
-      -1766,
-      -1597,
-      7159,
-      6690
+      1437,
+      -20636,
+      -7892,
+      12380
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-10-13 15:31:25",
-    "saved_at": "2025-10-13T15:32:42.515721",
+    "analysis_date": "2025-10-14 13:28:33",
+    "saved_at": "2025-10-14T13:32:45.151859",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "002710",
-    "name": "TCC스틸",
+    "code": "298020",
+    "name": "효성티앤씨",
     "score": 3,
     "signals": [
       "볼린저밴드복귀",
       "현재가20일선아래",
       "5일선20일선아래"
     ],
-    "price": 16030,
-    "volume": 140023,
+    "price": 206500,
+    "volume": 8579,
     "foreign_netbuy": [
-      6846,
-      15099,
-      102,
-      -19837
+      4189,
+      -551,
+      4126,
+      -1431
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-10-13 15:32:28",
-    "saved_at": "2025-10-13T15:32:42.515725",
+    "analysis_date": "2025-10-14 13:30:15",
+    "saved_at": "2025-10-14T13:32:45.151862",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "057050",
+    "name": "현대홈쇼핑",
+    "score": 3,
+    "signals": [
+      "볼린저밴드복귀",
+      "현재가20일선아래",
+      "5일선20일선아래"
+    ],
+    "price": 53400,
+    "volume": 4721,
+    "foreign_netbuy": [
+      -723,
+      1855,
+      883,
+      -4642
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2025-10-14 13:31:06",
+    "saved_at": "2025-10-14T13:32:45.151865",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "089590",
+    "name": "제주항공",
+    "score": 3,
+    "signals": [
+      "볼린저밴드복귀",
+      "현재가20일선아래",
+      "5일선20일선아래"
+    ],
+    "price": 6200,
+    "volume": 72515,
+    "foreign_netbuy": [
+      2568,
+      -17477,
+      16227,
+      762
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2025-10-14 13:31:57",
+    "saved_at": "2025-10-14T13:32:45.151868",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
