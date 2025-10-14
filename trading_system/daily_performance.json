@@ -977,12 +977,12 @@
   },
   {
     "date": "2025-10-14",
-    "timestamp": "2025-10-14T15:12:36.478019",
-    "total_assets": 687475.0,
+    "timestamp": "2025-10-14T16:52:51.782809",
+    "total_assets": 687925.0,
     "cash": 18075.0,
-    "stock_value": 669400.0,
-    "total_profit_loss": 2550.0,
-    "total_return_pct": 0.38239484141860985,
+    "stock_value": 669850.0,
+    "total_profit_loss": 3000.0,
+    "total_return_pct": 0.44987628402189395,
     "position_count": 5,
     "position_details": [
       {
@@ -990,50 +990,50 @@
         "stock_name": "삼성카드",
         "quantity": 3,
         "avg_price": 49250.0,
-        "current_price": 49150.0,
-        "total_value": 147450.0,
-        "profit_loss": -300.0,
-        "profit_loss_pct": -0.20304568527918782
+        "current_price": 49050.0,
+        "total_value": 147150.0,
+        "profit_loss": -600.0,
+        "profit_loss_pct": -0.40609137055837563
       },
       {
         "symbol": "057050",
         "stock_name": "현대홈쇼핑",
         "quantity": 1,
         "avg_price": 53600.0,
-        "current_price": 53300.0,
-        "total_value": 53300.0,
-        "profit_loss": -300.0,
-        "profit_loss_pct": -0.5597014925373134
+        "current_price": 53400.0,
+        "total_value": 53400.0,
+        "profit_loss": -200.0,
+        "profit_loss_pct": -0.3731343283582089
       },
       {
         "symbol": "062040",
         "stock_name": "산일전기",
         "quantity": 1,
         "avg_price": 109200.0,
-        "current_price": 109400.0,
-        "total_value": 109400.0,
-        "profit_loss": 200.0,
-        "profit_loss_pct": 0.18315018315018314
+        "current_price": 109000.0,
+        "total_value": 109000.0,
+        "profit_loss": -200.0,
+        "profit_loss_pct": -0.18315018315018314
       },
       {
         "symbol": "079900",
         "stock_name": "전진건설로봇",
         "quantity": 3,
         "avg_price": 45316.6667,
-        "current_price": 45150.0,
-        "total_value": 135450.0,
-        "profit_loss": -500.0,
-        "profit_loss_pct": -0.3677822728944465
+        "current_price": 45300.0,
+        "total_value": 135900.0,
+        "profit_loss": -50.0,
+        "profit_loss_pct": -0.03677822728944465
       },
       {
         "symbol": "241560",
         "stock_name": "두산밥캣",
         "quantity": 4,
         "avg_price": 55087.5,
-        "current_price": 55950.0,
-        "total_value": 223800.0,
-        "profit_loss": 3450.0,
-        "profit_loss_pct": 1.5656909462219197
+        "current_price": 56100.0,
+        "total_value": 224400.0,
+        "profit_loss": 4050.0,
+        "profit_loss_pct": 1.8379850238257316
       }
     ],
     "today_trades": [

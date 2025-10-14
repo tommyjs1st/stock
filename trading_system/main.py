@@ -1017,13 +1017,21 @@ class AutoTrader:
                             realtime_positions = self.api_client.get_all_holdings()
                             current_holdings = len([s for s, p in realtime_positions.items() 
                                                  if p.get('quantity', 0) > 0])
-                            if current_holdings >= self.max_symbols:
-                                self.logger.warning(f"⚠️ 최대 {self.max_symbols}개 종목 보유 중 - 신규 매수 중단")
-                                break
-    
                             stock_name = self.get_stock_name(symbol)
+
+                            # 최대 종목수 도달 시: 신규 종목만 건너뜀, 보유중인 종목은 추가 매수 가능
+                            if current_holdings >= self.max_symbols:
+                                is_already_holding = symbol in realtime_positions and realtime_positions[symbol].get('quantity', 0) > 0
+        
+                                if not is_already_holding:  # 신규 종목이면
+                                    self.logger.warning(f"⚠️ 최대 {self.max_symbols}개 종목 보유 중 - {stock_name}({symbol}) 신규 매수 건너뜀")
+                                    continue  # 신규 종목만 건너뜀
+
+                                # 보유중인 종목은 continue 없이 아래로 진행
+                                self.logger.info(f"💡 {stock_name}({symbol})는 보유중 - 추가 매수 검토 진행")
+
                             self.logger.info(f"🔍 [{i}/{len(self.symbols)}] {stock_name}({symbol}) 분석 시작")
-                            
+    
                             try:
 
                                 trade_executed = self.hybrid_strategy.execute_hybrid_trade(symbol, realtime_positions)
