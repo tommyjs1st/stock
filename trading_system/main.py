@@ -64,7 +64,7 @@ class AutoTrader:
         
         # 거래 설정
         trading_config = self.config_manager.get_trading_config()
-        self.max_symbols = trading_config.get('max_symbols', 3)
+        self.max_symbols = trading_config.get('max_symbols', 5)
         self.stop_loss_pct = 0.06  # 개선: 8% → 6%
         self.take_profit_pct = 0.20  # 개선: 25% → 20%
         
@@ -1019,10 +1019,11 @@ class AutoTrader:
                         
                         for i, symbol in enumerate(self.symbols, 1):
 
-                            current_holdings = len([s for s, p in self.all_positions.items() 
-                                                   if p.get('quantity', 0) > 0])
-                            if current_holdings >= 5:
-                                self.logger.warning(f"⚠️ 최대 5개 종목 보유 중 - 신규 매수 중단")
+                            realtime_positions = self.api_client.get_all_holdings()
+                            current_holdings = len([s for s, p in realtime_positions.items() 
+                                                 if p.get('quantity', 0) > 0])
+                            if current_holdings >= self.max_symbols:
+                                self.logger.warning(f"⚠️ 최대 {self.max_symbols}개 종목 보유 중 - 신규 매수 중단")
                                 break
     
                             stock_name = self.get_stock_name(symbol)
@@ -1030,7 +1031,7 @@ class AutoTrader:
                             
                             try:
 
-                                trade_executed = self.hybrid_strategy.execute_hybrid_trade(symbol, self.all_positions)
+                                trade_executed = self.hybrid_strategy.execute_hybrid_trade(symbol)
       
                                 if trade_executed:
                                     daily_trades += 1

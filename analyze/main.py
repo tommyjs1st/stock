@@ -33,8 +33,8 @@ class EnhancedStockAnalyzer:
         self.signal_combinations = {}
         
         # 필터링 설정
-        self.min_score_for_messaging = 3
-        self.min_score_for_detail = 2
+        self.min_score_for_messaging = 4
+        self.min_score_for_detail = 3
         
         # 절대조건 설정
         self.absolute_filters = {
@@ -165,7 +165,7 @@ class EnhancedStockAnalyzer:
                     return True  # 분석은 성공했으나 조건 미통과
                     
                 # 절대조건 통과시 로깅
-                self.logger.info(f"✅ {name}({code}) 절대조건 통과: {filter_reason}")
+                print(f"✅ {name}({code}) 절대조건 통과: {filter_reason}")
                 
             except Exception as score_error:
                 self.logger.error(f"❌ {name}({code}) 점수 계산 실패: {score_error}")
@@ -211,14 +211,14 @@ class EnhancedStockAnalyzer:
             }
             self._classify_multi_signal_stock_filtered(stock_info)
             
-            # 신호 조합 패턴 분석 (3점 이상)
+            # 신호 조합 패턴 분석 (4점 이상)
             if score >= self.min_score_for_messaging and active_signals:
                 combo_key = " + ".join(sorted(active_signals))
                 if combo_key not in self.signal_combinations:
                     self.signal_combinations[combo_key] = []
                 self.signal_combinations[combo_key].append(f"{name}({code})")
             
-            # 백테스트 후보 (3점 이상, 절대조건 통과)
+            # 백테스트 후보 (4점 이상, 절대조건 통과)
             if score >= self.min_score_for_messaging:
                 self.backtest_candidates.append({
                     "code": code,

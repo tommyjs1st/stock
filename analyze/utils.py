@@ -142,6 +142,32 @@ def save_enhanced_backtest_candidates(candidates, logger, include_filter_info=Tr
     try:
         if not candidates:
             logger.warning("⚠️ 저장할 후보 종목이 없습니다.")
+
+            # 기존 파일들 삭제
+            files_to_delete = [
+                "enhanced_trading_list.json",
+                "trading_list.json",
+                "enhanced_trading_list.pkl",
+                "enhanced_trading_list_summary.txt"
+            ]
+            
+            deleted_files = []
+            for filename in files_to_delete:
+                if os.path.exists(filename):
+                    try:
+                        os.remove(filename)
+                        deleted_files.append(filename)
+                        logger.info(f"🗑️ 기존 파일 삭제: {filename}")
+                    except Exception as e:
+                        logger.warning(f"⚠️ 파일 삭제 실패 ({filename}): {e}")
+            
+            if deleted_files:
+                logger.info(f"✅ 총 {len(deleted_files)}개 기존 파일 삭제 완료")
+            else:
+                logger.info("📝 삭제할 기존 파일이 없습니다.")
+            
+            return
+
             return
         
         # score 기준으로 내림차순 정렬

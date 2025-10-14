@@ -974,5 +974,121 @@
     ],
     "has_holdings": true,
     "program_trade_only": false
+  },
+  {
+    "date": "2025-10-14",
+    "timestamp": "2025-10-14T14:56:24.566963",
+    "total_assets": 578350.0,
+    "cash": 18075.0,
+    "stock_value": 560275.0,
+    "total_profit_loss": 2625.0,
+    "total_return_pct": 0.47072536537254545,
+    "position_count": 4,
+    "position_details": [
+      {
+        "symbol": "029780",
+        "stock_name": "삼성카드",
+        "quantity": 3,
+        "avg_price": 49250.0,
+        "current_price": 49100.0,
+        "total_value": 147300.0,
+        "profit_loss": -450.0,
+        "profit_loss_pct": -0.3045685279187817
+      },
+      {
+        "symbol": "057050",
+        "stock_name": "현대홈쇼핑",
+        "quantity": 1,
+        "avg_price": 53600.0,
+        "current_price": 53400.0,
+        "total_value": 53400.0,
+        "profit_loss": -200.0,
+        "profit_loss_pct": -0.3731343283582089
+      },
+      {
+        "symbol": "079900",
+        "stock_name": "전진건설로봇",
+        "quantity": 3,
+        "avg_price": 45316.6667,
+        "current_price": 45125.0,
+        "total_value": 135375.0,
+        "profit_loss": -575.0,
+        "profit_loss_pct": -0.42294961382861346
+      },
+      {
+        "symbol": "241560",
+        "stock_name": "두산밥캣",
+        "quantity": 4,
+        "avg_price": 55087.5,
+        "current_price": 56050.0,
+        "total_value": 224200.0,
+        "profit_loss": 3850.0,
+        "profit_loss_pct": 1.7472203312911279
+      }
+    ],
+    "today_trades": [
+      {
+        "timestamp": "2025-10-14T10:05:10.388953",
+        "symbol": "029780",
+        "stock_name": "삼성카드",
+        "action": "BUY",
+        "quantity": 3,
+        "price": 49250,
+        "amount": 147750,
+        "reason": "hybrid_strategy"
+      },
+      {
+        "timestamp": "2025-10-14T10:05:13.822370",
+        "symbol": "251270",
+        "stock_name": "넷마블",
+        "action": "BUY",
+        "quantity": 2,
+        "price": 56500,
+        "amount": 113000,
+        "reason": "hybrid_strategy"
+      },
+      {
+        "timestamp": "2025-10-14T10:05:17.192031",
+        "symbol": "008930",
+        "stock_name": "한미사이언스",
+        "action": "BUY",
+        "quantity": 1,
+        "price": 36650,
+        "amount": 36650,
+        "reason": "hybrid_strategy"
+      },
+      {
+        "timestamp": "2025-10-14T10:05:20.399205",
+        "symbol": "020560",
+        "stock_name": "아시아나항공",
+        "action": "BUY",
+        "quantity": 4,
+        "price": 9060,
+        "amount": 36240,
+        "reason": "hybrid_strategy"
+      },
+      {
+        "timestamp": "2025-10-14T10:35:29.967246",
+        "symbol": "008930",
+        "stock_name": "한미사이언스",
+        "action": "SELL",
+        "quantity": 1,
+        "price": 36400,
+        "amount": 36400,
+        "reason": "기술적매도"
+      },
+      {
+        "timestamp": "2025-10-14T10:35:32.807472",
+        "symbol": "251270",
+        "stock_name": "넷마블",
+        "action": "SELL",
+        "quantity": 2,
+        "price": 56400,
+        "amount": 112800,
+        "reason": "기술적매도"
+      }
+    ],
+    "has_holdings": true,
+    "program_trade_only": false
   }
 ]

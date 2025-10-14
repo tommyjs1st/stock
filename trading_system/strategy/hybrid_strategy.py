@@ -523,36 +523,12 @@ class HybridStrategy:
             'recent_change': recent_change
         }
     
-    def execute_hybrid_trade(self, symbol: str, positions: Dict) -> bool:
+    def execute_hybrid_trade(self, symbol: str) -> bool:
         stock_name = self.get_stock_name(symbol)
 
-        current_position = positions.get(symbol, {})
-        current_quantity = current_position.get('quantity', 0)
-    
-        # 실제 보유 중인 종목만 카운트 (수량이 0보다 큰 것만)
-        current_holdings = len([s for s, p in positions.items() 
-                             if p.get('quantity', 0) > 0])
-    
-        can_buy, reason = self.position_manager.can_purchase_symbol(
-            symbol, current_quantity=0, total_holdings_count=current_holdings)
-
-        if not can_buy:
-            self.logger.info(f"🚫 {stock_name}({symbol}) 매수 차단: {reason}")
-            return False
-        
-        # 🔥 재매수 금지 체크를 가장 먼저 실행
-        current_position = positions.get(symbol, {})
-        current_quantity = current_position.get('quantity', 0)
-    
-        total_holdings = len(positions)  # 전체 보유 종목 수
-        can_buy, reason = self.position_manager.can_purchase_symbol(symbol, current_quantity, total_holdings)
-        if not can_buy:
-            self.logger.info(f"🚫 {stock_name}({symbol}) 매수 차단: {reason}")
-            return False  # 여기서 바로 종료
-    
         # trading_list.json에서 이미 선별된 종목이므로 일봉 분석 생략
-        # 바로 분봉 타이밍 분석으로 진행
-        self.logger.info(f"🎯 {stock_name}({symbol}) 분봉 타이밍 분석 (이미 선별된 종목)")
+        self.logger.info(f"🎯 {stock_name}({symbol}) 분봉 타이밍 분석 "
+                        f"(현재 보유: {current_holdings}/5개)")
         
         # 분봉 타이밍 분석
         timing_analysis = self.find_optimal_entry_timing(symbol, 'BUY')
@@ -575,7 +551,7 @@ class HybridStrategy:
         stock_name = self.get_stock_name(symbol)
 
         # 전체 보유 종목 수 확인
-        total_holdings = len(positions)
+        total_holdings = len([s for s, p in positions.items() if p.get('quantity', 0) > 0])
 
         # 매수 가능 여부 확인
         current_position = positions.get(symbol, {})
