@@ -713,13 +713,8 @@ class AutoTrader:
             # get_stock_name이 필요할 때마다 자동으로 API 조회함
             self.logger.info(f"최종 선택 종목: {[f'{self.get_stock_name(s)}({s})' for s in self.symbols]}")
             
-            if not self.symbols:
-                self.symbols = ['278470', '062040', '042660']
-                self.logger.warning("종목이 없어 기본 종목 사용")
-                        
         except Exception as e:
             self.logger.error(f"종목 로드 실패: {e}")
-            self.symbols = ['278470', '062040', '042660']
 
     
     def load_stock_names(self):
@@ -1031,7 +1026,7 @@ class AutoTrader:
                             
                             try:
 
-                                trade_executed = self.hybrid_strategy.execute_hybrid_trade(symbol)
+                                trade_executed = self.hybrid_strategy.execute_hybrid_trade(symbol, realtime_positions)
       
                                 if trade_executed:
                                     daily_trades += 1

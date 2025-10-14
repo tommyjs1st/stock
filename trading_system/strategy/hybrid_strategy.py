@@ -523,13 +523,9 @@ class HybridStrategy:
             'recent_change': recent_change
         }
     
-    def execute_hybrid_trade(self, symbol: str) -> bool:
+    def execute_hybrid_trade(self, symbol: str, positions: Dict) -> bool:
         stock_name = self.get_stock_name(symbol)
 
-        # trading_list.json에서 이미 선별된 종목이므로 일봉 분석 생략
-        self.logger.info(f"🎯 {stock_name}({symbol}) 분봉 타이밍 분석 "
-                        f"(현재 보유: {current_holdings}/5개)")
-        
         # 분봉 타이밍 분석
         timing_analysis = self.find_optimal_entry_timing(symbol, 'BUY')
         

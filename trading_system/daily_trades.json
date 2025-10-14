@@ -228,5 +228,15 @@
     "price": 56400,
     "amount": 112800,
     "reason": "기술적매도"
+  },
+  {
+    "timestamp": "2025-10-14T15:07:00.269306",
+    "symbol": "062040",
+    "stock_name": "산일전기",
+    "action": "BUY",
+    "quantity": 1,
+    "price": 108500,
+    "amount": 108500,
+    "reason": "hybrid_strategy"
   }
 ]
