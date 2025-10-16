@@ -16,8 +16,246 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+
 class TechnicalIndicators:
-    
+
+    @staticmethod
+    def is_rsi_buy_signal(df, period=14, oversold_threshold=30, recovery_threshold=50):
+        """
+        RSI 매수 신호 감지
+        - RSI가 과매도 구간(30 이하)에서 회복 중이거나
+        - RSI가 매수 적정권(30~50)에 있을 때
+        
+        Args:
+            df: 주가 데이터프레임
+            period: RSI 계산 기간 (기본 14일)
+            oversold_threshold: 과매도 기준 (기본 30)
+            recovery_threshold: 회복 기준 (기본 50)
+        
+        Returns:
+            bool: RSI 매수 신호 여부
+        """
+        try:
+            if df is None or df.empty or len(df) < period + 5:
+                return False
+            
+            # 컬럼명 통일 처리
+            price_col = None
+            if 'stck_clpr' in df.columns:
+                price_col = 'stck_clpr'
+            elif 'stck_prpr' in df.columns:
+                price_col = 'stck_prpr'
+            else:
+                return False
+            
+            df = df.copy()
+            
+            # RSI 계산
+            delta = df[price_col].diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+            
+            # 0으로 나누기 방지
+            rs = gain / loss.replace(0, 0.0001)
+            rsi = 100 - (100 / (1 + rs))
+            
+            if len(rsi) < 2:
+                return False
+            
+            current_rsi = rsi.iloc[-1]
+            previous_rsi = rsi.iloc[-2]
+            
+            # NaN 체크
+            if pd.isna(current_rsi) or pd.isna(previous_rsi):
+                return False
+            
+            # 매수 신호 조건들
+            # 1. 과매도에서 회복 중 (RSI가 30 아래였다가 상승)
+            oversold_recovery = (previous_rsi <= oversold_threshold and 
+                                current_rsi > oversold_threshold and 
+                                current_rsi < recovery_threshold)
+            
+            # 2. 매수 적정권 (RSI 30~50)
+            buy_zone = (oversold_threshold <= current_rsi <= recovery_threshold)
+            
+            # 3. RSI 상승 추세 확인
+            rsi_uptrend = current_rsi > previous_rsi
+            
+            # 조건: (과매도 회복 또는 매수 적정권) + RSI 상승 추세
+            return (oversold_recovery or buy_zone) and rsi_uptrend
+            
+        except Exception as e:
+            logger.error(f"❌ RSI 매수 신호 계산 오류: {e}")
+            return False
+
+    @staticmethod
+    def is_macd_golden_cross(df, fast=12, slow=26, signal=9):
+        """
+        MACD 골든크로스 신호 감지
+        - MACD 라인이 Signal 라인을 상향 돌파
+        
+        Args:
+            df: 주가 데이터프레임
+            fast: 단기 EMA 기간 (기본 12)
+            slow: 장기 EMA 기간 (기본 26)
+            signal: Signal 라인 기간 (기본 9)
+        
+        Returns:
+            bool: MACD 골든크로스 여부
+        """
+        try:
+            if df is None or df.empty or len(df) < slow + signal + 5:
+                return False
+            
+            # 컬럼명 통일 처리
+            price_col = None
+            if 'stck_clpr' in df.columns:
+                price_col = 'stck_clpr'
+            elif 'stck_prpr' in df.columns:
+                price_col = 'stck_prpr'
+            else:
+                return False
+            
+            close_prices = df[price_col].copy()
+            
+            # NaN 체크
+            if close_prices.isnull().any():
+                return False
+            
+            # MACD 계산
+            ema_fast = close_prices.ewm(span=fast, adjust=False).mean()
+            ema_slow = close_prices.ewm(span=slow, adjust=False).mean()
+            
+            # MACD Line = 단기 EMA - 장기 EMA
+            macd_line = ema_fast - ema_slow
+            
+            # Signal Line = MACD의 EMA
+            signal_line = macd_line.ewm(span=signal, adjust=False).mean()
+            
+            if len(macd_line) < 2 or len(signal_line) < 2:
+                return False
+            
+            # 오늘과 어제의 MACD, Signal 값
+            today_macd = macd_line.iloc[-1]
+            today_signal = signal_line.iloc[-1]
+            yesterday_macd = macd_line.iloc[-2]
+            yesterday_signal = signal_line.iloc[-2]
+            
+            # NaN 체크
+            if (pd.isna(today_macd) or pd.isna(today_signal) or 
+                pd.isna(yesterday_macd) or pd.isna(yesterday_signal)):
+                return False
+            
+            # 골든크로스 조건
+            # 1. 어제는 MACD가 Signal 아래
+            # 2. 오늘은 MACD가 Signal 위로 돌파
+            # 3. MACD가 상승 추세
+            golden_cross = (
+                yesterday_macd <= yesterday_signal and  # 어제는 아래
+                today_macd > today_signal and           # 오늘은 위로 돌파
+                today_macd > yesterday_macd             # MACD 상승 추세
+            )
+            
+            # 추가 필터: 매수 시점 검증 (0선 근처 이하에서만 유효)
+            # 너무 높은 곳에서의 골든크로스는 제외
+            valid_position = today_signal <= 1000  # 적절한 임계값 설정
+            
+            # 거래량 확인 (선택사항)
+            volume_col = 'acml_vol' if 'acml_vol' in df.columns else 'cntg_vol'
+            if volume_col in df.columns and len(df) >= 10:
+                avg_volume = df[volume_col].rolling(window=10).mean().iloc[-1]
+                current_volume = df[volume_col].iloc[-1]
+                volume_surge = current_volume > avg_volume * 1.1
+                
+                return golden_cross and valid_position and volume_surge
+            else:
+                return golden_cross and valid_position
+            
+        except Exception as e:
+            logger.error(f"❌ MACD 골든크로스 계산 오류: {e}")
+            return False
+
+    @staticmethod
+    def is_macd_near_golden_cross(df, fast=12, slow=26, signal=9, threshold=0.05):
+        """
+        MACD 골든크로스 근접 신호 감지
+        - MACD 라인이 Signal 라인에 근접하면서 상승 중
+        
+        Args:
+            df: 주가 데이터프레임
+            threshold: 근접 판단 기준 (기본 5%)
+        
+        Returns:
+            bool: MACD 골든크로스 근접 여부
+        """
+        try:
+            if df is None or df.empty or len(df) < slow + signal + 5:
+                return False
+            
+            # 컬럼명 통일 처리
+            price_col = None
+            if 'stck_clpr' in df.columns:
+                price_col = 'stck_clpr'
+            elif 'stck_prpr' in df.columns:
+                price_col = 'stck_prpr'
+            else:
+                return False
+            
+            close_prices = df[price_col].copy()
+            
+            if close_prices.isnull().any():
+                return False
+            
+            # MACD 계산
+            ema_fast = close_prices.ewm(span=fast, adjust=False).mean()
+            ema_slow = close_prices.ewm(span=slow, adjust=False).mean()
+            macd_line = ema_fast - ema_slow
+            signal_line = macd_line.ewm(span=signal, adjust=False).mean()
+            
+            if len(macd_line) < 3:
+                return False
+            
+            current_macd = macd_line.iloc[-1]
+            current_signal = signal_line.iloc[-1]
+            
+            # NaN 체크
+            if pd.isna(current_macd) or pd.isna(current_signal):
+                return False
+            
+            # 1. MACD가 Signal 아래에 있어야 함
+            if current_macd >= current_signal:
+                return False
+            
+            # 2. 차이가 매우 작음 (근접 상태)
+            diff = abs(current_macd - current_signal)
+            signal_abs = abs(current_signal)
+            is_close = (diff / max(signal_abs, 0.01) <= threshold) or (diff <= 50)
+            
+            # 3. MACD 상승 추세 확인
+            macd_trend_up = False
+            if len(macd_line) >= 3:
+                macd_trend_up = (
+                    macd_line.iloc[-1] > macd_line.iloc[-2] and 
+                    macd_line.iloc[-2] >= macd_line.iloc[-3]
+                )
+            
+            # 4. 히스토그램 개선 추세
+            histogram_improving = False
+            if len(macd_line) >= 3:
+                hist_today = current_macd - current_signal
+                hist_yesterday = macd_line.iloc[-2] - signal_line.iloc[-2]
+                hist_2days_ago = macd_line.iloc[-3] - signal_line.iloc[-3]
+                
+                histogram_improving = (
+                    hist_today > hist_yesterday and 
+                    hist_yesterday > hist_2days_ago
+                )
+            
+            return is_close and (macd_trend_up or histogram_improving)
+            
+        except Exception as e:
+            logger.error(f"❌ MACD 근접 계산 오류: {e}")
+            return False
 
     @staticmethod
     def is_ma5_below_ma20(df):
@@ -559,14 +797,14 @@ class TechnicalIndicators:
         try:
             analysis = {
                 'meets_absolute_conditions': False,
-                'ma5_below_ma20': False,
+                'price_below_ma20': False,  # 변경: ma5_below_ma20 → price_below_ma20
                 'foreign_selling_pressure': None,
                 'technical_signals': {},
                 'recommendation': 'HOLD'
             }
             
             # 1. 절대조건 체크
-            analysis['ma5_below_ma20'] = TechnicalIndicators.is_ma5_below_ma20(df)
+            analysis['ma5_below_ma20'] = TechnicalIndicators.is_price_below_ma20(df)
             
             # 2. 외국인 매도 압력 분석
             if foreign_netbuy_list:
@@ -579,7 +817,7 @@ class TechnicalIndicators:
                 foreign_ok = not analysis['foreign_selling_pressure']['is_selling_pressure']
             
             analysis['meets_absolute_conditions'] = (
-                analysis['ma5_below_ma20'] and foreign_ok
+                analysis['price_below_ma20'] and foreign_ok
             )
             
             # 4. 기술적 신호들
@@ -588,7 +826,7 @@ class TechnicalIndicators:
                     'golden_cross': TechnicalIndicators.is_golden_cross(df),
                     'bollinger_rebound': TechnicalIndicators.is_bollinger_rebound(df),
                     'volume_breakout': TechnicalIndicators.is_volume_breakout(df),
-                    'price_below_ma20': TechnicalIndicators.is_price_below_ma20(df)
+                    'ma5_crossing_above': TechnicalIndicators.is_ma5_crossing_above_ma20(df)  # 추가 가능
                 }
                 
                 # 5. 매수 추천 여부
@@ -635,8 +873,8 @@ class SignalAnalyzer:
             
             if not absolute_check['meets_absolute_conditions']:
                 reasons = []
-                if not absolute_check['ma5_below_ma20']:
-                    reasons.append("5일선이 20일선 위")
+                if not absolute_check['price_below_ma20']:  # 변경
+                    reasons.append("현재가가 20일선 위")  # 변경
                 if absolute_check['foreign_selling_pressure'] and absolute_check['foreign_selling_pressure']['is_selling_pressure']:
                     reasons.append(f"외국인매도압력({absolute_check['foreign_selling_pressure']['pressure_level']})")
                 
@@ -647,14 +885,17 @@ class SignalAnalyzer:
                 "골든크로스": self.ti.is_golden_cross(df),
                 "볼린저밴드복귀": self.ti.is_bollinger_rebound(df),
                 "거래량급증": self.ti.is_volume_breakout(df),
-                "현재가20일선아래": self.ti.is_price_below_ma20(df),
-                "5일선20일선아래": self.ti.is_ma5_below_ma20(df),  # 이미 통과 확인됨
+                "현재가20일선아래": self.ti.is_price_below_ma20(df),  # 이미 통과 확인됨
+                "5일선20일선돌파": self.ti.is_ma5_crossing_above_ma20(df),
+                "RSI매수신호": self.ti.is_rsi_buy_signal(df),  # 🆕 추가
+                "MACD골든크로스": self.ti.is_macd_golden_cross(df),  # 🆕 추가
+                "MACD돌파직전": self.ti.is_macd_near_golden_cross(df),  # 🆕 추가 (보너스)
                 "외국인매수추세": foreign_trend == "steady_buying"
             }
-
+    
             score = sum(signals.values())
             active_signals = [key for key, value in signals.items() if value]
-
+    
             return score, active_signals, True, "절대조건 모두 통과"
             
         except Exception as e:
@@ -675,42 +916,27 @@ class SignalAnalyzer:
             signals = {
                 "골든크로스": self.ti.is_golden_cross(df),
                 "볼린저밴드복귀": self.ti.is_bollinger_rebound(df),
-                "MACD상향돌파": False,  # 구현 필요시 추가
-                "RSI과매도회복": False,  # 구현 필요시 추가
-                "스토캐스틱회복": False,  # 구현 필요시 추가
                 "거래량급증": self.ti.is_volume_breakout(df),
                 "Williams%R회복": self.ti.is_williams_r_oversold_recovery(df),
                 "이중바닥": self.ti.is_double_bottom_pattern(df),
                 "일목균형표": self.ti.is_ichimoku_bullish_signal(df),
                 "컵앤핸들": self.ti.is_cup_handle_pattern(df),
-                "MACD골든크로스": False,  # 구현 필요시 추가
-                "외국인매수추세": False,  # 별도 처리 필요
-                "기관매수추세": False,  # 별도 처리 필요
                 "5일선20일선돌파": self.ti.is_ma5_crossing_above_ma20(df),
                 "현재가20일선아래": self.ti.is_price_below_ma20(df),
-                "5일선20일선아래": self.ti.is_ma5_below_ma20(df)
+                "RSI매수신호": self.ti.is_rsi_buy_signal(df),  # 🆕 추가
+                "MACD골든크로스": self.ti.is_macd_golden_cross(df),  # 🆕 추가
+                "MACD돌파직전": self.ti.is_macd_near_golden_cross(df),  # 🆕 추가
+                "외국인매수추세": False,  # 별도 처리 필요
+                "기관매수추세": False,  # 별도 처리 필요
             }
             
             return signals
             
         except Exception as e:
             logger.error(f"개별 신호 분석 오류: {e}")
-            # 빈 딕셔너리 반환 (모든 신호 False)
-            return {
-                "골든크로스": False,
-                "볼린저밴드복귀": False,
-                "MACD상향돌파": False,
-                "RSI과매도회복": False,
-                "스토캐스틱회복": False,
-                "거래량급증": False,
-                "Williams%R회복": False,
-                "이중바닥": False,
-                "일목균형표": False,
-                "컵앤핸들": False,
-                "MACD골든크로스": False,
-                "외국인매수추세": False,
-                "기관매수추세": False,
-                "5일선20일선돌파": False,
-                "현재가20일선아래": False,
-                "5일선20일선아래": False
-            }
+            return {key: False for key in [
+                "골든크로스", "볼린저밴드복귀", "거래량급증", "Williams%R회복",
+                "이중바닥", "일목균형표", "컵앤핸들", "5일선20일선돌파",
+                "현재가20일선아래", "RSI매수신호", "MACD골든크로스", "MACD돌파직전",
+                "외국인매수추세", "기관매수추세"
+            ]}

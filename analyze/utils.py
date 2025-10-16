@@ -294,7 +294,7 @@ def format_enhanced_multi_signal_message(grade, stocks):
     
     info = grade_info[grade]
     header = f"{info['icon']} {info['color']}[✅절대조건통과 {info['name']} ({info['desc']})]**\n"
-    header += f"🔒 *5일선<20일선 + 외국인매도세제외 적용*\n"
+    header += f"🔒 *현재가<20일선 + 외국인매도세제외 적용*\n"  # 변경
     
     stock_lines = []
     for i, stock in enumerate(sorted(stocks, key=lambda x: x.get('score', 0), reverse=True), 1):
@@ -336,7 +336,7 @@ def format_enhanced_signal_combination_message(combinations):
         return ""
     
     header = "🔍 **[✅절대조건통과 인기 신호 조합 패턴]**\n"
-    header += "🔒 *5일선<20일선 + 외국인매도세제외 적용*\n"
+    header += "🔒 *현재가<20일선 + 외국인매도세제외 적용*\n"  # 변경
     combo_lines = []
     
     # 조합별 종목 수로 정렬
@@ -368,9 +368,8 @@ def format_absolute_filter_summary(filter_passed_count, filter_failed_count, tot
     
     summary_lines.append("📊 **[절대조건 필터링 요약]**")
     summary_lines.append("🔒 **적용된 절대조건:**")
-    summary_lines.append("   ① 5일 이동평균선이 20일 이동평균선 아래 위치")
+    summary_lines.append("   ① 현재가가 20일 이동평균선 아래 위치")  # 변경
     summary_lines.append("   ② 외국인 매도 추세 종목 제외")
-    summary_lines.append("   ③ 최소 거래량 조건 (1,000주 이상)")
     summary_lines.append("")
     
     summary_lines.append("📈 **필터링 결과:**")
@@ -384,9 +383,8 @@ def format_absolute_filter_summary(filter_passed_count, filter_failed_count, tot
     
     summary_lines.append("")
     summary_lines.append("💡 **의미:**")
-    summary_lines.append("   • 모든 후보는 기술적 조정 구간에서 선별")
+    summary_lines.append("   • 모든 후보는 20일선 아래 조정 구간에서 선별")  # 변경
     summary_lines.append("   • 외국인 매도 압력이 없는 종목으로 한정")
-    summary_lines.append("   • 유동성이 확보된 종목만 포함")
     
     return "\n".join(summary_lines)
 

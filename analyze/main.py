@@ -33,7 +33,7 @@ class EnhancedStockAnalyzer:
         self.signal_combinations = {}
         
         # 필터링 설정
-        self.min_score_for_messaging = 4
+        self.min_score_for_messaging = 5
         self.min_score_for_detail = 3
         
 
@@ -42,20 +42,18 @@ class EnhancedStockAnalyzer:
         return {
             "골든크로스": [],
             "볼린저밴드복귀": [],
-            "MACD상향돌파": [],
-            "RSI과매도회복": [],
-            "스토캐스틱회복": [],
             "거래량급증": [],
             "Williams%R회복": [],
             "이중바닥": [],
             "일목균형표": [],
             "컵앤핸들": [],
-            "MACD골든크로스": [],
-            "외국인매수추세": [],
-            "기관매수추세": [],
             "5일선20일선돌파": [],
             "현재가20일선아래": [],
-            "5일선20일선아래": []  # 이것이 절대조건
+            "RSI매수신호": [],  # 🆕 추가
+            "MACD골든크로스": [],  # 🆕 추가
+            "MACD돌파직전": [],  # 🆕 추가
+            "외국인매수추세": [],
+            "기관매수추세": []
         }
     
     def _init_multi_signal_stocks(self):
@@ -217,7 +215,7 @@ class EnhancedStockAnalyzer:
     def run_analysis(self):
         """전체 분석 실행 (절대조건 필터링 적용)"""
         self.logger.info("📊 절대조건 필터링 적용 - 시가총액 상위 200개 종목 분석 시작...")
-        self.logger.info("🔒 절대조건: ①5일선이 20일선 아래 ②외국인 매도세 제외")
+        self.logger.info("🔒 절대조건: ①현재가가 20일선 아래 ②외국인 매도세 제외")  # 변경
         
         # 종목 리스트 조회
         stock_list = self.data_fetcher.get_top_200_stocks()
@@ -228,25 +226,27 @@ class EnhancedStockAnalyzer:
         # 진행상황 추적
         progress = ProgressTracker(len(stock_list))
         
-        # 절대조건 통과 종목 카운트
-        filter_passed_count = 0
-        filter_failed_count = 0
-        
         # 각 종목 분석
         for name, code in stock_list.items():
             success = self.analyze_stock(name, code)
-            progress.update(success)
             
-            # 절대조건 통과 여부 확인 (백테스트 후보에 추가되었는지로 판단)
-            if any(candidate['code'] == code for candidate in self.backtest_candidates):
-                filter_passed_count += 1
-            else:
-                filter_failed_count += 1
+            # 절대조건 통과 여부 확인 (multi_signal_stocks에 추가되었는지로 판단)
+            filter_passed = any(
+                stock['code'] == code 
+                for grade_stocks in self.multi_signal_stocks.values() 
+                for stock in grade_stocks
+            )
             
+            progress.update(success, filter_passed)
             time.sleep(0.5)
         
-        # 결과 처리
-        self._process_results(progress, filter_passed_count, filter_failed_count)
+        # 결과 처리 - ProgressTracker의 카운트 사용
+        summary = progress.get_summary()
+        self._process_results(
+            progress, 
+            summary['filter_passed_count'],  # ProgressTracker에서 가져옴
+            summary['filter_failed_count']    # ProgressTracker에서 가져옴
+        )
         return True
 
     def _process_results(self, progress, filter_passed_count, filter_failed_count):
@@ -288,7 +288,7 @@ class EnhancedStockAnalyzer:
                         len(self.multi_signal_stocks["single_internal"]))
         
         summary_msg = f"📈 **[절대조건 필터링 적용 매수신호 요약]**\n"
-        summary_msg += f"🔒 **절대조건**: 5일선<20일선 + 외국인매도세제외\n\n"
+        summary_msg += f"🔒 **절대조건**: 현재가<20일선 + 외국인매도세제외\n\n"  # 변경
         
         summary_msg += f"🚀 초강력 신호: {len(self.multi_signal_stocks['ultra_strong'])}개\n"
         summary_msg += f"🔥 강력 신호: {len(self.multi_signal_stocks['strong'])}개\n"
@@ -320,7 +320,7 @@ class EnhancedStockAnalyzer:
             self.logger.info(f"📈 절대조건 통과율: {pass_rate:.1f}%")
         
         self.logger.info("🔒 적용된 절대조건:")
-        self.logger.info("   ① 5일선이 20일선 아래에 위치")
+        self.logger.info("   ① 현재가가 20일선 아래에 위치")  # 변경
         self.logger.info("   ② 외국인 매도 추세 제외")
 
     def _send_filtered_multi_signal_results(self):
@@ -349,12 +349,20 @@ class EnhancedStockAnalyzer:
     def _send_filtered_detailed_signals(self):
         """절대조건 통과 개별 신호만 상세 전송"""
         icons = {
-            "골든크로스": "🟡", "볼린저밴드복귀": "🔵", "MACD상향돌파": "🟢",
-            "RSI과매도회복": "🟠", "스토캐스틱회복": "🟣", "거래량급증": "🔴",
-            "Williams%R회복": "🟤", "이중바닥": "⚫", "일목균형표": "🔘", 
-            "컵앤핸들": "🎯", "MACD골든크로스": "⚡", "외국인매수추세": "🌍", 
-            "기관매수추세": "🏛️", "5일선20일선돌파": "📈", "현재가20일선아래": "📉", 
-            "5일선20일선아래": "🔻"
+            "골든크로스": "🟡", 
+            "볼린저밴드복귀": "🔵", 
+            "거래량급증": "🔴",
+            "Williams%R회복": "🟤", 
+            "이중바닥": "⚫", 
+            "일목균형표": "🔘", 
+            "컵앤핸들": "🎯", 
+            "5일선20일선돌파": "📈", 
+            "현재가20일선아래": "📉",
+            "RSI매수신호": "🟢",  # 🆕 추가
+            "MACD골든크로스": "⚡",  # 🆕 추가
+            "MACD돌파직전": "🔆",  # 🆕 추가
+            "외국인매수추세": "🌍", 
+            "기관매수추세": "🏛️"
         }
         
         for signal_type, signal_list in self.signal_lists.items():
@@ -379,7 +387,6 @@ def main():
         # 강화된 분석기 생성 및 실행
         analyzer = EnhancedStockAnalyzer()
         analyzer.logger.info("🚀 절대조건 필터링 주식 분석 시작")
-        analyzer.logger.info("🔒 절대조건: ①5일선<20일선 ②외국인매도세제외")
         
         success = analyzer.run_analysis()
         
