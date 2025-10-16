@@ -36,13 +36,6 @@ class EnhancedStockAnalyzer:
         self.min_score_for_messaging = 4
         self.min_score_for_detail = 3
         
-        # 절대조건 설정
-        self.absolute_filters = {
-            "require_ma5_below_ma20": True,      # 5일선이 20일선 아래 필수
-            "exclude_foreign_selling": True,     # 외국인 매도세 제외
-            "min_volume_threshold": 1000,        # 최소 거래량 (거래량 부족 종목 제외)
-            "max_decline_from_high": 0.7         # 최고가 대비 30% 이상 하락한 종목만 (선택사항)
-        }
 
     def _init_signal_lists(self):
         """개별 신호별 종목 리스트 초기화"""
@@ -74,59 +67,6 @@ class EnhancedStockAnalyzer:
             "weak_internal": [],
             "single_internal": []
         }
-
-    def check_absolute_conditions(self, name, code, df, foreign_trend, foreign_netbuy_list):
-        """
-        절대조건 체크 함수
-        
-        Returns:
-            tuple: (통과여부, 제외사유)
-        """
-        try:
-            # 1. 5일선이 20일선 아래에 있는지 확인 (절대조건)
-            if self.absolute_filters["require_ma5_below_ma20"]:
-                from technical_indicators import TechnicalIndicators
-                ti = TechnicalIndicators()
-                
-                if not ti.is_ma5_below_ma20(df):
-                    return False, "5일선이 20일선 위에 있음"
-            
-            # 2. 외국인 매도세 제외 (절대조건)
-            if self.absolute_filters["exclude_foreign_selling"]:
-                if foreign_trend in ["distributing"]:  # 명확한 매도 추세
-                    return False, "외국인 매도 추세"
-                
-                # 최근 3일 중 2일 이상 순매도인 경우도 제외
-                if len(foreign_netbuy_list) >= 3:
-                    recent_3days = foreign_netbuy_list[:3]
-                    selling_days = sum(1 for x in recent_3days if x < 0)
-                    if selling_days >= 2:
-                        return False, "외국인 최근 매도세"
-            
-            # 3. 최소 거래량 조건 (선택사항)
-            if self.absolute_filters["min_volume_threshold"]:
-                current_volume = df.iloc[-1]["acml_vol"] if "acml_vol" in df.columns else 0
-                if current_volume < self.absolute_filters["min_volume_threshold"]:
-                    return False, f"거래량 부족 ({current_volume:,}주)"
-            
-            # 4. 최고가 대비 하락률 조건 (선택사항)
-            if self.absolute_filters.get("max_decline_from_high"):
-                if len(df) >= 60:  # 충분한 데이터가 있을 때만
-                    current_price = df.iloc[-1]["stck_clpr"]
-                    high_price = df["stck_clpr"].rolling(60).max().iloc[-1]
-                    
-                    if high_price > 0:
-                        decline_ratio = (high_price - current_price) / high_price
-                        max_decline = self.absolute_filters["max_decline_from_high"]
-                        
-                        if decline_ratio < max_decline:
-                            return False, f"하락폭 부족 ({decline_ratio:.1%})"
-            
-            return True, "모든 절대조건 통과"
-            
-        except Exception as e:
-            self.logger.error(f"절대조건 체크 오류 ({name}): {e}")
-            return False, f"조건 체크 오류: {e}"
 
     def analyze_stock(self, name, code):
         """개별 종목 분석 (절대조건 필터링 적용)"""
@@ -242,20 +182,20 @@ class EnhancedStockAnalyzer:
     def _record_individual_signals(self, signals, name, code, foreign_trend, score):
         """개별 신호 기록 (점수별 필터링 적용)"""
         if score >= self.min_score_for_messaging:
-            stock_info = f"- {name} ({code}) - {score}점 ✅"  # 절대조건 통과 표시
+            stock_info = f"- {name} ({code}) - {score}점 ✅"
             
             for signal_name, is_active in signals.items():
                 if is_active and signal_name in self.signal_lists:
                     self.signal_lists[signal_name].append(stock_info)
             
-            # 외국인/기관 추세 신호
             if foreign_trend == "steady_buying":
                 self.signal_lists["외국인매수추세"].append(stock_info)
         
-        # 내부 로깅
+        # 내부 로깅 - INFO 레벨로 변경하여 파일에 기록되도록 수정
         if score >= self.min_score_for_detail:
             active_signal_names = [name for name, is_active in signals.items() if is_active]
-            self.logger.debug(f"📊 {name}({code}) {score}점 ✅: {', '.join(active_signal_names)}")
+            # DEBUG → INFO로 변경
+            self.logger.info(f"📊 {name}({code}) {score}점 ✅: {', '.join(active_signal_names)}")
 
     def _classify_multi_signal_stock_filtered(self, stock_info):
         """다중신호 등급별 분류 (절대조건 통과 종목만)"""
@@ -382,7 +322,6 @@ class EnhancedStockAnalyzer:
         self.logger.info("🔒 적용된 절대조건:")
         self.logger.info("   ① 5일선이 20일선 아래에 위치")
         self.logger.info("   ② 외국인 매도 추세 제외")
-        self.logger.info("   ③ 최소 거래량 조건")
 
     def _send_filtered_multi_signal_results(self):
         """절대조건 통과 다중신호 종목만 메신저 전송"""
