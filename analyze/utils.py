@@ -294,7 +294,7 @@ def format_enhanced_multi_signal_message(grade, stocks):
     
     info = grade_info[grade]
     header = f"{info['icon']} {info['color']}[✅절대조건통과 {info['name']} ({info['desc']})]**\n"
-    header += f"🔒 *현재가<20일선 + 외국인매도세제외 적용*\n"  # 변경
+    header += "🔒 *현재가<20일선 + 거래량≥1000주 + 외국인매도세제외*\n"  # 🆕 수정
     
     stock_lines = []
     for i, stock in enumerate(sorted(stocks, key=lambda x: x.get('score', 0), reverse=True), 1):
@@ -369,7 +369,8 @@ def format_absolute_filter_summary(filter_passed_count, filter_failed_count, tot
     summary_lines.append("📊 **[절대조건 필터링 요약]**")
     summary_lines.append("🔒 **적용된 절대조건:**")
     summary_lines.append("   ① 현재가가 20일 이동평균선 아래 위치")  # 변경
-    summary_lines.append("   ② 외국인 매도 추세 종목 제외")
+    summary_lines.append("   ② 거래량 1000주 이상")  # 🆕 추가
+    summary_lines.append("   ③ 외국인 매도 추세 종목 제외")
     summary_lines.append("")
     
     summary_lines.append("📈 **필터링 결과:**")

@@ -20,6 +20,47 @@ logger = logging.getLogger(__name__)
 class TechnicalIndicators:
 
     @staticmethod
+    def is_volume_sufficient(df, min_volume=1000):
+        """
+        최근 거래량이 최소 기준 이상인지 확인 (절대조건용)
+        
+        Args:
+            df: 주가 데이터프레임
+            min_volume: 최소 거래량 (기본 1000주)
+        
+        Returns:
+            bool: 거래량 충분 여부
+        """
+        try:
+            if df is None or df.empty or len(df) < 1:
+                return False
+            
+            # 거래량 컬럼 통일 처리
+            volume_col = None
+            if 'acml_vol' in df.columns:
+                volume_col = 'acml_vol'
+            elif 'cntg_vol' in df.columns:
+                volume_col = 'cntg_vol'
+            else:
+                return False
+            
+            # 최신 거래량
+            current_volume = df.iloc[-1][volume_col]
+            
+            # NaN 체크
+            if pd.isna(current_volume):
+                return False
+            
+            # 거래량 검증
+            is_sufficient = current_volume >= min_volume
+            
+            return is_sufficient
+            
+        except Exception as e:
+            logger.error(f"❌ 거래량 확인 오류: {e}")
+            return False
+
+    @staticmethod
     def is_rsi_buy_signal(df, period=14, oversold_threshold=30, recovery_threshold=50):
         """
         RSI 매수 신호 감지
@@ -798,6 +839,7 @@ class TechnicalIndicators:
             analysis = {
                 'meets_absolute_conditions': False,
                 'price_below_ma20': False,  # 변경: ma5_below_ma20 → price_below_ma20
+                'volume_sufficient': False,  # 🆕 추가
                 'foreign_selling_pressure': None,
                 'technical_signals': {},
                 'recommendation': 'HOLD'
@@ -805,6 +847,7 @@ class TechnicalIndicators:
             
             # 1. 절대조건 체크
             analysis['ma5_below_ma20'] = TechnicalIndicators.is_price_below_ma20(df)
+            analysis['volume_sufficient'] = TechnicalIndicators.is_volume_sufficient(df, min_volume=1000)  # 🆕 추가
             
             # 2. 외국인 매도 압력 분석
             if foreign_netbuy_list:
@@ -817,7 +860,9 @@ class TechnicalIndicators:
                 foreign_ok = not analysis['foreign_selling_pressure']['is_selling_pressure']
             
             analysis['meets_absolute_conditions'] = (
-                analysis['price_below_ma20'] and foreign_ok
+                analysis['price_below_ma20']  and 
+                analysis['volume_sufficient'] and  # 🆕 추가
+                foreign_ok
             )
             
             # 4. 기술적 신호들
@@ -875,6 +920,8 @@ class SignalAnalyzer:
                 reasons = []
                 if not absolute_check['price_below_ma20']:  # 변경
                     reasons.append("현재가가 20일선 위")  # 변경
+                if not absolute_check.get('volume_sufficient', True):  # 🆕 추가
+                    reasons.append("거래량 1000주 미만")
                 if absolute_check['foreign_selling_pressure'] and absolute_check['foreign_selling_pressure']['is_selling_pressure']:
                     reasons.append(f"외국인매도압력({absolute_check['foreign_selling_pressure']['pressure_level']})")
                 

@@ -1,1 +1,14 @@
-{}
+{
+  "91256": {
+    "order_no": "91256",
+    "symbol": "062040",
+    "stock_name": "산일전기",
+    "side": "SELL",
+    "quantity": 1,
+    "limit_price": 126500,
+    "strategy": "aggressive_limit",
+    "order_time": "2025-10-16T13:35:46.383762",
+    "check_count": 0,
+    "last_check": null
+  }
+}

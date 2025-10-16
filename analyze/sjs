@@ -1,0 +1,40 @@
+    @staticmethod
+    def is_volume_sufficient(df, min_volume=1000):
+        """
+        최근 거래량이 최소 기준 이상인지 확인 (절대조건용)
+        
+        Args:
+            df: 주가 데이터프레임
+            min_volume: 최소 거래량 (기본 1000주)
+        
+        Returns:
+            bool: 거래량 충분 여부
+        """
+        try:
+            if df is None or df.empty or len(df) < 1:
+                return False
+            
+            # 거래량 컬럼 통일 처리
+            volume_col = None
+            if 'acml_vol' in df.columns:
+                volume_col = 'acml_vol'
+            elif 'cntg_vol' in df.columns:
+                volume_col = 'cntg_vol'
+            else:
+                return False
+            
+            # 최신 거래량
+            current_volume = df.iloc[-1][volume_col]
+            
+            # NaN 체크
+            if pd.isna(current_volume):
+                return False
+            
+            # 거래량 검증
+            is_sufficient = current_volume >= min_volume
+            
+            return is_sufficient
+            
+        except Exception as e:
+            logger.error(f"❌ 거래량 확인 오류: {e}")
+            return False
