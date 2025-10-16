@@ -212,12 +212,12 @@ class OrderManager:
                         raw_price = bid_price - max(spread // 4, self.get_min_price_unit(bid_price))
                     else:  # normal, patient
                         if spread <= self.get_min_price_unit(current_price) * 5:
-                            # 스프레드가 작으면 매수호가
-                            raw_price = bid_price
+                            # 🔥 수정: bid_price → ask_price
+                            raw_price = ask_price
                         else:
-                            # 스프레드가 크면 현재가와 매수호가의 중간
-                            raw_price = (current_price + bid_price) / 2
-            
+                            # 🔥 수정: 현재가와 매도호가의 중간
+                            raw_price = (current_price + ask_price) / 2
+
             limit_price = self.adjust_to_price_unit(raw_price)
             limit_price = max(limit_price, 1)
             
