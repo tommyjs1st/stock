@@ -12,8 +12,7 @@ import pandas as pd
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 
-def setup_logger(log_dir="logs", log_filename="enhanced_buying_stocks.log", when="midnight", backup_count=7):
-    """강화된 로깅 설정"""
+def setup_logger(log_dir="logs", log_filename="buying_stocks.log", when="midnight", backup_count=7):
     os.makedirs(log_dir, exist_ok=True)
     log_path = os.path.join(log_dir, log_filename)
 

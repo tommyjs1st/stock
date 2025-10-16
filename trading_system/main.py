@@ -950,7 +950,6 @@ class AutoTrader:
         
         daily_trades = 0
         last_daily_summary = datetime.now().date()
-        last_position_update = datetime.now()
         
         try:
             while True:
@@ -973,27 +972,22 @@ class AutoTrader:
 
                 market_info = self.get_market_status_info(current_time)
                 
-                self.logger.info(f"🕐 {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
                 self.logger.info(f"📊 시장: {market_info['status']} - {market_info['message']}")
                 
                 if market_info['is_trading_time']:
                     cycle_start_trades = self.trade_count
                     
                     try:
-                        if current_time - last_position_update > timedelta(minutes=10):
-                            self.update_all_positions()
-                            last_position_update = current_time
-                        
+                        # 🆕 매도 분석 전에 포지션 업데이트 실행
+                        self.logger.info("🔄 포지션 업데이트 중...")
+                        self.update_all_positions()
+
                         if (current_time.hour % 2 == 0 and 
                             0 <= current_time.minute <= 5 and 
                             self.check_symbol_list_update()):
                             self.logger.info("🔄 종목 리스트 업데이트 시작")
                             self.reload_symbols_from_discovery()
                         
-                        # 🆕 매도 분석 전에 포지션 업데이트 실행
-                        self.logger.info("🔄 포지션 업데이트 중...")
-                        self.update_all_positions()
-
                         # 개선된 매도 로직 먼저 실행
                         self.logger.info("💼 개선된 손절/익절 시스템 실행...")
                         self.logger.info(f"📊 현재 보유 종목: {len(self.all_positions)}개")
