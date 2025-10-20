@@ -61,6 +61,56 @@ class TechnicalIndicators:
             return False
 
     @staticmethod
+    def is_price_above_bollinger_lower(df, period=20, num_std=2):
+        """
+        현재가가 볼린저밴드 하단선 위에 있는지 확인 (절대조건용)
+        - 볼린저밴드 하단을 이탈한 과도한 하락 종목 제외
+        """
+        try:
+            if df is None or df.empty or len(df) < period + 1:
+                return False
+        
+            # 컬럼명 통일 처리
+            price_col = None
+            if 'stck_clpr' in df.columns:
+                price_col = 'stck_clpr'
+            elif 'stck_prpr' in df.columns:
+                price_col = 'stck_prpr'
+            else:
+                return False
+            
+            df = df.copy()
+            
+            # 볼린저밴드 계산
+            df["ma20"] = df[price_col].rolling(window=period).mean()
+            df["stddev"] = df[price_col].rolling(window=period).std()
+            df["lower_band"] = df["ma20"] - num_std * df["stddev"]
+            
+            # 최신 데이터
+            current = df.iloc[-1]
+            
+            # NaN 값 체크
+            if pd.isna(current["lower_band"]):
+                return False
+            
+            current_price = current[price_col]
+            lower_band = current["lower_band"]
+            
+            # 현재가가 볼린저밴드 하단선 위에 있는지 확인
+            above_lower_band = current_price >= lower_band
+            
+            # 디버깅 로그
+            if not above_lower_band:
+                distance_ratio = (lower_band - current_price) / lower_band * 100
+                logger.debug(f"볼린저밴드 하단 이탈: 현재가 {current_price:,}원, 하단선 {lower_band:.0f}원 (이탈률 {distance_ratio:.1f}%)")
+            
+            return above_lower_band
+            
+        except Exception as e:
+            logger.error(f"❌ 볼린저밴드 확인 오류: {e}")
+            return False
+
+    @staticmethod
     def is_rsi_buy_signal(df, period=14, oversold_threshold=30, recovery_threshold=50):
         """
         RSI 매수 신호 감지
@@ -920,10 +970,12 @@ class SignalAnalyzer:
                 reasons = []
                 if not absolute_check['price_below_ma20']:  # 변경
                     reasons.append("현재가가 20일선 위")  # 변경
-                if not absolute_check.get('volume_sufficient', True):  # 🆕 추가
+                if not absolute_check.get('volume_sufficient', True):
                     reasons.append("거래량 1000주 미만")
                 if absolute_check['foreign_selling_pressure'] and absolute_check['foreign_selling_pressure']['is_selling_pressure']:
                     reasons.append(f"외국인매도압력({absolute_check['foreign_selling_pressure']['pressure_level']})")
+                if not absolute_check.get('above_bollinger_lower', True):
+                    reasons.append("볼린저밴드 하단 이탈")
                 
                 return 0, [], False, " + ".join(reasons)
             
@@ -932,11 +984,12 @@ class SignalAnalyzer:
                 "골든크로스": self.ti.is_golden_cross(df),
                 "볼린저밴드복귀": self.ti.is_bollinger_rebound(df),
                 "거래량급증": self.ti.is_volume_breakout(df),
-                "현재가20일선아래": self.ti.is_price_below_ma20(df),  # 이미 통과 확인됨
+                "현재가20일선아래": self.ti.is_price_below_ma20(df),
                 "5일선20일선돌파": self.ti.is_ma5_crossing_above_ma20(df),
-                "RSI매수신호": self.ti.is_rsi_buy_signal(df),  # 🆕 추가
-                "MACD골든크로스": self.ti.is_macd_golden_cross(df),  # 🆕 추가
-                "MACD돌파직전": self.ti.is_macd_near_golden_cross(df),  # 🆕 추가 (보너스)
+                "RSI매수신호": self.ti.is_rsi_buy_signal(df),
+                "MACD골든크로스": self.ti.is_macd_golden_cross(df),
+                "MACD돌파직전": self.ti.is_macd_near_golden_cross(df),
+                "볼린저밴드내위치": self.ti.is_price_above_bollinger_lower(df),
                 "외국인매수추세": foreign_trend == "steady_buying"
             }
     
@@ -970,9 +1023,10 @@ class SignalAnalyzer:
                 "컵앤핸들": self.ti.is_cup_handle_pattern(df),
                 "5일선20일선돌파": self.ti.is_ma5_crossing_above_ma20(df),
                 "현재가20일선아래": self.ti.is_price_below_ma20(df),
-                "RSI매수신호": self.ti.is_rsi_buy_signal(df),  # 🆕 추가
-                "MACD골든크로스": self.ti.is_macd_golden_cross(df),  # 🆕 추가
-                "MACD돌파직전": self.ti.is_macd_near_golden_cross(df),  # 🆕 추가
+                "RSI매수신호": self.ti.is_rsi_buy_signal(df),
+                "MACD골든크로스": self.ti.is_macd_golden_cross(df),
+                "볼린저밴드내위치": self.ti.is_price_above_bollinger_lower(df),
+                "MACD돌파직전": self.ti.is_macd_near_golden_cross(df), 
                 "외국인매수추세": False,  # 별도 처리 필요
                 "기관매수추세": False,  # 별도 처리 필요
             }
@@ -985,5 +1039,5 @@ class SignalAnalyzer:
                 "골든크로스", "볼린저밴드복귀", "거래량급증", "Williams%R회복",
                 "이중바닥", "일목균형표", "컵앤핸들", "5일선20일선돌파",
                 "현재가20일선아래", "RSI매수신호", "MACD골든크로스", "MACD돌파직전",
-                "외국인매수추세", "기관매수추세"
+                "볼린저밴드내위치", "외국인매수추세", "기관매수추세"
             ]}

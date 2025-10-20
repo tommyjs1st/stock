@@ -215,7 +215,7 @@ class EnhancedStockAnalyzer:
     def run_analysis(self):
         """전체 분석 실행 (절대조건 필터링 적용)"""
         self.logger.info("📊 절대조건 필터링 적용 - 시가총액 상위 200개 종목 분석 시작...")
-        self.logger.info("🔒 절대조건: ①현재가<20일선 ②거래량≥1000주 ③외국인매도세제외")  # 🆕 수정
+        self.logger.info("🔒 절대조건: ①현재가<20일선 ②거래량≥1000주 ③볼린저밴드내위치 ④외국인매도세제외")
         
         # 종목 리스트 조회
         stock_list = self.data_fetcher.get_top_200_stocks()
@@ -288,7 +288,7 @@ class EnhancedStockAnalyzer:
                         len(self.multi_signal_stocks["single_internal"]))
         
         summary_msg = f"📈 **[절대조건 필터링 적용 매수신호 요약]**\n"
-        summary_msg += f"🔒 **절대조건**: 현재가<20일선 + 거래량≥1000주 + 외국인매도세제외\n\n"  # 🆕 수정
+        summary_msg += f"🔒 **절대조건**: 현재가<20일선 + 거래량≥1000주 + 볼린저밴드내 + 외국인매도세제외\n\n"
         
         summary_msg += f"🚀 초강력 신호: {len(self.multi_signal_stocks['ultra_strong'])}개\n"
         summary_msg += f"🔥 강력 신호: {len(self.multi_signal_stocks['strong'])}개\n"
@@ -320,8 +320,9 @@ class EnhancedStockAnalyzer:
             self.logger.info(f"📈 절대조건 통과율: {pass_rate:.1f}%")
         
         self.logger.info("🔒 적용된 절대조건:")
-        self.logger.info("   ① 현재가가 20일선 아래에 위치")  # 변경
-        self.logger.info("   ② 거래량 1000주 이상")  # 🆕 추가
+        self.logger.info("   ① 현재가가 20일선 아래에 위치") 
+        self.logger.info("   ② 거래량 1000주 이상") 
+        self.logger.info("   ③ 볼린저밴드 하단선 위에 위치") 
         self.logger.info("   ② 외국인 매도 추세 제외")
 
     def _send_filtered_multi_signal_results(self):
