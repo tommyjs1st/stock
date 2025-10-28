@@ -53,6 +53,7 @@ class TechnicalIndicators:
             
             # 거래량 검증
             is_sufficient = current_volume >= min_volume
+            logger.debug(f"{current_volume}, {is_sufficient}")
             
             return is_sufficient
             
@@ -435,6 +436,7 @@ class TechnicalIndicators:
             
             # 매도 압력 수준 판단
             selling_ratio = selling_days / len(recent_data)
+            logger.debug(f"{selling_ratio}, {avg_daily_volume}")
             
             analysis_result = {
                 'selling_days': selling_days,
@@ -620,7 +622,7 @@ class TechnicalIndicators:
             return False
 
     @staticmethod
-    def is_price_below_ma20(df):
+    def is_price_below_ma20(df, name):
         """현재 주가가 20일 이동평균선 아래에 있는지 확인"""
         try:
             if df is None or df.empty or len(df) < 21:
@@ -657,6 +659,8 @@ class TechnicalIndicators:
             distance_ratio = (ma20_value - current_price) / ma20_value
             meaningful_distance = distance_ratio >= 0.01
             
+            logger.debug(f"{name}: {current_price}, {ma20_value}, {round(current_price/ma20_value*100,2)}% {distance_ratio}")
+            logger.debug(f"{below_ma20}: {meaningful_distance}")
             return below_ma20 and meaningful_distance
             
         except Exception as e:
@@ -878,7 +882,7 @@ class TechnicalIndicators:
             return False
 
     @staticmethod
-    def get_comprehensive_analysis(df, foreign_netbuy_list=None):
+    def get_comprehensive_analysis(df, foreign_netbuy_list=None,name=""):
         """
         종합 기술적 분석 (절대조건 포함)
         
@@ -896,7 +900,7 @@ class TechnicalIndicators:
             }
             
             # 1. 절대조건 체크
-            analysis['ma5_below_ma20'] = TechnicalIndicators.is_price_below_ma20(df)
+            analysis['price_below_ma20'] = TechnicalIndicators.is_price_below_ma20(df,name)
             analysis['volume_sufficient'] = TechnicalIndicators.is_volume_sufficient(df, min_volume=1000)  # 🆕 추가
             
             # 2. 외국인 매도 압력 분석
@@ -964,7 +968,7 @@ class SignalAnalyzer:
                 return 0, [], False, "데이터 없음"
             
             # 1. 절대조건 체크 먼저 수행
-            absolute_check = self.ti.get_comprehensive_analysis(df, foreign_netbuy_list)
+            absolute_check = self.ti.get_comprehensive_analysis(df, foreign_netbuy_list,name)
             
             if not absolute_check['meets_absolute_conditions']:
                 reasons = []
@@ -984,7 +988,7 @@ class SignalAnalyzer:
                 "골든크로스": self.ti.is_golden_cross(df),
                 "볼린저밴드복귀": self.ti.is_bollinger_rebound(df),
                 "거래량급증": self.ti.is_volume_breakout(df),
-                "현재가20일선아래": self.ti.is_price_below_ma20(df),
+                "현재가20일선아래": self.ti.is_price_below_ma20(df,name),
                 "5일선20일선돌파": self.ti.is_ma5_crossing_above_ma20(df),
                 "RSI매수신호": self.ti.is_rsi_buy_signal(df),
                 "MACD골든크로스": self.ti.is_macd_golden_cross(df),
@@ -1022,7 +1026,7 @@ class SignalAnalyzer:
                 "일목균형표": self.ti.is_ichimoku_bullish_signal(df),
                 "컵앤핸들": self.ti.is_cup_handle_pattern(df),
                 "5일선20일선돌파": self.ti.is_ma5_crossing_above_ma20(df),
-                "현재가20일선아래": self.ti.is_price_below_ma20(df),
+                "현재가20일선아래": self.ti.is_price_below_ma20(df,""),
                 "RSI매수신호": self.ti.is_rsi_buy_signal(df),
                 "MACD골든크로스": self.ti.is_macd_golden_cross(df),
                 "볼린저밴드내위치": self.ti.is_price_above_bollinger_lower(df),

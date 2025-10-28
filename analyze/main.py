@@ -33,7 +33,7 @@ class EnhancedStockAnalyzer:
         self.signal_combinations = {}
         
         # 필터링 설정
-        self.min_score_for_messaging = 5
+        self.min_score_for_messaging = 4
         self.min_score_for_detail = 3
         
 
@@ -103,7 +103,7 @@ class EnhancedStockAnalyzer:
                     return True  # 분석은 성공했으나 조건 미통과
                     
                 # 절대조건 통과시 로깅
-                print(f"✅ {name}({code}) 절대조건 통과: {filter_reason}")
+                #self.logger.info(f"✅ {name}({code}) 절대조건 통과: {filter_reason}")
                 
             except Exception as score_error:
                 self.logger.error(f"❌ {name}({code}) 점수 계산 실패: {score_error}")
@@ -238,7 +238,7 @@ class EnhancedStockAnalyzer:
             )
             
             progress.update(success, filter_passed)
-            time.sleep(0.5)
+            time.sleep(0.1)
         
         # 결과 처리 - ProgressTracker의 카운트 사용
         summary = progress.get_summary()

@@ -89,7 +89,7 @@ class KISAPIClient:
         
         for attempt in range(max_retries):
             try:
-                time.sleep(0.1)  # API 호출 제한 고려
+                time.sleep(0.15)  # API 호출 제한 고려
                 response = requests.get(url, headers=headers, params=params, timeout=10)
                 response.raise_for_status()
                 return response.json()

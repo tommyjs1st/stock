@@ -1,0 +1,80 @@
+[
+  {
+    "code": "024720",
+    "name": "콜마홀딩스",
+    "score": 4,
+    "signals": [
+      "현재가20일선아래",
+      "RSI매수신호",
+      "MACD돌파직전",
+      "볼린저밴드내위치"
+    ],
+    "price": 11440,
+    "volume": 89785,
+    "foreign_netbuy": [
+      14692,
+      40853,
+      -47807,
+      18760
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2025-10-28 10:51:59",
+    "saved_at": "2025-10-28T10:53:49.759486",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "005720",
+    "name": "넥센",
+    "score": 4,
+    "signals": [
+      "현재가20일선아래",
+      "RSI매수신호",
+      "MACD돌파직전",
+      "볼린저밴드내위치"
+    ],
+    "price": 5440,
+    "volume": 30184,
+    "foreign_netbuy": [
+      13349,
+      -10146,
+      3670,
+      -414
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2025-10-28 10:52:50",
+    "saved_at": "2025-10-28T10:53:49.759490",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "009470",
+    "name": "삼화전기",
+    "score": 4,
+    "signals": [
+      "거래량급증",
+      "현재가20일선아래",
+      "RSI매수신호",
+      "볼린저밴드내위치"
+    ],
+    "price": 37000,
+    "volume": 383907,
+    "foreign_netbuy": [
+      28983,
+      7462,
+      7112,
+      56202
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2025-10-28 10:53:11",
+    "saved_at": "2025-10-28T10:53:49.759493",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  }
+]

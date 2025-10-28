@@ -196,10 +196,10 @@ class DataFetcher(KISAPIClient):
     def get_top_200_stocks(self):
         """네이버에서 시가총액 상위 200개 종목 조회"""
         stocks = {}
-        exclude_keywords = ["KODEX", "TIGER", "PLUS", "ACE", "TIMEFOLIO", "ETF", "ETN", "리츠", "우", "스팩","채권", "국채"]
+        exclude_keywords = ["KODEX", "TIGER", "PLUS", "ACE", "TIMEFOLIO", "ETF", "ETN", "리츠", "우", "스팩","채권", "국채", "레버리지"]
         
         try:
-            for page in range(1, 11):  # 10페이지까지 조회
+            for page in range(1, 16):  # 10페이지까지 조회
                 url = f"https://finance.naver.com/sise/sise_market_sum.nhn?sosok=0&page={page}"
                 headers = {"User-Agent": "Mozilla/5.0"}
                 res = requests.get(url, headers=headers, timeout=10)
