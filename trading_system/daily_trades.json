@@ -248,5 +248,85 @@
     "price": 126500,
     "amount": 126500,
     "reason": "기술적익절"
+  },
+  {
+    "timestamp": "2025-10-28T12:56:03.171940",
+    "symbol": "064400",
+    "stock_name": "LG씨엔에스",
+    "action": "BUY",
+    "quantity": 3,
+    "price": 63000,
+    "amount": 189000,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2025-10-28T13:26:17.191164",
+    "symbol": "377740",
+    "stock_name": "바이오노트",
+    "action": "BUY",
+    "quantity": 27,
+    "price": 5560,
+    "amount": 150120,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2025-10-28T13:26:20.650871",
+    "symbol": "024720",
+    "stock_name": "콜마홀딩스",
+    "action": "BUY",
+    "quantity": 6,
+    "price": 11350,
+    "amount": 68100,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2025-10-28T13:56:33.074391",
+    "symbol": "024720",
+    "stock_name": "콜마홀딩스",
+    "action": "BUY",
+    "quantity": 3,
+    "price": 11400,
+    "amount": 34200,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2025-10-28T14:56:59.292647",
+    "symbol": "024720",
+    "stock_name": "콜마홀딩스",
+    "action": "BUY",
+    "quantity": 2,
+    "price": 11400,
+    "amount": 22800,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2025-10-28T15:27:11.089418",
+    "symbol": "024720",
+    "stock_name": "콜마홀딩스",
+    "action": "BUY",
+    "quantity": 1,
+    "price": 11350,
+    "amount": 11350,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2025-10-29T10:45:05.547980",
+    "symbol": "241560",
+    "stock_name": "두산밥캣",
+    "action": "SELL",
+    "quantity": 4,
+    "price": 64900,
+    "amount": 259600,
+    "reason": "기술적익절"
+  },
+  {
+    "timestamp": "2025-10-29T10:45:05.551184",
+    "symbol": "241560",
+    "stock_name": "두산밥캣",
+    "action": "SELL",
+    "quantity": 4,
+    "price": 64900,
+    "amount": 259600,
+    "reason": "기술적익절"
   }
 ]

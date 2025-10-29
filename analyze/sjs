@@ -1,40 +1,49 @@
-    @staticmethod
-    def is_volume_sufficient(df, min_volume=1000):
+    def calculate_buy_signal_score(self, df, name, code, foreign_trend=None, foreign_netbuy_list=None):
         """
-        최근 거래량이 최소 기준 이상인지 확인 (절대조건용)
-        
-        Args:
-            df: 주가 데이터프레임
-            min_volume: 최소 거래량 (기본 1000주)
+        절대조건 필터링이 적용된 종합 매수 신호 점수 계산
         
         Returns:
-            bool: 거래량 충분 여부
+            tuple: (점수, 활성신호리스트, 절대조건통과여부, 제외사유)
         """
         try:
-            if df is None or df.empty or len(df) < 1:
-                return False
+            if df is None or df.empty:
+                return 0, [], False, "데이터 없음"
             
-            # 거래량 컬럼 통일 처리
-            volume_col = None
-            if 'acml_vol' in df.columns:
-                volume_col = 'acml_vol'
-            elif 'cntg_vol' in df.columns:
-                volume_col = 'cntg_vol'
-            else:
-                return False
+            # 1. 절대조건 체크 먼저 수행
+            absolute_check = self.ti.get_comprehensive_analysis(df, foreign_netbuy_list, name)
             
-            # 최신 거래량
-            current_volume = df.iloc[-1][volume_col]
+            if not absolute_check['meets_absolute_conditions']:
+                reasons = []
+                if not absolute_check['price_below_ma20']:
+                    reasons.append("현재가가 20일선 위")
+                if not absolute_check.get('volume_sufficient', True):
+                    reasons.append("거래량 1000주 미만")
+                if absolute_check['foreign_buying_trend'] and not absolute_check['foreign_buying_trend']['has_buying_trend']:
+                    reasons.append(f"외국인매수추세없음({absolute_check['foreign_buying_trend']['trend_level']})")
+                if not absolute_check.get('above_bollinger_lower', True):
+                    reasons.append("볼린저밴드 하단 이탈")
+                
+                return 0, [], False, " + ".join(reasons)
             
-            # NaN 체크
-            if pd.isna(current_volume):
-                return False
-            
-            # 거래량 검증
-            is_sufficient = current_volume >= min_volume
-            
-            return is_sufficient
+            # 2. 절대조건 통과시에만 상세 신호 분석
+            signals = {
+                "골든크로스": self.ti.is_golden_cross(df),
+                "볼린저밴드복귀": self.ti.is_bollinger_rebound(df),
+                "거래량급증": self.ti.is_volume_breakout(df),
+                "현재가20일선아래": self.ti.is_price_below_ma20(df, name),
+                "5일선20일선돌파": self.ti.is_ma5_crossing_above_ma20(df),
+                "RSI매수신호": self.ti.is_rsi_buy_signal(df),
+                "MACD골든크로스": self.ti.is_macd_golden_cross(df),
+                "MACD돌파직전": self.ti.is_macd_near_golden_cross(df),
+                "볼린저밴드내위치": self.ti.is_price_above_bollinger_lower(df),
+                "외국인매수추세": foreign_trend == "steady_buying"
+            }
+    
+            score = sum(signals.values())
+            active_signals = [key for key, value in signals.items() if value]
+    
+            return score, active_signals, True, "절대조건 모두 통과"
             
         except Exception as e:
-            logger.error(f"❌ 거래량 확인 오류: {e}")
-            return False
+            logger.error(f"❌ {name}: 매수 신호 점수 계산 오류: {e}")
+            return 0, [], False, f"계산 오류: {e}"

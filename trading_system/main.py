@@ -1201,7 +1201,7 @@ def main():
             daily_analysis = trader.hybrid_strategy.analyze_daily_strategy(test_symbol)
             print(f"테스트 결과: {daily_analysis}")
         else:
-            interval = 15 if debug_mode else 60
+            interval = 15 if debug_mode else 30
             print(f"🚀 개선된 하이브리드 모드 시작 (체크 간격: {interval}분)")
             trader.run_hybrid_strategy(check_interval_minutes=interval)
 

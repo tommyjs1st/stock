@@ -404,86 +404,6 @@ class TechnicalIndicators:
             return False
 
     @staticmethod
-    def analyze_foreign_selling_pressure(foreign_netbuy_list, days=5):
-        """
-        외국인 매도 압력 분석 (개선된 버전)
-        
-        Args:
-            foreign_netbuy_list: 외국인 순매수 리스트 (최신순)
-            days: 분석할 일수
-            
-        Returns:
-            dict: 매도 압력 분석 결과
-        """
-        try:
-            if not foreign_netbuy_list or len(foreign_netbuy_list) < 3:
-                return {
-                    'is_selling_pressure': False,
-                    'pressure_level': 'unknown',
-                    'reason': '데이터 부족'
-                }
-            
-            # 최근 N일 데이터 분석
-            recent_data = foreign_netbuy_list[:days]
-            
-            # 매도일 계산
-            selling_days = sum(1 for x in recent_data if x < 0)
-            total_volume = sum(abs(x) for x in recent_data)
-            net_volume = sum(recent_data)
-            
-            # 평균 일일 거래량
-            avg_daily_volume = total_volume / len(recent_data) if recent_data else 0
-            
-            # 매도 압력 수준 판단
-            selling_ratio = selling_days / len(recent_data)
-            logger.debug(f"{selling_ratio}, {avg_daily_volume}")
-            
-            analysis_result = {
-                'selling_days': selling_days,
-                'total_days': len(recent_data),
-                'selling_ratio': selling_ratio,
-                'net_volume': net_volume,
-                'avg_daily_volume': avg_daily_volume,
-                'recent_data': recent_data
-            }
-            
-            # 매도 압력 수준 분류
-            if selling_ratio >= 0.8 and avg_daily_volume > 10000:  # 80% 이상 매도일 + 대량거래
-                analysis_result.update({
-                    'is_selling_pressure': True,
-                    'pressure_level': 'very_high',
-                    'reason': f'{days}일중 {selling_days}일 매도 + 대량거래'
-                })
-            elif selling_ratio >= 0.6 and net_volume < -50000:  # 60% 이상 매도일 + 순매도 5만주 이상
-                analysis_result.update({
-                    'is_selling_pressure': True,
-                    'pressure_level': 'high',
-                    'reason': f'{days}일중 {selling_days}일 매도 + 순매도 {abs(net_volume):,}주'
-                })
-            elif selling_ratio >= 0.6 or (net_volume < -20000 and avg_daily_volume > 5000):
-                analysis_result.update({
-                    'is_selling_pressure': True,
-                    'pressure_level': 'moderate',
-                    'reason': f'매도비율 {selling_ratio:.1%} 또는 순매도 {abs(net_volume):,}주'
-                })
-            else:
-                analysis_result.update({
-                    'is_selling_pressure': False,
-                    'pressure_level': 'low',
-                    'reason': '매도 압력 낮음'
-                })
-            
-            return analysis_result
-            
-        except Exception as e:
-            logger.error(f"외국인 매도 압력 분석 오류: {e}")
-            return {
-                'is_selling_pressure': False,
-                'pressure_level': 'error',
-                'reason': f'분석 오류: {e}'
-            }
-
-    @staticmethod
     def is_golden_cross(df):
         """골든크로스 신호 감지 (5일선이 20일선을 상향 돌파)"""
         try:
@@ -882,7 +802,7 @@ class TechnicalIndicators:
             return False
 
     @staticmethod
-    def get_comprehensive_analysis(df, foreign_netbuy_list=None,name=""):
+    def get_comprehensive_analysis(df, foreign_netbuy_list=None, name=""):
         """
         종합 기술적 분석 (절대조건 포함)
         
@@ -892,31 +812,31 @@ class TechnicalIndicators:
         try:
             analysis = {
                 'meets_absolute_conditions': False,
-                'price_below_ma20': False,  # 변경: ma5_below_ma20 → price_below_ma20
-                'volume_sufficient': False,  # 🆕 추가
-                'foreign_selling_pressure': None,
+                'price_below_ma20': False,
+                'volume_sufficient': False,
+                'foreign_buying_trend': None,  # 변경: selling_pressure -> buying_trend
                 'technical_signals': {},
                 'recommendation': 'HOLD'
             }
             
             # 1. 절대조건 체크
-            analysis['price_below_ma20'] = TechnicalIndicators.is_price_below_ma20(df,name)
-            analysis['volume_sufficient'] = TechnicalIndicators.is_volume_sufficient(df, min_volume=1000)  # 🆕 추가
+            analysis['price_below_ma20'] = TechnicalIndicators.is_price_below_ma20(df, name)
+            analysis['volume_sufficient'] = TechnicalIndicators.is_volume_sufficient(df, min_volume=1000)
             
-            # 2. 외국인 매도 압력 분석
+            # 2. 외국인 매수 추세 분석 (변경)
             if foreign_netbuy_list:
-                foreign_analysis = TechnicalIndicators.analyze_foreign_selling_pressure(foreign_netbuy_list)
-                analysis['foreign_selling_pressure'] = foreign_analysis
+                foreign_analysis = TechnicalIndicators.analyze_foreign_buying_trend(foreign_netbuy_list)
+                analysis['foreign_buying_trend'] = foreign_analysis
             
-            # 3. 절대조건 종합 판단
-            foreign_ok = True
-            if analysis['foreign_selling_pressure']:
-                foreign_ok = not analysis['foreign_selling_pressure']['is_selling_pressure']
+            # 3. 절대조건 종합 판단 (변경: 외국인 매수 추세가 있어야 통과)
+            foreign_ok = False
+            if analysis['foreign_buying_trend']:
+                foreign_ok = analysis['foreign_buying_trend']['has_buying_trend']
             
             analysis['meets_absolute_conditions'] = (
-                analysis['price_below_ma20']  and 
-                analysis['volume_sufficient'] and  # 🆕 추가
-                foreign_ok
+                analysis['price_below_ma20'] and 
+                analysis['volume_sufficient'] and
+                foreign_ok  # 변경: 외국인 매수 추세 필수
             )
             
             # 4. 기술적 신호들
@@ -925,7 +845,7 @@ class TechnicalIndicators:
                     'golden_cross': TechnicalIndicators.is_golden_cross(df),
                     'bollinger_rebound': TechnicalIndicators.is_bollinger_rebound(df),
                     'volume_breakout': TechnicalIndicators.is_volume_breakout(df),
-                    'ma5_crossing_above': TechnicalIndicators.is_ma5_crossing_above_ma20(df)  # 추가 가능
+                    'ma5_crossing_above': TechnicalIndicators.is_ma5_crossing_above_ma20(df)
                 }
                 
                 # 5. 매수 추천 여부
@@ -946,8 +866,79 @@ class TechnicalIndicators:
                 'error': str(e)
             }
 
-
-
+    @staticmethod
+    def analyze_foreign_buying_trend(foreign_netbuy_list, days=5):
+        """
+        외국인 매수 추세 분석 (절대조건용)
+        
+        Args:
+            foreign_netbuy_list: 외국인 순매수 리스트 (최신순)
+            days: 분석할 일수
+            
+        Returns:
+            dict: 매수 추세 분석 결과
+        """
+        try:
+            if not foreign_netbuy_list or len(foreign_netbuy_list) < 3:
+                return {
+                    'has_buying_trend': True,  # 데이터 없으면 통과 (보수적)
+                    'trend_level': 'unknown',
+                    'reason': '데이터 부족'
+                }
+            
+            # 최근 N일 데이터 분석
+            recent_data = foreign_netbuy_list[:days]
+            
+            # 매수일 계산
+            buying_days = sum(1 for x in recent_data if x > 0)
+            total_volume = sum(abs(x) for x in recent_data)
+            net_volume = sum(recent_data)
+            
+            # 평균 일일 거래량
+            avg_daily_volume = total_volume / len(recent_data) if recent_data else 0
+            
+            # 매수 비율
+            buying_ratio = buying_days / len(recent_data)
+            logger.debug(f"외국인 매수일: {buying_days}/{len(recent_data)}, 순매수: {net_volume:,}주")
+            
+            analysis_result = {
+                'buying_days': buying_days,
+                'total_days': len(recent_data),
+                'buying_ratio': buying_ratio,
+                'net_volume': net_volume,
+                'avg_daily_volume': avg_daily_volume,
+                'recent_data': recent_data
+            }
+            
+            # 매수 추세 수준 분류
+            if buying_ratio >= 0.6 and net_volume > 20000:  # 60% 이상 매수일 + 순매수 2만주 이상
+                analysis_result.update({
+                    'has_buying_trend': True,
+                    'trend_level': 'strong',
+                    'reason': f'{days}일중 {buying_days}일 매수 + 순매수 {net_volume:,}주'
+                })
+            elif buying_ratio >= 0.6 or net_volume > 10000:  # 60% 이상 매수일 또는 순매수 1만주 이상
+                analysis_result.update({
+                    'has_buying_trend': True,
+                    'trend_level': 'moderate',
+                    'reason': f'매수비율 {buying_ratio:.1%} 또는 순매수 {net_volume:,}주'
+                })
+            else:
+                analysis_result.update({
+                    'has_buying_trend': False,
+                    'trend_level': 'weak',
+                    'reason': f'매수 추세 약함 (매수일 {buying_days}/{days}일, 순매수 {net_volume:,}주)'
+                })
+            
+            return analysis_result
+            
+        except Exception as e:
+            logger.error(f"외국인 매수 추세 분석 오류: {e}")
+            return {
+                'has_buying_trend': False,
+                'trend_level': 'error',
+                'reason': f'분석 오류: {e}'
+            }
 
 class SignalAnalyzer:
     """강화된 매수 신호 종합 분석 클래스"""
@@ -968,16 +959,16 @@ class SignalAnalyzer:
                 return 0, [], False, "데이터 없음"
             
             # 1. 절대조건 체크 먼저 수행
-            absolute_check = self.ti.get_comprehensive_analysis(df, foreign_netbuy_list,name)
+            absolute_check = self.ti.get_comprehensive_analysis(df, foreign_netbuy_list, name)
             
             if not absolute_check['meets_absolute_conditions']:
                 reasons = []
-                if not absolute_check['price_below_ma20']:  # 변경
-                    reasons.append("현재가가 20일선 위")  # 변경
+                if not absolute_check['price_below_ma20']:
+                    reasons.append("현재가가 20일선 위")
                 if not absolute_check.get('volume_sufficient', True):
                     reasons.append("거래량 1000주 미만")
-                if absolute_check['foreign_selling_pressure'] and absolute_check['foreign_selling_pressure']['is_selling_pressure']:
-                    reasons.append(f"외국인매도압력({absolute_check['foreign_selling_pressure']['pressure_level']})")
+                if absolute_check['foreign_buying_trend'] and not absolute_check['foreign_buying_trend']['has_buying_trend']:
+                    reasons.append(f"외국인매수추세없음({absolute_check['foreign_buying_trend']['trend_level']})")
                 if not absolute_check.get('above_bollinger_lower', True):
                     reasons.append("볼린저밴드 하단 이탈")
                 
@@ -988,7 +979,7 @@ class SignalAnalyzer:
                 "골든크로스": self.ti.is_golden_cross(df),
                 "볼린저밴드복귀": self.ti.is_bollinger_rebound(df),
                 "거래량급증": self.ti.is_volume_breakout(df),
-                "현재가20일선아래": self.ti.is_price_below_ma20(df,name),
+                "현재가20일선아래": self.ti.is_price_below_ma20(df, name),
                 "5일선20일선돌파": self.ti.is_ma5_crossing_above_ma20(df),
                 "RSI매수신호": self.ti.is_rsi_buy_signal(df),
                 "MACD골든크로스": self.ti.is_macd_golden_cross(df),
@@ -1045,3 +1036,4 @@ class SignalAnalyzer:
                 "현재가20일선아래", "RSI매수신호", "MACD골든크로스", "MACD돌파직전",
                 "볼린저밴드내위치", "외국인매수추세", "기관매수추세"
             ]}
+

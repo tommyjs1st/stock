@@ -145,10 +145,8 @@ def save_enhanced_backtest_candidates(candidates, logger, include_filter_info=Tr
 
             # 기존 파일들 삭제
             files_to_delete = [
-                "enhanced_trading_list.json",
                 "trading_list.json",
-                "enhanced_trading_list.pkl",
-                "enhanced_trading_list_summary.txt"
+                "trading_list_summary.txt"
             ]
             
             deleted_files = []
@@ -191,18 +189,14 @@ def save_enhanced_backtest_candidates(candidates, logger, include_filter_info=Tr
                 'foreign_selling_excluded': True
             })
         
-        # 강화된 JSON 저장
-        success, error = safe_json_save(final_candidates, "enhanced_trading_list.json")
+        success, error = safe_json_save(final_candidates, "trading_list.json")
         
         if success:
-            logger.info(f"✅ enhanced_trading_list.json 저장 완료: {len(final_candidates)}개 종목 (절대조건 통과)")
-            
-            # 기존 파일명으로도 저장 (하위 호환성)
-            safe_json_save(final_candidates, "trading_list.json")
+            logger.info(f"✅ trading_list.json 저장 완료: {len(final_candidates)}개 종목 (절대조건 통과)")
             
             # 저장된 파일 정보 로깅
-            if os.path.exists("enhanced_trading_list.json"):
-                file_size = os.path.getsize("enhanced_trading_list.json")
+            if os.path.exists("trading_list.json"):
+                file_size = os.path.getsize("trading_list.json")
                 logger.info(f"📄 파일 크기: {file_size} bytes")
                 
                 # 간단 통계
@@ -211,23 +205,23 @@ def save_enhanced_backtest_candidates(candidates, logger, include_filter_info=Tr
                     max_score = max(c.get('score', 0) for c in final_candidates)
                     logger.info(f"📊 점수 통계: 평균 {avg_score:.1f}점, 최고 {max_score}점")
         else:
-            logger.error(f"❌ enhanced_trading_list.json 저장 실패: {error}")
+            logger.error(f"❌ trading_list.json 저장 실패: {error}")
             
             # 대안 저장 방법들
             try:
                 import pickle
-                with open("enhanced_trading_list.pkl", "wb") as f:
+                with open("trading_list.pkl", "wb") as f:
                     pickle.dump(final_candidates, f)
-                logger.info("✅ 대안으로 enhanced_trading_list.pkl에 저장 완료")
+                logger.info("✅ 대안으로 trading_list.pkl에 저장 완료")
             except Exception as pickle_error:
                 logger.error(f"❌ pickle 저장 실패: {pickle_error}")
             
             # 텍스트 파일로 요약 저장
             try:
-                with open("enhanced_trading_list_summary.txt", "w", encoding="utf-8") as f:
+                with open("trading_list_summary.txt", "w", encoding="utf-8") as f:
                     f.write("# 절대조건 필터링 적용 백테스트 후보 종목 리스트\n")
                     f.write(f"# 생성일시: {datetime.now()}\n")
-                    f.write(f"# 절대조건: 5일선<20일선 + 외국인매도세제외\n\n")
+                    f.write(f"# 절대조건: 5일선<20일선 + 외국인매수추세\n\n")
                     
                     for i, candidate in enumerate(final_candidates, 1):
                         signals = ", ".join(candidate.get('signals', []))
@@ -236,7 +230,7 @@ def save_enhanced_backtest_candidates(candidates, logger, include_filter_info=Tr
                         f.write(f"    신호: [{signals}]\n")
                         f.write(f"    필터: {candidate.get('filter_reason', '통과')}\n\n")
                         
-                logger.info("✅ 대안으로 enhanced_trading_list_summary.txt에 저장 완료")
+                logger.info("✅ 대안으로 trading_list_summary.txt에 저장 완료")
             except Exception as txt_error:
                 logger.error(f"❌ 텍스트 요약 저장 실패: {txt_error}")
                 
@@ -295,7 +289,7 @@ def format_enhanced_multi_signal_message(grade, stocks):
     
     info = grade_info[grade]
     header = f"{info['icon']} {info['color']}[✅절대조건통과 {info['name']} ({info['desc']})]**\n"
-    header += "🔒 *현재가<20일선 + 거래량≥1000주 + 볼린저밴드내 + 외국인매도세제외*\n"
+    header += "🔒 *현재가<20일선 + 거래량≥1000주 + 볼린저밴드내 + 외국인매수추세*\n"
     
     stock_lines = []
     for i, stock in enumerate(sorted(stocks, key=lambda x: x.get('score', 0), reverse=True), 1):
@@ -337,7 +331,7 @@ def format_enhanced_signal_combination_message(combinations):
         return ""
     
     header = "🔍 **[✅절대조건통과 인기 신호 조합 패턴]**\n"
-    header += "🔒 *현재가<20일선 + 외국인매도세제외 적용*\n"  # 변경
+    header += "🔒 *현재가<20일선 + 외국인매수추세 적용*\n"  # 변경
     combo_lines = []
     
     # 조합별 종목 수로 정렬
@@ -372,7 +366,7 @@ def format_absolute_filter_summary(filter_passed_count, filter_failed_count, tot
     summary_lines.append("   ① 현재가가 20일 이동평균선 아래 위치")  # 변경
     summary_lines.append("   ② 거래량 1000주 이상") 
     summary_lines.append("   ③ 볼린저밴드 하단선 위에 위치")
-    summary_lines.append("   ④ 외국인 매도 추세 종목 제외")
+    summary_lines.append("   ④ 외국인 매수추세")
     summary_lines.append("")
     
     summary_lines.append("📈 **필터링 결과:**")
@@ -387,7 +381,7 @@ def format_absolute_filter_summary(filter_passed_count, filter_failed_count, tot
     summary_lines.append("")
     summary_lines.append("💡 **의미:**")
     summary_lines.append("   • 모든 후보는 20일선 아래 조정 구간에서 선별")  # 변경
-    summary_lines.append("   • 외국인 매도 압력이 없는 종목으로 한정")
+    summary_lines.append("   • 외국인 매수추세 종목으로 한정")
     
     return "\n".join(summary_lines)
 
