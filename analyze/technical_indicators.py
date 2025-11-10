@@ -804,7 +804,7 @@ class TechnicalIndicators:
     @staticmethod
     def get_comprehensive_analysis(df, foreign_netbuy_list=None, name=""):
         """
-        종합 기술적 분석 (절대조건 포함)
+        종합 기술적 분석 (개선된 외국인 절대조건 포함)
         
         Returns:
             dict: 종합 분석 결과
@@ -814,32 +814,35 @@ class TechnicalIndicators:
                 'meets_absolute_conditions': False,
                 'price_below_ma20': False,
                 'volume_sufficient': False,
-                'foreign_buying_trend': None,  # 변경: selling_pressure -> buying_trend
+                'foreign_consecutive_buying': None,  # 🆕 변경
                 'technical_signals': {},
                 'recommendation': 'HOLD'
             }
             
             # 1. 절대조건 체크
+            from technical_indicators import TechnicalIndicators
             analysis['price_below_ma20'] = TechnicalIndicators.is_price_below_ma20(df, name)
             analysis['volume_sufficient'] = TechnicalIndicators.is_volume_sufficient(df, min_volume=1000)
+            analysis['above_bollinger_lower'] = TechnicalIndicators.is_price_above_bollinger_lower(df)
             
-            # 2. 외국인 매수 추세 분석 (변경)
+            # 2. 외국인 연속 매수 체크 (🆕 개선)
             if foreign_netbuy_list:
-                foreign_analysis = TechnicalIndicators.analyze_foreign_buying_trend(foreign_netbuy_list)
-                analysis['foreign_buying_trend'] = foreign_analysis
+                foreign_check = check_foreign_consecutive_buying(foreign_netbuy_list)
+                analysis['foreign_consecutive_buying'] = foreign_check
             
-            # 3. 절대조건 종합 판단 (변경: 외국인 매수 추세가 있어야 통과)
-            foreign_ok = False
-            if analysis['foreign_buying_trend']:
-                foreign_ok = analysis['foreign_buying_trend']['has_buying_trend']
+            # 3. 절대조건 종합 판단
+            foreign_ok = True
+            if analysis['foreign_consecutive_buying']:
+                foreign_ok = analysis['foreign_consecutive_buying']['meets_condition']
             
             analysis['meets_absolute_conditions'] = (
                 analysis['price_below_ma20'] and 
                 analysis['volume_sufficient'] and
-                foreign_ok  # 변경: 외국인 매수 추세 필수
+                analysis['above_bollinger_lower'] and
+                foreign_ok
             )
             
-            # 4. 기술적 신호들
+            # 4. 기술적 신호들 (절대조건 통과시에만)
             if analysis['meets_absolute_conditions']:
                 analysis['technical_signals'] = {
                     'golden_cross': TechnicalIndicators.is_golden_cross(df),
@@ -860,12 +863,12 @@ class TechnicalIndicators:
             return analysis
             
         except Exception as e:
-            logger.error(f"종합 기술적 분석 오류: {e}")
+            print(f"❌ 종합 기술적 분석 오류: {e}")
             return {
                 'meets_absolute_conditions': False,
                 'error': str(e)
             }
-
+    
     @staticmethod
     def analyze_foreign_buying_trend(foreign_netbuy_list, days=5):
         """
@@ -940,6 +943,89 @@ class TechnicalIndicators:
                 'reason': f'분석 오류: {e}'
             }
 
+    def check_foreign_consecutive_buying(foreign_netbuy_list):
+        """
+        외국인 최근 연속 매수 확인 (절대조건용)
+        - 최근 3일 연속 순매수 또는
+        - 최근 2일 연속 순매수
+        
+        Args:
+            foreign_netbuy_list: 외국인 순매수 리스트 (최신순, 즉 [오늘, 어제, 그제, ...])
+            
+        Returns:
+            dict: {
+                'meets_condition': bool - 절대조건 만족 여부,
+                'consecutive_days': int - 연속 매수 일수,
+                'reason': str - 판단 근거,
+                'volumes': list - 해당 기간 거래량
+            }
+        """
+        try:
+            if not foreign_netbuy_list or len(foreign_netbuy_list) < 2:
+                return {
+                    'meets_condition': False,
+                    'consecutive_days': 0,
+                    'reason': '데이터 부족 (최소 2일 필요)',
+                    'volumes': []
+                }
+            
+            # 최근 3일 데이터 확인 (리스트는 최신순: [오늘, 어제, 그제])
+            recent_3days = foreign_netbuy_list[:3] if len(foreign_netbuy_list) >= 3 else foreign_netbuy_list[:2]
+            
+            # 연속 매수일 카운트 (최신일부터 역순으로 체크)
+            consecutive_buying = 0
+            for volume in recent_3days:
+                if volume > 0:  # 순매수 (양수)
+                    consecutive_buying += 1
+                else:
+                    break  # 매도일이 나오면 중단
+            
+            print(f"🌍 외국인 최근 데이터: {recent_3days[:3]}, 연속매수일: {consecutive_buying}")
+            
+            # 절대조건 판단
+            if consecutive_buying >= 3:
+                total_buy_volume = sum(recent_3days[:consecutive_buying])
+                return {
+                    'meets_condition': True,
+                    'consecutive_days': consecutive_buying,
+                    'reason': f'최근 {consecutive_buying}일 연속 순매수 (총 {total_buy_volume:,}주)',
+                    'volumes': recent_3days[:consecutive_buying]
+                }
+            elif consecutive_buying >= 2:
+                total_buy_volume = sum(recent_3days[:consecutive_buying])
+                return {
+                    'meets_condition': True,
+                    'consecutive_days': consecutive_buying,
+                    'reason': f'최근 {consecutive_buying}일 연속 순매수 (총 {total_buy_volume:,}주)',
+                    'volumes': recent_3days[:consecutive_buying]
+                }
+            else:
+                # 연속 매수가 아닌 경우
+                if len(recent_3days) > 0 and recent_3days[0] <= 0:  # 오늘이 매도
+                    return {
+                        'meets_condition': False,
+                        'consecutive_days': 0,
+                        'reason': f'오늘 순매도 ({recent_3days[0]:,}주)',
+                        'volumes': recent_3days
+                    }
+                else:  # 오늘은 매수지만 어제가 매도
+                    return {
+                        'meets_condition': False,
+                        'consecutive_days': 1,
+                        'reason': f'연속성 없음 (오늘만 매수: {recent_3days[0]:,}주, 어제 매도: {recent_3days[1]:,}주)',
+                        'volumes': recent_3days
+                    }
+                    
+        except Exception as e:
+            print(f"❌ 외국인 연속 매수 확인 오류: {e}")
+            return {
+                'meets_condition': False,
+                'consecutive_days': 0,
+                'reason': f'분석 오류: {e}',
+                'volumes': []
+            }
+
+
 class SignalAnalyzer:
     """강화된 매수 신호 종합 분석 클래스"""
     
@@ -947,9 +1033,9 @@ class SignalAnalyzer:
         self.data_fetcher = data_fetcher
         self.ti = TechnicalIndicators()
     
-    def calculate_buy_signal_score(self, df, name, code, foreign_trend=None, foreign_netbuy_list=None):
+    def calculate_buy_signal_score(df, name, code, foreign_trend=None, foreign_netbuy_list=None):
         """
-        절대조건 필터링이 적용된 종합 매수 신호 점수 계산
+        절대조건 필터링이 적용된 종합 매수 신호 점수 계산 (개선된 외국인 조건)
         
         Returns:
             tuple: (점수, 활성신호리스트, 절대조건통과여부, 제외사유)
@@ -959,7 +1045,7 @@ class SignalAnalyzer:
                 return 0, [], False, "데이터 없음"
             
             # 1. 절대조건 체크 먼저 수행
-            absolute_check = self.ti.get_comprehensive_analysis(df, foreign_netbuy_list, name)
+            absolute_check = get_comprehensive_analysis(df, foreign_netbuy_list, name)
             
             if not absolute_check['meets_absolute_conditions']:
                 reasons = []
@@ -967,35 +1053,49 @@ class SignalAnalyzer:
                     reasons.append("현재가가 20일선 위")
                 if not absolute_check.get('volume_sufficient', True):
                     reasons.append("거래량 1000주 미만")
-                if absolute_check['foreign_buying_trend'] and not absolute_check['foreign_buying_trend']['has_buying_trend']:
-                    reasons.append(f"외국인매수추세없음({absolute_check['foreign_buying_trend']['trend_level']})")
                 if not absolute_check.get('above_bollinger_lower', True):
                     reasons.append("볼린저밴드 하단 이탈")
+                
+                # 외국인 조건 체크 (🆕 개선)
+                foreign_check = absolute_check.get('foreign_consecutive_buying')
+                if foreign_check and not foreign_check['meets_condition']:
+                    reasons.append(f"외국인({foreign_check['reason']})")
                 
                 return 0, [], False, " + ".join(reasons)
             
             # 2. 절대조건 통과시에만 상세 신호 분석
+            from technical_indicators import TechnicalIndicators
+            
+            # 외국인 연속 매수 정보 추출
+            foreign_check = absolute_check.get('foreign_consecutive_buying', {})
+            consecutive_days = foreign_check.get('consecutive_days', 0)
+            
             signals = {
-                "골든크로스": self.ti.is_golden_cross(df),
-                "볼린저밴드복귀": self.ti.is_bollinger_rebound(df),
-                "거래량급증": self.ti.is_volume_breakout(df),
-                "현재가20일선아래": self.ti.is_price_below_ma20(df, name),
-                "5일선20일선돌파": self.ti.is_ma5_crossing_above_ma20(df),
-                "RSI매수신호": self.ti.is_rsi_buy_signal(df),
-                "MACD골든크로스": self.ti.is_macd_golden_cross(df),
-                "MACD돌파직전": self.ti.is_macd_near_golden_cross(df),
-                "볼린저밴드내위치": self.ti.is_price_above_bollinger_lower(df),
-                "외국인매수추세": foreign_trend == "steady_buying"
+                "골든크로스": TechnicalIndicators.is_golden_cross(df),
+                "볼린저밴드복귀": TechnicalIndicators.is_bollinger_rebound(df),
+                "거래량급증": TechnicalIndicators.is_volume_breakout(df),
+                "현재가20일선아래": TechnicalIndicators.is_price_below_ma20(df, name),
+                "5일선20일선돌파": TechnicalIndicators.is_ma5_crossing_above_ma20(df),
+                "RSI매수신호": TechnicalIndicators.is_rsi_buy_signal(df),
+                "MACD골든크로스": TechnicalIndicators.is_macd_golden_cross(df),
+                "MACD돌파직전": TechnicalIndicators.is_macd_near_golden_cross(df),
+                "볼린저밴드내위치": TechnicalIndicators.is_price_above_bollinger_lower(df),
+                "외국인연속매수": consecutive_days >= 2  # 🆕 2일 이상 연속 매수
             }
-    
+            
+            # 연속 매수 일수에 따른 추가 점수 (선택사항)
+            if consecutive_days >= 3:
+                signals["외국인강력매수"] = True  # 보너스 신호
+            
             score = sum(signals.values())
             active_signals = [key for key, value in signals.items() if value]
     
             return score, active_signals, True, "절대조건 모두 통과"
             
         except Exception as e:
-            logger.error(f"❌ {name}: 매수 신호 점수 계산 오류: {e}")
+            print(f"❌ {name}: 매수 신호 점수 계산 오류: {e}")
             return 0, [], False, f"계산 오류: {e}"
+    
 
     def get_individual_signals(self, df):
         """

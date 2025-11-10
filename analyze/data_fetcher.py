@@ -199,7 +199,7 @@ class DataFetcher(KISAPIClient):
         exclude_keywords = ["KODEX", "TIGER", "PLUS", "ACE", "TIMEFOLIO", "ETF", "ETN", "리츠", "우", "스팩","채권", "국채", "레버리지"]
         
         try:
-            for page in range(1, 16):  # 10페이지까지 조회
+            for page in range(1, 8):  # 10페이지까지 조회
                 url = f"https://finance.naver.com/sise/sise_market_sum.nhn?sosok=0&page={page}"
                 headers = {"User-Agent": "Mozilla/5.0"}
                 res = requests.get(url, headers=headers, timeout=10)

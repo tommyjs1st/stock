@@ -328,5 +328,35 @@
     "price": 64900,
     "amount": 259600,
     "reason": "기술적익절"
+  },
+  {
+    "timestamp": "2025-10-30T09:40:05.532763",
+    "symbol": "034230",
+    "stock_name": "파라다이스",
+    "action": "BUY",
+    "quantity": 9,
+    "price": 18600,
+    "amount": 167400,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2025-10-30T09:40:08.853877",
+    "symbol": "003530",
+    "stock_name": "한화투자증권",
+    "action": "BUY",
+    "quantity": 17,
+    "price": 5540,
+    "amount": 94180,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2025-10-30T11:10:35.491905",
+    "symbol": "034230",
+    "stock_name": "파라다이스",
+    "action": "BUY",
+    "quantity": 2,
+    "price": 18550,
+    "amount": 37100,
+    "reason": "hybrid_strategy"
   }
 ]

@@ -1,33 +1,111 @@
 [
   {
-    "code": "272210",
-    "name": "한화시스템",
+    "code": "259960",
+    "name": "크래프톤",
     "score": 4,
     "signals": [
+      "볼린저밴드복귀",
       "현재가20일선아래",
       "RSI매수신호",
-      "MACD돌파직전",
       "볼린저밴드내위치"
     ],
-    "price": 55300,
-    "volume": 535730,
+    "price": 265500,
+    "volume": 61098,
     "foreign_netbuy": [
-      -145368,
-      304909,
-      -57097,
-      42111
+      2829,
+      47429,
+      5069,
+      6739
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-10-29 13:31:00",
-    "saved_at": "2025-10-29T13:37:56.435712",
+    "analysis_date": "2025-11-10 13:30:46",
+    "saved_at": "2025-11-10T13:33:56.950926",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "377740",
-    "name": "바이오노트",
+    "code": "064400",
+    "name": "LG씨엔에스",
+    "score": 4,
+    "signals": [
+      "볼린저밴드복귀",
+      "현재가20일선아래",
+      "RSI매수신호",
+      "볼린저밴드내위치"
+    ],
+    "price": 55950,
+    "volume": 818150,
+    "foreign_netbuy": [
+      -528774,
+      -836099,
+      4764850,
+      -341806
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2025-11-10 13:31:18",
+    "saved_at": "2025-11-10T13:33:56.950938",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "004020",
+    "name": "현대제철",
+    "score": 4,
+    "signals": [
+      "볼린저밴드복귀",
+      "현재가20일선아래",
+      "RSI매수신호",
+      "볼린저밴드내위치"
+    ],
+    "price": 31950,
+    "volume": 265988,
+    "foreign_netbuy": [
+      -2082,
+      139712,
+      -20997,
+      130781
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2025-11-10 13:31:34",
+    "saved_at": "2025-11-10T13:33:56.950942",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "004000",
+    "name": "롯데정밀화학",
+    "score": 4,
+    "signals": [
+      "볼린저밴드복귀",
+      "현재가20일선아래",
+      "RSI매수신호",
+      "볼린저밴드내위치"
+    ],
+    "price": 44900,
+    "volume": 58787,
+    "foreign_netbuy": [
+      -31723,
+      31327,
+      7404,
+      39882
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2025-11-10 13:33:11",
+    "saved_at": "2025-11-10T13:33:56.950945",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "082640",
+    "name": "동양생명",
     "score": 4,
     "signals": [
       "현재가20일선아래",
@@ -35,18 +113,44 @@
       "MACD돌파직전",
       "볼린저밴드내위치"
     ],
-    "price": 5510,
-    "volume": 80192,
+    "price": 6680,
+    "volume": 91802,
     "foreign_netbuy": [
-      11060,
-      41138,
-      -10319,
-      -4698
+      -49219,
+      16937,
+      22455,
+      70684
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-10-29 13:34:51",
-    "saved_at": "2025-10-29T13:37:56.435734",
+    "analysis_date": "2025-11-10 13:33:22",
+    "saved_at": "2025-11-10T13:33:56.950948",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "100840",
+    "name": "SNT에너지",
+    "score": 4,
+    "signals": [
+      "볼린저밴드복귀",
+      "현재가20일선아래",
+      "RSI매수신호",
+      "볼린저밴드내위치"
+    ],
+    "price": 42750,
+    "volume": 139168,
+    "foreign_netbuy": [
+      19956,
+      -9033,
+      73790,
+      -10043
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2025-11-10 13:33:38",
+    "saved_at": "2025-11-10T13:33:56.950951",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true

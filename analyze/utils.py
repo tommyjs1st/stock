@@ -289,7 +289,8 @@ def format_enhanced_multi_signal_message(grade, stocks):
     
     info = grade_info[grade]
     header = f"{info['icon']} {info['color']}[✅절대조건통과 {info['name']} ({info['desc']})]**\n"
-    header += "🔒 *현재가<20일선 + 거래량≥1000주 + 볼린저밴드내 + 외국인매수추세*\n"
+    header += "🔒 *현재가<20일선 + 거래량≥1000주 + 볼린저밴드내 + 외국인2~3일연속매수*\n"  # 🆕 변경
+
     
     stock_lines = []
     for i, stock in enumerate(sorted(stocks, key=lambda x: x.get('score', 0), reverse=True), 1):
