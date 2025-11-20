@@ -61,7 +61,7 @@ class AutoTrader:
             base_url=kis_config['base_url'],
             account_no=kis_config['account_no']
         )
-        
+
         # 거래 설정
         trading_config = self.config_manager.get_trading_config()
         self.max_symbols = trading_config.get('max_symbols', 5)
@@ -1213,6 +1213,6 @@ def main():
 
 if __name__ == "__main__":
     from market_schedule_checker import check_market_schedule_and_exit
-    check_market_schedule_and_exit()
+    #check_market_schedule_and_exit()
 
     main()

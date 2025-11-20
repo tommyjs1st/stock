@@ -319,8 +319,8 @@ def format_enhanced_multi_signal_message(grade, stocks):
         
         # 필터 통과 정보
         filter_reason = stock.get('filter_reason', '절대조건통과')
-        if filter_reason != '절대조건통과':
-            line += f"     ✅ 사유: {filter_reason}\n"
+        #if filter_reason != '절대조건통과':
+        #    line += f"     ✅ 사유: {filter_reason}\n"
         
         stock_lines.append(line)
     

@@ -1,6 +1,6 @@
 """
 강화된 주식 분석 메인 클래스
-절대조건: 5일선이 20일선 아래 + 외국인 매도세 제외
+절대조건: 5일선이 20일선 아래 + 외국인 연속매수
 """
 import os
 import time
@@ -33,7 +33,7 @@ class EnhancedStockAnalyzer:
         self.signal_combinations = {}
         
         # 필터링 설정
-        self.min_score_for_messaging = 4
+        self.min_score_for_messaging = 3
         self.min_score_for_detail = 3
         
 
@@ -48,7 +48,6 @@ class EnhancedStockAnalyzer:
             "일목균형표": [],
             "컵앤핸들": [],
             "5일선20일선돌파": [],
-            "현재가20일선아래": [],
             "RSI매수신호": [],  # 🆕 추가
             "MACD골든크로스": [],  # 🆕 추가
             "MACD돌파직전": [],  # 🆕 추가
@@ -149,14 +148,14 @@ class EnhancedStockAnalyzer:
             }
             self._classify_multi_signal_stock_filtered(stock_info)
             
-            # 신호 조합 패턴 분석 (4점 이상)
+            # 신호 조합 패턴 분석 (3점 이상)
             if score >= self.min_score_for_messaging and active_signals:
                 combo_key = " + ".join(sorted(active_signals))
                 if combo_key not in self.signal_combinations:
                     self.signal_combinations[combo_key] = []
                 self.signal_combinations[combo_key].append(f"{name}({code})")
             
-            # 백테스트 후보 (4점 이상, 절대조건 통과)
+            # 백테스트 후보 (3점 이상, 절대조건 통과)
             if score >= self.min_score_for_messaging:
                 self.backtest_candidates.append({
                     "code": code,
@@ -238,7 +237,7 @@ class EnhancedStockAnalyzer:
             )
             
             progress.update(success, filter_passed)
-            time.sleep(0.1)
+            time.sleep(0.2)
         
         # 결과 처리 - ProgressTracker의 카운트 사용
         summary = progress.get_summary()
@@ -288,7 +287,7 @@ class EnhancedStockAnalyzer:
                         len(self.multi_signal_stocks["single_internal"]))
         
         summary_msg = f"📈 **[절대조건 필터링 적용 매수신호 요약]**\n"
-        summary_msg += f"🔒 **절대조건**: 현재가<20일선 + 거래량≥1000주 + 볼린저밴드내 + 외국인매도세제외\n\n"
+        summary_msg += f"🔒 **절대조건**: 현재가<20일선 + 거래량≥1000주 + 볼린저밴드내 + 외국인 연속매수\n\n"
         
         summary_msg += f"🚀 초강력 신호: {len(self.multi_signal_stocks['ultra_strong'])}개\n"
         summary_msg += f"🔥 강력 신호: {len(self.multi_signal_stocks['strong'])}개\n"
@@ -359,7 +358,6 @@ class EnhancedStockAnalyzer:
             "일목균형표": "🔘", 
             "컵앤핸들": "🎯", 
             "5일선20일선돌파": "📈", 
-            "현재가20일선아래": "📉",
             "RSI매수신호": "🟢",  # 🆕 추가
             "MACD골든크로스": "⚡",  # 🆕 추가
             "MACD돌파직전": "🔆",  # 🆕 추가
