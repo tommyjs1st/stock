@@ -75,19 +75,19 @@ class SectorMomentumAnalyzer:
                 "authorization": f"Bearer {self._get_access_token()}",
                 "appkey": self.app_key,
                 "appsecret": self.app_secret,
-                "tr_id": "FHKUP03500100"  # 업종 기간별 시세 조회
+                "tr_id": "FHKST03010100"  # 업종 기간별 시세 조회
             }
             
             end_date = datetime.now().strftime("%Y%m%d")
             start_date = (datetime.now() - timedelta(days=days + 10)).strftime("%Y%m%d")
             
             params = {
-                "FID_COND_MRKT_DIV_CODE": "U",  # 업종
-                "FID_INPUT_ISCD": sector_code,
-                "FID_INPUT_DATE_1": start_date,
-                "FID_INPUT_DATE_2": end_date,
-                "FID_PERIOD_DIV_CODE": "D",  # 일봉
-                "FID_ORG_ADJ_PRC": "0"
+                "fid_cond_mrkt_div_code": "U",  # ✅ 소문자로 변경
+                "fid_input_iscd": sector_code,
+                "fid_input_date_1": start_date,
+                "fid_input_date_2": end_date,
+                "fid_period_div_code": "D",
+                "fid_org_adj_prc": "0"
             }
             
             time.sleep(0.2)  # API 호출 제한
@@ -95,6 +95,11 @@ class SectorMomentumAnalyzer:
             response.raise_for_status()
             
             data = response.json()
+
+            # ✅ 응답 검증 추가
+            if data.get('rt_cd') != '0':
+                logger.warning(f"업종 {sector_code} API 응답 오류: {data.get('msg1')}")
+                return pd.DataFrame()
             
             if data.get('output2'):
                 df = pd.DataFrame(data['output2'])

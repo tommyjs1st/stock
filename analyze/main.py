@@ -117,6 +117,10 @@ class EnhancedStockAnalyzer:
                     current_price = df.iloc[-1]["stck_prpr"]
                 else:
                     current_price = 0
+            
+                if current_price > 300000:
+                    self.logger.info(f"✅ {name}({code}) 구매가격이 너무 높음: {current_price/10000:.1f}만원")
+                    return False
                     
                 if 'acml_vol' in df.columns:
                     volume = df.iloc[-1]["acml_vol"]
@@ -129,6 +133,7 @@ class EnhancedStockAnalyzer:
                 self.logger.warning(f"⚠️ {name}({code}) 가격정보 추출 실패: {price_error}")
                 current_price = 0
                 volume = 0
+
             
             # 점수별 처리
             if score >= self.min_score_for_detail:

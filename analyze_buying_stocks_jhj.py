@@ -243,7 +243,7 @@ def get_period_price_data(access_token, app_key, app_secret, stock_code, days=60
     return df
 
 
-def get_daily_price_data_with_realtime(access_token, app_key, app_secret, stock_code, days=60, max_retries=3):
+def get_daily_price_data_with_realtime(access_token, app_key, app_secret, stock_code, days=90, max_retries=3):
     """
     개선된 일봉 데이터 + 실시간 현재가 결합
     기간별시세 API를 사용해 지정한 일수만큼 데이터 확보

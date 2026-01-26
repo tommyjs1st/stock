@@ -1,176 +1,26 @@
 [
   {
-    "code": "077970",
-    "name": "STX엔진",
-    "score": 4,
-    "signals": [
-      "RSI매수신호",
-      "MACD돌파직전",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 31350,
-    "volume": 187142,
-    "foreign_netbuy": [
-      108672,
-      123511,
-      59625,
-      224766
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-11-20 13:33:26",
-    "saved_at": "2025-11-20T13:34:29.010512",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "373220",
-    "name": "LG에너지솔루션",
+    "code": "000100",
+    "name": "유한양행",
     "score": 3,
     "signals": [
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 443500,
-    "volume": 104277,
+    "price": 109000,
+    "volume": 463189,
     "foreign_netbuy": [
-      44873,
-      64541,
-      29386,
-      12172
+      97789,
+      62708,
+      115147,
+      -168934,
+      99039
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-11-20 13:30:11",
-    "saved_at": "2025-11-20T13:34:29.010534",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "443060",
-    "name": "HD현대마린솔루션",
-    "score": 3,
-    "signals": [
-      "RSI매수신호",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 212000,
-    "volume": 65104,
-    "foreign_netbuy": [
-      320,
-      33017,
-      3535,
-      276681
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-11-20 13:31:05",
-    "saved_at": "2025-11-20T13:34:29.010541",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "377300",
-    "name": "카카오페이",
-    "score": 3,
-    "signals": [
-      "RSI매수신호",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 50300,
-    "volume": 147266,
-    "foreign_netbuy": [
-      53974,
-      181562,
-      28565,
-      -4439
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-11-20 13:31:20",
-    "saved_at": "2025-11-20T13:34:29.010548",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "006260",
-    "name": "LS",
-    "score": 3,
-    "signals": [
-      "RSI매수신호",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 196700,
-    "volume": 125418,
-    "foreign_netbuy": [
-      13841,
-      11272,
-      23784,
-      9167
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-11-20 13:31:26",
-    "saved_at": "2025-11-20T13:34:29.010554",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "251270",
-    "name": "넷마블",
-    "score": 3,
-    "signals": [
-      "RSI매수신호",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 52500,
-    "volume": 129099,
-    "foreign_netbuy": [
-      13374,
-      32901,
-      18200,
-      -2223
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-11-20 13:31:42",
-    "saved_at": "2025-11-20T13:34:29.010560",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "042670",
-    "name": "HD현대인프라코어",
-    "score": 3,
-    "signals": [
-      "RSI매수신호",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 14220,
-    "volume": 739484,
-    "foreign_netbuy": [
-      122477,
-      40643,
-      5116,
-      115999
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2025-11-20 13:32:15",
-    "saved_at": "2025-11-20T13:34:29.010567",
+    "analysis_date": "2026-01-26 18:11:19",
+    "saved_at": "2026-01-26T18:14:41.189468",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true

@@ -36,11 +36,12 @@ class DataFetcher(KISAPIClient):
         
         return None, None
 
-    def get_period_price_data(self, stock_code, days=60, period="D"):
+    def get_period_price_data(self, stock_code, days=90, period="D"):
         """기간별 주가 데이터 조회"""
         end_date = datetime.now()
-        start_date = end_date - timedelta(days=days + 20)
-        
+        # 주말/공휴일 고려하여 넉넉하게 조회 (요청 일수의 1.5배 정도)
+        start_date = end_date - timedelta(days=int(days * 1.5) + 10)
+
         url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice"
         params = {
             "fid_cond_mrkt_div_code": "J",
@@ -50,14 +51,14 @@ class DataFetcher(KISAPIClient):
             "fid_period_div_code": period,
             "fid_org_adj_prc": "0"
         }
-        
+
         try:
             data = self.api_request(url, params, "FHKST03010100")
             if not data or "output2" not in data or not data["output2"]:
                 return None
-            
+
             df = pd.DataFrame(data["output2"])
-            
+
             # 컬럼명 표준화
             df = df.rename(columns={
                 'stck_bsop_date': 'stck_bsop_date',
@@ -67,24 +68,28 @@ class DataFetcher(KISAPIClient):
                 'stck_lwpr': 'stck_lwpr',
                 'acml_vol': 'acml_vol'
             })
-            
+
             # 데이터 타입 변환
             numeric_cols = ["stck_clpr", "stck_hgpr", "stck_lwpr", "acml_vol"]
             for col in numeric_cols:
                 df[col] = pd.to_numeric(df[col], errors="coerce")
-            
+
             # 결측치 제거 및 정렬
             df = df.dropna(subset=numeric_cols)
             df = df.sort_values(by="stck_bsop_date").reset_index(drop=True)
-            
-            logger.debug(f"✅ {stock_code}: {len(df)}일 데이터 조회 완료")
+
+            # 요청한 거래일 수만큼만 반환 (최근 데이터)
+            if len(df) > days:
+                df = df.tail(days).reset_index(drop=True)
+
+            logger.debug(f"✅ {stock_code}: {len(df)}일 데이터 조회 완료 (요청: {days}일)")
             return df
-            
+
         except Exception as e:
             logger.error(f"❌ {stock_code}: 기간별 데이터 조회 오류: {e}")
             return None
 
-    def get_daily_price_data_with_realtime(self, stock_code, days=60):
+    def get_daily_price_data_with_realtime(self, stock_code, days=90):
         """실시간 현재가가 포함된 일봉 데이터 조회"""
         # 기간별 데이터 조회
         df = self.get_period_price_data(stock_code, days)
