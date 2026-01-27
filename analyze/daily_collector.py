@@ -1,12 +1,13 @@
 """
 일봉 데이터 수집 배치 프로그램
-시가총액 상위 종목의 일봉 데이터를 DB에 저장
+시가총액 상위 종목의 일봉 데이터를 DB에 저장 (코스피+코스닥 통합)
 
 사용법:
+  python daily_collector.py --daily         # 일일 배치 (300종목, 최근 7일) - 매일 실행 권장
   python daily_collector.py --test          # 테스트 모드 (5종목, 30일)
   python daily_collector.py --stocks 10     # 10종목
   python daily_collector.py --days 60       # 60일 데이터
-  python daily_collector.py                 # 전체 실행
+  python daily_collector.py                 # 전체 실행 (300종목)
 """
 import sys
 import os
@@ -170,49 +171,82 @@ class DailyDataCollector:
         self.logger.addHandler(console_handler)
     
     def get_top_stocks(self) -> Dict[str, str]:
-        """시가총액 상위 종목 조회"""
-        max_stocks = self.max_stocks if self.max_stocks else 200
-        self.logger.info(f"📊 시가총액 상위 {max_stocks}개 종목 조회 시작...")
-        
-        stocks = {}
+        """시가총액 상위 종목 조회 (코스피+코스닥 통합)"""
+        max_stocks = self.max_stocks if self.max_stocks else 300
+        self.logger.info(f"📊 시가총액 상위 {max_stocks}개 종목 조회 시작 (코스피+코스닥)...")
+
+        all_stocks = []  # (종목코드, 종목명, 시가총액, 시장구분)
         exclude_keywords = ["KODEX", "TIGER", "PLUS", "ACE", "ETF", "ETN", "리츠", "우", "스팩", "커버드"]
-        
+
         try:
             import requests
             from bs4 import BeautifulSoup
-            
-            for page in range(1, 20):
-                url = f"https://finance.naver.com/sise/sise_market_sum.nhn?sosok=0&page={page}"
-                headers = {"User-Agent": "Mozilla/5.0"}
-                
-                response = requests.get(url, headers=headers, timeout=10)
-                soup = BeautifulSoup(response.text, "html.parser")
-                rows = soup.select("table.type_2 tr")
-                
-                for row in rows:
-                    link = row.select_one("a.tltle")
-                    if link:
-                        name = link.text.strip()
-                        href = link["href"]
-                        code = href.split("=")[-1]
-                        
-                        # 제외 키워드 체크
-                        if any(keyword in name for keyword in exclude_keywords):
-                            continue
-                        
-                        stocks[code] = name
-                        
-                        if len(stocks) >= max_stocks:
-                            break
-                
-                if len(stocks) >= max_stocks:
-                    break
-                
-                time.sleep(0.5)
-            
-            self.logger.info(f"✅ {len(stocks)}개 종목 조회 완료")
-            return stocks
-            
+
+            # 코스피(sosok=0)와 코스닥(sosok=1) 모두 수집
+            for market_type in [0, 1]:
+                market_name = "코스피" if market_type == 0 else "코스닥"
+                self.logger.info(f"  📋 {market_name} 종목 수집 중...")
+
+                for page in range(1, 15):  # 각 시장당 최대 15페이지
+                    url = f"https://finance.naver.com/sise/sise_market_sum.nhn?sosok={market_type}&page={page}"
+                    headers = {"User-Agent": "Mozilla/5.0"}
+
+                    response = requests.get(url, headers=headers, timeout=10)
+                    soup = BeautifulSoup(response.text, "html.parser")
+                    rows = soup.select("table.type_2 tr")
+
+                    for row in rows:
+                        link = row.select_one("a.tltle")
+                        if link:
+                            name = link.text.strip()
+                            href = link["href"]
+                            code = href.split("=")[-1]
+
+                            # 제외 키워드 체크
+                            if any(keyword in name for keyword in exclude_keywords):
+                                continue
+
+                            # 시가총액 파싱 (억원 단위)
+                            market_cap = 0
+                            cols = row.select("td")
+                            if len(cols) >= 7:
+                                market_cap_text = cols[6].text.strip().replace(",", "")
+                                try:
+                                    market_cap = int(market_cap_text) if market_cap_text else 0
+                                except:
+                                    market_cap = 0
+
+                            all_stocks.append({
+                                'code': code,
+                                'name': name,
+                                'market_cap': market_cap,
+                                'market': market_name
+                            })
+
+                    time.sleep(0.3)
+
+                    # 충분히 수집했으면 중단
+                    if len(all_stocks) >= max_stocks * 2:
+                        break
+
+            # 시가총액 기준으로 정렬 (내림차순)
+            all_stocks.sort(key=lambda x: x['market_cap'], reverse=True)
+
+            # 상위 N개 선택
+            top_stocks = all_stocks[:max_stocks]
+
+            # 딕셔너리로 변환 (code: name)
+            result = {stock['code']: stock['name'] for stock in top_stocks}
+
+            # 통계 출력
+            kospi_count = sum(1 for s in top_stocks if s['market'] == '코스피')
+            kosdaq_count = sum(1 for s in top_stocks if s['market'] == '코스닥')
+
+            self.logger.info(f"✅ {len(result)}개 종목 조회 완료")
+            self.logger.info(f"   - 코스피: {kospi_count}개, 코스닥: {kosdaq_count}개")
+
+            return result
+
         except Exception as e:
             self.logger.error(f"❌ 종목 리스트 조회 실패: {e}")
             return {}
@@ -334,7 +368,7 @@ class DailyDataCollector:
     def _fetch_investor_data(self, stock_code: str) -> List[Dict]:
         """투자자별 매매 데이터 조회"""
         try:
-            url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-investortrend"
+            url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-investor"
             
             headers = {
                 "content-type": "application/json",
@@ -346,10 +380,7 @@ class DailyDataCollector:
             
             params = {
                 "fid_cond_mrkt_div_code": "J",
-                "fid_input_iscd": stock_code,
-                "fid_input_date_1": "",  # 조회시작일자 (생략 시 최근 데이터)
-                "fid_input_date_2": "",  # 조회종료일자
-                "fid_period_div_code": "D"  # D:일, W:주, M:월
+                "fid_input_iscd": stock_code
             }
             
             time.sleep(0.15)
@@ -449,21 +480,10 @@ class DailyDataCollector:
                 return df
             
             return pd.DataFrame()
-            
+
         except Exception as e:
             self.logger.error(f"❌ 날짜 범위 조회 실패 ({stock_code}): {e}")
             return pd.DataFrame()
-            
-            if not all_records:
-                self.logger.warning(f"⚠️ {stock_name}({stock_code}): 데이터 없음")
-                return []
-            
-            self.logger.info(f"✅ {stock_name}({stock_code}): {len(all_records)}건 수집")
-            return all_records
-            
-        except Exception as e:
-            self.logger.error(f"❌ {stock_name}({stock_code}) 데이터 수집 실패: {e}")
-            return []
     
     def _convert_df_to_records(self, stock_code: str, df: pd.DataFrame) -> List[Dict]:
         """DataFrame을 레코드 리스트로 변환"""
@@ -661,13 +681,16 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 사용 예시:
+  # 일일 배치 (300종목, 최근 7일) - 매일 실행 권장
+  python daily_collector.py --daily
+
   # 테스트 모드 (5종목, 30일)
   python daily_collector.py --test
-  
+
   # 10종목, 60일 수집
   python daily_collector.py --stocks 10 --days 60
-  
-  # 전체 실행 (200종목, 365일)
+
+  # 전체 실행 (300종목, config.yaml 설정값)
   python daily_collector.py
         """
     )
@@ -682,7 +705,7 @@ def main():
         '--stocks',
         type=int,
         metavar='N',
-        help='수집할 종목 수 (기본값: 200)'
+        help='수집할 종목 수 (기본값: 300, 코스피+코스닥 통합)'
     )
     
     parser.add_argument(
@@ -697,27 +720,43 @@ def main():
         action='store_true',
         help='확인 프롬프트 건너뛰기'
     )
-    
+
+    parser.add_argument(
+        '--daily',
+        action='store_true',
+        help='일일 배치 모드 (300종목, 최근 7일만 수집, 투자자 데이터 포함)'
+    )
+
     args = parser.parse_args()
     
     try:
+        # 일일 배치 모드 처리
+        if args.daily:
+            print("\n📅 일일 배치 모드로 실행합니다.")
+            print("   - 종목 수: 300개 (코스피+코스닥)")
+            print("   - 데이터 기간: 최근 7일")
+            print("   - 투자자 데이터 포함")
+            args.stocks = None  # 전체 종목
+            args.days = 7  # 최근 7일
+            args.yes = True  # 자동 실행
+
         # 설정 출력
         if args.test:
             print("\n🧪 테스트 모드로 실행합니다.")
             print("   - 종목 수: 5개")
             print("   - 데이터 기간: 30일")
-        else:
-            stocks_msg = f"{args.stocks}개" if args.stocks else "200개 (전체)"
+        elif not args.daily:
+            stocks_msg = f"{args.stocks}개" if args.stocks else "300개 (코스피+코스닥)"
             days_msg = f"{args.days}일" if args.days else "config.yaml 설정값"
             print(f"\n📊 배치 실행 설정:")
             print(f"   - 종목 수: {stocks_msg}")
             print(f"   - 데이터 기간: {days_msg}")
-        
+
         # 확인 프롬프트 (테스트 모드나 --yes 옵션이 아닐 때만)
         if not args.test and not args.yes:
             print("\n시작하려면 Enter를 누르세요 (취소: Ctrl+C)...")
             input()
-        
+
         # Collector 생성 및 실행
         collector = DailyDataCollector(
             max_stocks=args.stocks,

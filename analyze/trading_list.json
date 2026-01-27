@@ -8,19 +8,43 @@
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 109000,
-    "volume": 463189,
+    "price": 108000,
+    "volume": 179308,
     "foreign_netbuy": [
       97789,
       62708,
       115147,
-      -168934,
-      99039
+      -168934
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-01-26 18:11:19",
-    "saved_at": "2026-01-26T18:14:41.189468",
+    "analysis_date": "2026-01-27 11:11:42",
+    "saved_at": "2026-01-27T11:15:53.833948",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "100090",
+    "name": "SK오션플랜트",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 18980,
+    "volume": 256920,
+    "foreign_netbuy": [
+      89982,
+      58866,
+      133910,
+      -137336
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-01-27 11:15:03",
+    "saved_at": "2026-01-27T11:15:53.833968",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true

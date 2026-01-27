@@ -8,5 +8,6 @@ source /Users/jsshin/RESTAPI/venv311/bin/activate
 cd /Users/jsshin/RESTAPI/analyze
 
 # 2. 가상 환경의 파이썬 인터프리터와 실행할 스크립트를 모두 절대 경로로 지정하여 실행
-/Users/jsshin/RESTAPI/venv311/bin/python3 /Users/jsshin/RESTAPI/analyze/daily_collector.py --stocks 300 --days 5 -y >> /Users/jsshin/cron.log 2>&1
+#/Users/jsshin/RESTAPI/venv311/bin/python3 /Users/jsshin/RESTAPI/analyze/daily_collector.py --daily >> /Users/jsshin/cron.log 2>&1
+/Users/jsshin/RESTAPI/venv311/bin/python3 /Users/jsshin/RESTAPI/analyze/daily_collector.py --stocks 300 --days 3 -y >> /Users/jsshin/cron.log 2>&1
 
