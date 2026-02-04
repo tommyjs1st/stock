@@ -113,7 +113,7 @@ class FundamentalCollector:
     
     def setup_logger(self):
         """로거 설정"""
-        log_dir = "analyze/logs"
+        log_dir = "logs"
         os.makedirs(log_dir, exist_ok=True)
         
         log_file = os.path.join(log_dir, f"fundamental_batch_{datetime.now().strftime('%Y%m%d')}.log")

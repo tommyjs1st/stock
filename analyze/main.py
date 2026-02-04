@@ -14,6 +14,13 @@ from utils import (
     setup_logger, send_discord_message, format_multi_signal_message,
     format_signal_combination_message, save_backtest_candidates, ProgressTracker
 )
+# 기존 import에 추가
+from enhanced_technical_indicators import (
+    check_investor_condition,
+    calculate_ma20_divergence,
+    get_divergence_bonus,
+    check_trading_value
+)
 
 load_dotenv()
 
@@ -65,8 +72,18 @@ class EnhancedStockAnalyzer:
             "single_internal": []
         }
 
+    """
+    EnhancedStockAnalyzer의 analyze_stock 메서드 최종 수정본
+    모든 버그 수정:
+    1. _record_individual_signals에 score 인자 추가 ✅
+    2. _record_signal_combination 호출을 인라인 코드로 교체 ✅
+    """ 
+    
     def analyze_stock(self, name, code):
-        """개별 종목 분석 (절대조건 필터링 적용)"""
+        """
+        개별 종목 분석 (절대조건 필터링 적용)
+        버그 수정 완료 버전
+        """
         try:
             # 외국인 순매수 추세 확인 (안전한 호출)
             try:
@@ -90,7 +107,7 @@ class EnhancedStockAnalyzer:
                 self.logger.warning(f"⚠️ {name}: 가격 데이터를 가져올 수 없습니다.")
                 return False
             
-            # ===== SignalAnalyzer에서 절대조건 체크 및 점수 계산을 모두 처리 =====
+            # SignalAnalyzer에서 절대조건 체크 및 점수 계산
             try:
                 score, active_signals, passes_absolute, filter_reason = self.signal_analyzer.calculate_buy_signal_score(
                     df, name, code, foreign_trend=foreign_trend, foreign_netbuy_list=foreign_netbuy_list
@@ -101,9 +118,6 @@ class EnhancedStockAnalyzer:
                     self.logger.debug(f"🚫 {name}({code}) 절대조건 미통과: {filter_reason}")
                     return True  # 분석은 성공했으나 조건 미통과
                     
-                # 절대조건 통과시 로깅
-                #self.logger.info(f"✅ {name}({code}) 절대조건 통과: {filter_reason}")
-                
             except Exception as score_error:
                 self.logger.error(f"❌ {name}({code}) 점수 계산 실패: {score_error}")
                 return False
@@ -119,8 +133,8 @@ class EnhancedStockAnalyzer:
                     current_price = 0
             
                 if current_price > 300000:
-                    self.logger.info(f"✅ {name}({code}) 구매가격이 너무 높음: {current_price/10000:.1f}만원")
-                    return False
+                    self.logger.debug(f"🚫 {name}({code}) 구매가격이 너무 높음: {current_price/10000:.1f}만원")
+                    return True
                     
                 if 'acml_vol' in df.columns:
                     volume = df.iloc[-1]["acml_vol"]
@@ -133,12 +147,13 @@ class EnhancedStockAnalyzer:
                 self.logger.warning(f"⚠️ {name}({code}) 가격정보 추출 실패: {price_error}")
                 current_price = 0
                 volume = 0
-
+    
             
-            # 점수별 처리
+            # 점수별 처리 - 개별 신호 기록
             if score >= self.min_score_for_detail:
                 try:
                     individual_signals = self.signal_analyzer.get_individual_signals(df)
+                    # 🔥 버그 수정 1: score 인자 추가
                     self._record_individual_signals(individual_signals, name, code, foreign_trend, score)
                 except Exception as signal_error:
                     self.logger.warning(f"⚠️ {name}({code}) 개별신호 분석 실패: {signal_error}")
@@ -149,10 +164,11 @@ class EnhancedStockAnalyzer:
                 "signals": active_signals, "price": current_price, "volume": volume,
                 "foreign": foreign_netbuy_list,
                 "filter_status": "절대조건통과",
-                "filter_reason": filter_reason  # 통과 사유 추가
+                "filter_reason": filter_reason
             }
             self._classify_multi_signal_stock_filtered(stock_info)
             
+            # 🔥 버그 수정 2: _record_signal_combination을 인라인 코드로 교체
             # 신호 조합 패턴 분석 (3점 이상)
             if score >= self.min_score_for_messaging and active_signals:
                 combo_key = " + ".join(sorted(active_signals))
@@ -178,9 +194,11 @@ class EnhancedStockAnalyzer:
             return True
             
         except Exception as e:
-            self.logger.error(f"⚠️ {name} 분석 오류: {e}")
+            self.logger.error(f"❌ {name}({code}) 분석 실패: {e}")
+            import traceback
+            traceback.print_exc()
             return False
-
+    
     def _record_individual_signals(self, signals, name, code, foreign_trend, score):
         """개별 신호 기록 (점수별 필터링 적용)"""
         if score >= self.min_score_for_messaging:
@@ -222,7 +240,7 @@ class EnhancedStockAnalyzer:
         self.logger.info("🔒 절대조건: ①현재가<20일선 ②거래량≥1000주 ③볼린저밴드내 ④외국인최근2~3일연속매수")
         
         # 종목 리스트 조회
-        stock_list = self.data_fetcher.get_top_200_stocks()
+        stock_list = self.data_fetcher.get_top_200_stocks(top_n=200)
         if not stock_list:
             self.logger.error("❌ 종목 리스트를 가져올 수 없습니다.")
             return False

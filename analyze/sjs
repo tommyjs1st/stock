@@ -1,84 +1,126 @@
+    """
+    EnhancedStockAnalyzer의 analyze_stock 메서드 최종 수정본
+    모든 버그 수정:
+    1. _record_individual_signals에 score 인자 추가 ✅
+    2. _record_signal_combination 호출을 인라인 코드로 교체 ✅
+    """
     
-    def upsert_fundamental_data(self, data: Dict[str, Any]) -> bool:
-        """펀더멘털 데이터 추가/업데이트
-        
-        Args:
-            data: {
-                'stock_code': str,
-                'trade_date': date,
-                'per': float,
-                'pbr': float,
-                'roe': float,
-                'debt_ratio': float,
-                'market_cap': int,
-                'listed_shares': int
-            }
-        
-        Returns:
-            bool: 성공 여부
+    def analyze_stock(self, name, code):
+        """
+        개별 종목 분석 (절대조건 필터링 적용)
+        버그 수정 완료 버전
         """
         try:
-            sql = """
-            INSERT INTO fundamental_data (
-                stock_code, trade_date, per, pbr, roe, debt_ratio, 
-                market_cap, listed_shares, created_at, updated_at
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
-            ON DUPLICATE KEY UPDATE
-                per = VALUES(per),
-                pbr = VALUES(pbr),
-                roe = VALUES(roe),
-                debt_ratio = VALUES(debt_ratio),
-                market_cap = VALUES(market_cap),
-                listed_shares = VALUES(listed_shares),
-                updated_at = NOW()
-            """
+            # 외국인 순매수 추세 확인 (안전한 호출)
+            try:
+                foreign_netbuy_list, foreign_trend = self.data_fetcher.get_foreign_netbuy_trend(code)
+            except Exception as e:
+                self.logger.warning(f"⚠️ {name}({code}) 외국인 데이터 조회 실패: {e}")
+                foreign_netbuy_list, foreign_trend = [], "unknown"
             
-            self.cursor.execute(sql, (
-                data.get('stock_code'),
-                data.get('trade_date'),
-                data.get('per'),
-                data.get('pbr'),
-                data.get('roe'),
-                data.get('debt_ratio'),
-                data.get('market_cap'),
-                data.get('listed_shares')
-            ))
+            # 주가 데이터 조회 (실시간 포함)
+            try:
+                df = self.data_fetcher.get_daily_price_data_with_realtime(code)
+            except Exception as e:
+                self.logger.warning(f"⚠️ {name}({code}) 실시간 데이터 실패, 기본 데이터 시도: {e}")
+                try:
+                    df = self.data_fetcher.get_daily_data(code)
+                except Exception as e2:
+                    self.logger.error(f"❌ {name}({code}) 모든 데이터 조회 실패: {e2}")
+                    return False
+            
+            if df is None or df.empty:
+                self.logger.warning(f"⚠️ {name}: 가격 데이터를 가져올 수 없습니다.")
+                return False
+            
+            # SignalAnalyzer에서 절대조건 체크 및 점수 계산
+            try:
+                score, active_signals, passes_absolute, filter_reason = self.signal_analyzer.calculate_buy_signal_score(
+                    df, name, code, foreign_trend=foreign_trend, foreign_netbuy_list=foreign_netbuy_list
+                )
+                
+                # 절대조건 미통과시 로깅 후 종료
+                if not passes_absolute:
+                    self.logger.debug(f"🚫 {name}({code}) 절대조건 미통과: {filter_reason}")
+                    return True  # 분석은 성공했으나 조건 미통과
+                    
+            except Exception as score_error:
+                self.logger.error(f"❌ {name}({code}) 점수 계산 실패: {score_error}")
+                return False
+            
+            # 현재 가격 정보 안전하게 추출
+            try:
+                # 컬럼명 통일 처리
+                if 'stck_clpr' in df.columns:
+                    current_price = df.iloc[-1]["stck_clpr"]
+                elif 'stck_prpr' in df.columns:
+                    current_price = df.iloc[-1]["stck_prpr"]
+                else:
+                    current_price = 0
+            
+                if current_price > 300000:
+                    self.logger.debug(f"🚫 {name}({code}) 구매가격이 너무 높음: {current_price/10000:.1f}만원")
+                    return True
+                    
+                if 'acml_vol' in df.columns:
+                    volume = df.iloc[-1]["acml_vol"]
+                elif 'cntg_vol' in df.columns:
+                    volume = df.iloc[-1]["cntg_vol"]
+                else:
+                    volume = 0
+                    
+            except Exception as price_error:
+                self.logger.warning(f"⚠️ {name}({code}) 가격정보 추출 실패: {price_error}")
+                current_price = 0
+                volume = 0
+    
+            
+            # 점수별 처리 - 개별 신호 기록
+            if score >= self.min_score_for_detail:
+                try:
+                    individual_signals = self.signal_analyzer.get_individual_signals(df)
+                    # 🔥 버그 수정 1: score 인자 추가
+                    self._record_individual_signals(individual_signals, name, code, foreign_trend, score)
+                except Exception as signal_error:
+                    self.logger.warning(f"⚠️ {name}({code}) 개별신호 분석 실패: {signal_error}")
+            
+            # 다중신호 등급 분류 (절대조건 통과 종목만)
+            stock_info = {
+                "name": name, "code": code, "score": score,
+                "signals": active_signals, "price": current_price, "volume": volume,
+                "foreign": foreign_netbuy_list,
+                "filter_status": "절대조건통과",
+                "filter_reason": filter_reason
+            }
+            self._classify_multi_signal_stock_filtered(stock_info)
+            
+            # 🔥 버그 수정 2: _record_signal_combination을 인라인 코드로 교체
+            # 신호 조합 패턴 분석 (3점 이상)
+            if score >= self.min_score_for_messaging and active_signals:
+                combo_key = " + ".join(sorted(active_signals))
+                if combo_key not in self.signal_combinations:
+                    self.signal_combinations[combo_key] = []
+                self.signal_combinations[combo_key].append(f"{name}({code})")
+            
+            # 백테스트 후보 (3점 이상, 절대조건 통과)
+            if score >= self.min_score_for_messaging:
+                self.backtest_candidates.append({
+                    "code": code,
+                    "name": name,
+                    "score": score,
+                    "signals": active_signals,
+                    "price": current_price,
+                    "volume": volume,
+                    "foreign_netbuy": foreign_netbuy_list,
+                    "filter_status": "절대조건통과",
+                    "filter_reason": filter_reason,
+                    "analysis_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                })
             
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ 펀더멘털 데이터 저장 실패 ({data.get('stock_code')}): {e}")
+            self.logger.error(f"❌ {name}({code}) 분석 실패: {e}")
+            import traceback
+            traceback.print_exc()
             return False
-    
-    
-    def get_fundamental_data(self, stock_code: str, days: int = 30) -> Optional[Dict]:
-        """DB에서 펀더멘털 데이터 조회
-        
-        Args:
-            stock_code: 종목코드
-            days: 조회 기간 (기본 30일)
-        
-        Returns:
-            Dict: 최신 펀더멘털 데이터 또는 None
-        """
-        try:
-            sql = """
-            SELECT stock_code, trade_date, per, pbr, roe, debt_ratio, 
-                   market_cap, listed_shares, created_at, updated_at
-            FROM fundamental_data
-            WHERE stock_code = %s
-              AND trade_date >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
-            ORDER BY trade_date DESC
-            LIMIT 1
-            """
-            
-            self.cursor.execute(sql, (stock_code, days))
-            result = self.cursor.fetchone()
-            
-            return result
-            
-        except Exception as e:
-            self.logger.error(f"❌ 펀더멘털 데이터 조회 실패 ({stock_code}): {e}")
-            return None
-    

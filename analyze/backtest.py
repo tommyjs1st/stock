@@ -1,505 +1,448 @@
 """
-KIS API 기반 백테스트 모듈
-모듈화된 구조에 맞게 개선된 버전
+백테스팅 시스템
+과거 데이터로 종목 발굴 전략을 검증하고 성과를 측정
 """
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-import json
-import time
 import os
-from typing import Dict, List, Tuple
+import sys
+import json
+import yaml
 import logging
-import warnings
-warnings.filterwarnings('ignore')
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Tuple
+import pandas as pd
+from collections import defaultdict
 
-# 분리된 모듈들 import
-from kis_api_client import KISAPIClient
-from utils import setup_logger, convert_numpy_types, safe_json_save, load_stock_codes_from_file
+# 현재 디렉토리 모듈 import
+from data_fetcher import DataFetcher
+from technical_indicators import SignalAnalyzer
+from db_manager import DBManager
+from utils import setup_logger
 
-class KISBacktester(KISAPIClient):
-    def __init__(self):
-        super().__init__()
-        self.setup_logging()
 
-    def setup_logging(self):
-        """로깅 설정"""
-        self.logger = setup_logger(log_filename="backtest.log")
-
-    def get_stock_data(self, stock_code: str, period: str = "D", count: int = 100) -> pd.DataFrame:
-        """주식 데이터 조회"""
-        url = f"https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice"
-        params = {
-            "fid_cond_mrkt_div_code": "J",
-            "fid_input_iscd": stock_code,
-            "fid_input_date_1": "",
-            "fid_input_date_2": "",
-            "fid_period_div_code": period,
-            "fid_org_adj_prc": "0"
-        }
-
+class BacktestAnalyzer:
+    """백테스팅 분석 클래스"""
+    
+    def __init__(self, config_path="../trading_system/config.yaml"):
+        """초기화"""
+        self.logger = setup_logger("backtest")
+        
+        # 설정 로드
         try:
-            data = self.api_request(url, params, "FHKST03010100")
-            if data and 'output2' in data and data['output2']:
-                df = pd.DataFrame(data['output2'])
-
-                # 컬럼명 변경 및 데이터 타입 변환
-                df = df.rename(columns={
-                    'stck_bsop_date': 'date',
-                    'stck_oprc': 'open',
-                    'stck_hgpr': 'high',
-                    'stck_lwpr': 'low',
-                    'stck_clpr': 'close',
-                    'acml_vol': 'volume'
-                })
-
-                # 필요한 컬럼만 선택
-                df = df[['date', 'open', 'high', 'low', 'close', 'volume']].copy()
-
-                # 데이터 타입 변환
-                for col in ['open', 'high', 'low', 'close', 'volume']:
-                    df[col] = pd.to_numeric(df[col], errors='coerce')
-
-                df['date'] = pd.to_datetime(df['date'])
-                df = df.sort_values('date').reset_index(drop=True)
-
-                # 최근 count개만 선택
-                df = df.tail(count).reset_index(drop=True)
-
-                return df
-            else:
-                self.logger.warning(f"❌ 데이터 없음: {stock_code}")
-                return pd.DataFrame()
-                
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = yaml.safe_load(f)
+                self.backtest_config = config.get('backtest_analysis', {})
+                self.analysis_config = config.get('analysis', {})
         except Exception as e:
-            self.logger.error(f"❌ {stock_code}: 데이터 조회 중 오류: {e}")
-            return pd.DataFrame()
-
-    def calculate_technical_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
-        """기술적 지표 계산"""
-        if len(df) < 20:
-            self.logger.warning("❌ 데이터가 부족합니다 (최소 20개 필요)")
-            return df
-
-        # 이동평균
-        df['ma5'] = df['close'].rolling(window=5).mean()
-        df['ma10'] = df['close'].rolling(window=10).mean()
-        df['ma20'] = df['close'].rolling(window=20).mean()
-
-        # 볼린저 밴드
-        df['bb_middle'] = df['close'].rolling(window=20).mean()
-        bb_std = df['close'].rolling(window=20).std()
-        df['bb_upper'] = df['bb_middle'] + (bb_std * 2)
-        df['bb_lower'] = df['bb_middle'] - (bb_std * 2)
-
-        # RSI
-        delta = df['close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        rs = gain / loss
-        df['rsi'] = 100 - (100 / (1 + rs))
-
-        # MACD
-        exp1 = df['close'].ewm(span=12).mean()
-        exp2 = df['close'].ewm(span=26).mean()
-        df['macd'] = exp1 - exp2
-        df['macd_signal'] = df['macd'].ewm(span=9).mean()
-        df['macd_histogram'] = df['macd'] - df['macd_signal']
-
-        # 거래량 비율 (현재 거래량 / 5일 평균 거래량)
-        df['volume_ma5'] = df['volume'].rolling(window=5).mean()
-        df['volume_ratio'] = df['volume'] / df['volume_ma5']
-
-        # 가격 변화율
-        df['price_change'] = df['close'].pct_change()
-        df['price_change_5d'] = df['close'].pct_change(periods=5)
-
-        # 변동성 (20일 표준편차)
-        df['volatility'] = df['close'].rolling(window=20).std()
-
-        return df
-
-    def momentum_strategy(self, df: pd.DataFrame) -> pd.Series:
-        """모멘텀 전략"""
-        signals = pd.Series(0, index=df.index)
-
-        # 조건: 5일선 > 20일선, RSI > 50, 거래량 증가
-        buy_condition = (
-            (df['ma5'] > df['ma20']) &
-            (df['rsi'] > 50) &
-            (df['volume_ratio'] > 1.2)
-        )
-
-        sell_condition = (
-            (df['ma5'] < df['ma20']) |
-            (df['rsi'] < 30)
-        )
-
-        signals[buy_condition] = 1
-        signals[sell_condition] = -1
-
-        return signals
-
-    def mean_reversion_strategy(self, df: pd.DataFrame) -> pd.Series:
-        """평균회귀 전략"""
-        signals = pd.Series(0, index=df.index)
-
-        # 조건: 가격이 볼린저 밴드 하한선 근처, RSI 과매도
-        buy_condition = (
-            (df['close'] <= df['bb_lower'] * 1.02) &
-            (df['rsi'] < 35)
-        )
-
-        sell_condition = (
-            (df['close'] >= df['bb_upper'] * 0.98) |
-            (df['rsi'] > 65)
-        )
-
-        signals[buy_condition] = 1
-        signals[sell_condition] = -1
-
-        return signals
-
-    def breakout_strategy(self, df: pd.DataFrame) -> pd.Series:
-        """돌파 전략"""
-        signals = pd.Series(0, index=df.index)
-
-        # 조건: 20일 최고가 돌파, 거래량 급증
-        df['high_20'] = df['high'].rolling(window=20).max()
-
-        buy_condition = (
-            (df['close'] > df['high_20'].shift(1)) &
-            (df['volume_ratio'] > 2.0)
-        )
-
-        sell_condition = df['close'] < df['ma20']
-
-        signals[buy_condition] = 1
-        signals[sell_condition] = -1
-
-        return signals
-
-    def scalping_strategy(self, df: pd.DataFrame) -> pd.Series:
-        """스캘핑 전략"""
-        signals = pd.Series(0, index=df.index)
-
-        # 조건: MACD 골든크로스, 단기 상승 추세
-        buy_condition = (
-            (df['macd'] > df['macd_signal']) &
-            (df['macd'].shift(1) <= df['macd_signal'].shift(1)) &
-            (df['close'] > df['ma5'])
-        )
-
-        sell_condition = (
-            (df['macd'] < df['macd_signal']) |
-            (df['close'] < df['ma5'] * 0.98)
-        )
-
-        signals[buy_condition] = 1
-        signals[sell_condition] = -1
-
-        return signals
-
-    def backtest_strategy(self, df: pd.DataFrame, strategy_func, initial_capital: float = 1000000) -> Dict:
-        """전략 백테스트"""
-        if len(df) < 30:
-            return {'error': '데이터 부족'}
-
+            self.logger.error(f"❌ 설정 로드 실패: {e}")
+            self.backtest_config = {}
+            self.analysis_config = {}
+        
+        # 데이터 소스
+        self.data_fetcher = DataFetcher()
+        self.signal_analyzer = SignalAnalyzer(self.data_fetcher)
+        self.db_manager = DBManager()
+        
+        # 결과 저장
+        self.backtest_results = []
+        self.signal_performance = defaultdict(lambda: {
+            'total': 0,
+            'success': 0,
+            'total_return': 0.0,
+            'returns': []
+        })
+        
+        self.logger.info("🎯 백테스팅 분석기 초기화 완료")
+    
+    def get_historical_stock_list(self, date_str: str) -> List[Dict]:
+        """
+        특정 날짜의 시가총액 상위 종목 리스트 조회
+        실제로는 현재 상위 200개를 사용 (과거 데이터 제약)
+        """
         try:
-            signals = strategy_func(df)
-
-            # 포지션 계산
-            positions = signals.replace(0, np.nan).fillna(method='ffill').fillna(0)
-
-            # 수익률 계산
-            returns = df['close'].pct_change()
-            strategy_returns = positions.shift(1) * returns
-
-            # 누적 수익률
-            cumulative_returns = (1 + strategy_returns).cumprod()
-            total_return = cumulative_returns.iloc[-1] - 1
-
-            # 통계 계산
-            winning_trades = len(strategy_returns[strategy_returns > 0])
-            losing_trades = len(strategy_returns[strategy_returns < 0])
-            total_trades = winning_trades + losing_trades
-
-            win_rate = winning_trades / total_trades if total_trades > 0 else 0
-
-            # 최대 낙폭 계산
-            rolling_max = cumulative_returns.cummax()
-            drawdown = (cumulative_returns - rolling_max) / rolling_max
-            max_drawdown = drawdown.min()
-
-            # 샤프 비율 (연간화)
-            annual_return = total_return * (252 / len(df))
-            annual_volatility = strategy_returns.std() * np.sqrt(252)
-            sharpe_ratio = annual_return / annual_volatility if annual_volatility > 0 else 0
-
+            stock_list = self.data_fetcher.get_top_200_stocks()
+            self.logger.debug(f"📊 {date_str} 기준 종목: {len(stock_list)}개")
+            return stock_list
+        except Exception as e:
+            self.logger.error(f"❌ 종목 리스트 조회 실패: {e}")
+            return []
+    
+    def simulate_stock_analysis(self, name: str, code: str, analysis_date: datetime) -> Optional[Dict]:
+        """
+        특정 날짜 기준으로 종목 분석 시뮬레이션
+        
+        Args:
+            name: 종목명
+            code: 종목코드
+            analysis_date: 분석 기준일
+            
+        Returns:
+            분석 결과 딕셔너리 또는 None
+        """
+        try:
+            # 해당 날짜까지의 데이터만 사용 (미래 데이터 누출 방지)
+            df = self.get_historical_data_until(code, analysis_date)
+            
+            if df is None or df.empty or len(df) < 30:
+                return None
+            
+            # 외국인 데이터도 해당 날짜까지만
+            foreign_netbuy_list = self.get_foreign_data_until(code, analysis_date)
+            
+            # 절대조건 및 신호 점수 계산
+            score, active_signals, passes_absolute, filter_reason = \
+                self.signal_analyzer.calculate_buy_signal_score(
+                    df, name, code, 
+                    foreign_trend=None,
+                    foreign_netbuy_list=foreign_netbuy_list
+                )
+            
+            # 절대조건 미통과
+            if not passes_absolute:
+                return None
+            
+            # 현재가
+            current_price = df.iloc[-1]['stck_clpr']
+            
             return {
-                'total_return': total_return,
-                'annual_return': annual_return,
-                'win_rate': win_rate,
-                'total_trades': total_trades,
-                'max_drawdown': max_drawdown,
-                'sharpe_ratio': sharpe_ratio,
-                'final_capital': initial_capital * (1 + total_return)
+                'name': name,
+                'code': code,
+                'analysis_date': analysis_date.strftime('%Y-%m-%d'),
+                'score': score,
+                'signals': active_signals,
+                'price': current_price,
+                'passes_absolute': passes_absolute
             }
-
+            
         except Exception as e:
-            self.logger.error(f"❌ 백테스트 오류: {e}")
-            return {'error': str(e)}
-
-    def save_backtest_results(self, results_df: pd.DataFrame, stock_names: Dict[str, str], filename: str = "backtest_results.json"):
-        """백테스트 결과를 JSON 파일로 저장"""
-        if results_df.empty:
-            self.logger.warning("저장할 결과가 없습니다.")
+            self.logger.debug(f"⚠️ {name}({code}) 시뮬레이션 실패: {e}")
+            return None
+    
+    def get_historical_data_until(self, code: str, end_date: datetime) -> Optional[pd.DataFrame]:
+        """
+        특정 날짜까지의 과거 데이터 조회
+        
+        Args:
+            code: 종목코드
+            end_date: 종료일
+            
+        Returns:
+            DataFrame 또는 None
+        """
+        try:
+            # DB에서 데이터 조회 (테이블명 수정!)
+            query = """
+                SELECT trade_date, close_price, high_price, low_price, volume
+                FROM daily_stock_prices
+                WHERE stock_code = %s AND trade_date <= %s
+                ORDER BY trade_date DESC
+                LIMIT 100
+            """
+            
+            self.db_manager.connect()
+            cursor = self.db_manager.connection.cursor()
+            cursor.execute(query, (code, end_date.strftime('%Y-%m-%d')))
+            
+            rows = cursor.fetchall()
+            
+            if not rows:
+                return None
+            
+            # DataFrame 생성 (기존 컬럼명으로 변환)
+            df = pd.DataFrame(rows, columns=['trade_date', 'stck_clpr', 'stck_hgpr', 'stck_lwpr', 'acml_vol'])
+            
+            # 데이터 타입 변환
+            numeric_cols = ['stck_clpr', 'stck_hgpr', 'stck_lwpr', 'acml_vol']
+            for col in numeric_cols:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+            
+            # 날짜 컬럼 변환 (YYYY-MM-DD -> YYYYMMDD)
+            df['stck_bsop_date'] = df['trade_date'].astype(str).str.replace('-', '')
+            df = df.drop('trade_date', axis=1)
+            
+            # 정렬 (오래된 것부터)
+            df = df.sort_values('stck_bsop_date').reset_index(drop=True)
+            
+            return df
+            
+        except Exception as e:
+            self.logger.debug(f"⚠️ {code} 과거 데이터 조회 실패: {e}")
+            return None
+        finally:
+            self.db_manager.disconnect()
+    
+    def get_foreign_data_until(self, code: str, end_date: datetime) -> List[int]:
+        """특정 날짜까지의 외국인 순매수 데이터"""
+        try:
+            # DB에서 외국인 데이터 조회 (테이블명 수정!)
+            query = """
+                SELECT foreign_net_qty
+                FROM daily_stock_prices
+                WHERE stock_code = %s AND trade_date <= %s
+                ORDER BY trade_date DESC
+                LIMIT 5
+            """
+            
+            self.db_manager.connect()
+            cursor = self.db_manager.connection.cursor()
+            cursor.execute(query, (code, end_date.strftime('%Y-%m-%d')))
+            
+            rows = cursor.fetchall()
+            
+            if not rows:
+                return []
+            
+            # 순매수량 리스트
+            netbuy_list = [int(row[0]) if row[0] else 0 for row in rows]
+            
+            return netbuy_list
+            
+        except Exception as e:
+            return []
+        finally:
+            self.db_manager.disconnect()
+    
+    def calculate_future_returns(self, code: str, buy_date: datetime, buy_price: float, 
+                                 holding_periods: List[int]) -> Dict[int, float]:
+        """
+        매수 후 보유기간별 수익률 계산
+        
+        Args:
+            code: 종목코드
+            buy_date: 매수일
+            buy_price: 매수가
+            holding_periods: 보유기간 리스트 (예: [5, 10, 20])
+            
+        Returns:
+            {보유기간: 수익률} 딕셔너리
+        """
+        returns = {}
+        
+        try:
+            for days in holding_periods:
+                sell_date = buy_date + timedelta(days=days)
+                sell_price = self.get_price_on_date(code, sell_date)
+                
+                if sell_price and sell_price > 0:
+                    return_pct = ((sell_price - buy_price) / buy_price) * 100
+                    returns[days] = round(return_pct, 2)
+                else:
+                    returns[days] = None
+                    
+        except Exception as e:
+            self.logger.debug(f"⚠️ {code} 수익률 계산 실패: {e}")
+        
+        return returns
+    
+    def get_price_on_date(self, code: str, target_date: datetime) -> Optional[float]:
+        """특정 날짜의 종가 조회 (거래일 기준)"""
+        try:
+            # 해당 날짜 이후 첫 거래일의 종가 (테이블명 수정!)
+            query = """
+                SELECT close_price
+                FROM daily_stock_prices
+                WHERE stock_code = %s AND trade_date >= %s
+                ORDER BY trade_date ASC
+                LIMIT 1
+            """
+            
+            self.db_manager.connect()
+            cursor = self.db_manager.connection.cursor()
+            cursor.execute(query, (code, target_date.strftime('%Y-%m-%d')))
+            
+            row = cursor.fetchone()
+            
+            if row:
+                return float(row[0])
+            
+            return None
+            
+        except Exception as e:
+            return None
+        finally:
+            self.db_manager.disconnect()
+    
+    def run_backtest(self, start_date: str, end_date: str, interval_days: int = 7):
+        """
+        백테스팅 실행
+        
+        Args:
+            start_date: 시작일 (YYYY-MM-DD)
+            end_date: 종료일 (YYYY-MM-DD)
+            interval_days: 테스트 간격 (일)
+        """
+        self.logger.info("="*70)
+        self.logger.info(f"🚀 백테스팅 시작: {start_date} ~ {end_date}")
+        self.logger.info("="*70)
+        
+        # 날짜 범위 생성
+        start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        
+        current_date = start_dt
+        test_count = 0
+        total_discoveries = 0
+        
+        holding_periods = self.backtest_config.get('performance', {}).get('holding_periods', [5, 10, 20])
+        
+        while current_date <= end_dt:
+            self.logger.info(f"\n📅 분석일: {current_date.strftime('%Y-%m-%d')}")
+            
+            # 해당 날짜의 종목 리스트
+            stock_list = self.get_historical_stock_list(current_date.strftime('%Y-%m-%d'))
+            
+            daily_discoveries = []
+            
+            # 각 종목 분석
+            for name, code in list(stock_list.items())[:50]:  # 테스트: 상위 50개만
+                result = self.simulate_stock_analysis(name, code, current_date)
+                
+                if result and result['score'] >= 3:  # 3점 이상만
+                    # 향후 수익률 계산
+                    returns = self.calculate_future_returns(
+                        code, current_date, result['price'], holding_periods
+                    )
+                    
+                    result['returns'] = returns
+                    daily_discoveries.append(result)
+                    
+                    # 신호별 성과 기록
+                    for signal in result['signals']:
+                        for period, return_pct in returns.items():
+                            if return_pct is not None:
+                                self.signal_performance[signal]['total'] += 1
+                                self.signal_performance[signal]['total_return'] += return_pct
+                                self.signal_performance[signal]['returns'].append(return_pct)
+                                
+                                if return_pct > 0:
+                                    self.signal_performance[signal]['success'] += 1
+            
+            if daily_discoveries:
+                self.logger.info(f"✅ 발굴: {len(daily_discoveries)}개")
+                total_discoveries += len(daily_discoveries)
+                
+                # 결과 저장
+                self.backtest_results.extend(daily_discoveries)
+            else:
+                self.logger.info("❌ 발굴 종목 없음")
+            
+            test_count += 1
+            current_date += timedelta(days=interval_days)
+        
+        self.logger.info("\n" + "="*70)
+        self.logger.info(f"✅ 백테스팅 완료")
+        self.logger.info(f"   총 테스트: {test_count}회")
+        self.logger.info(f"   총 발굴: {total_discoveries}개")
+        self.logger.info("="*70)
+        
+        # 결과 분석 및 저장
+        self.analyze_results()
+        self.save_results()
+    
+    def analyze_results(self):
+        """백테스팅 결과 분석"""
+        if not self.backtest_results:
+            self.logger.warning("⚠️ 분석할 결과가 없습니다.")
             return
         
-        # 종목별 최고 전략 선택
-        best_strategies = {}
-        for stock_code in results_df['stock_code'].unique():
-            stock_results = results_df[results_df['stock_code'] == stock_code]
-            valid_results = stock_results[stock_results['total_trades'] >= 3]
-            if valid_results.empty:
-                best_row = stock_results.loc[stock_results['total_return'].idxmax()]
-            else:
-                best_row = valid_results.loc[valid_results['total_return'].idxmax()]
+        self.logger.info("\n" + "="*70)
+        self.logger.info("📊 백테스팅 결과 분석")
+        self.logger.info("="*70)
+        
+        # 전체 통계
+        total_stocks = len(self.backtest_results)
+        holding_periods = [5, 10, 20]
+        
+        for period in holding_periods:
+            valid_returns = [r['returns'].get(period) for r in self.backtest_results 
+                           if r['returns'].get(period) is not None]
             
-            best_strategies[stock_code] = {
-                'symbol': stock_code,
-                'name': stock_names.get(stock_code, stock_code),
-                'strategy': best_row['strategy'],
-                'return': round(best_row['total_return'] * 100, 2),
-                'win_rate': round(best_row['win_rate'], 3),
-                'sharpe_ratio': round(best_row['sharpe_ratio'], 3),
-                'max_drawdown': round(best_row['max_drawdown'], 3),
-                'total_trades': int(best_row['total_trades']),
-                'priority': 0,
-                'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            }
+            if valid_returns:
+                success_count = sum(1 for r in valid_returns if r > 0)
+                success_rate = (success_count / len(valid_returns)) * 100
+                avg_return = sum(valid_returns) / len(valid_returns)
+                
+                self.logger.info(f"\n{period}일 보유:")
+                self.logger.info(f"  성공률: {success_rate:.1f}% ({success_count}/{len(valid_returns)})")
+                self.logger.info(f"  평균 수익률: {avg_return:+.2f}%")
         
-        # 수익률 기준으로 우선순위 설정
-        sorted_symbols = sorted(best_strategies.items(), 
-                              key=lambda x: x[1]['return'], 
-                              reverse=True)
+        # 신호별 성과
+        self.logger.info("\n" + "-"*70)
+        self.logger.info("📈 신호별 성과 (5일 보유 기준)")
+        self.logger.info("-"*70)
         
-        for i, (symbol, data) in enumerate(sorted_symbols):
-            best_strategies[symbol]['priority'] = i + 1
+        signal_stats = []
+        for signal, perf in self.signal_performance.items():
+            if perf['total'] > 0:
+                success_rate = (perf['success'] / perf['total']) * 100
+                avg_return = perf['total_return'] / perf['total']
+                
+                signal_stats.append({
+                    'signal': signal,
+                    'count': perf['total'],
+                    'success_rate': success_rate,
+                    'avg_return': avg_return
+                })
         
-        # 전체 결과 구성
-        backtest_data = {
-            'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'backtest_period': f"{len(results_df)} days",
-            'verified_symbols': list(best_strategies.values()),
-            'summary': {
-                'total_symbols': len(best_strategies),
-                'avg_return': round(results_df.groupby('stock_code')['total_return'].max().mean() * 100, 2),
-                'best_symbol': sorted_symbols[0][0] if sorted_symbols else None,
-                'best_return': sorted_symbols[0][1]['return'] if sorted_symbols else 0
-            }
-        }
+        # 성공률 순 정렬
+        signal_stats.sort(key=lambda x: x['success_rate'], reverse=True)
         
-        # JSON 파일로 저장
-        success, error = safe_json_save(backtest_data, filename)
-        if success:
-            self.logger.info(f"✅ 백테스트 결과가 {filename}에 저장되었습니다.")
-            
-            # stock_names.json 별도 저장
-            if os.path.exists('stock_names.json'):
-                with open('stock_names.json', 'r', encoding='utf-8') as f:
-                    existing_names = json.load(f)
-            else:
-                existing_names = {}
+        for stat in signal_stats[:10]:  # 상위 10개
+            self.logger.info(
+                f"{stat['signal']:20s}: "
+                f"{stat['success_rate']:5.1f}% "
+                f"(평균 {stat['avg_return']:+.2f}%, "
+                f"발생 {stat['count']:3d}회)"
+            )
     
-            # 기존 데이터와 새 데이터 병합
-            merged_names = {**existing_names, **stock_names}
-    
-            # 병합된 데이터 저장
-            success_names, error_names = safe_json_save(merged_names, 'stock_names.json')
-            if success_names:
-                self.logger.info("✅ 종목명 매핑이 stock_names.json에 저장되었습니다.")
-            else:
-                self.logger.error(f"❌ 종목명 저장 실패: {error_names}")
+    def save_results(self):
+        """결과 저장"""
+        try:
+            output_config = self.backtest_config.get('output', {})
+            results_file = output_config.get('results_file', 'backtest_results.json')
             
-        else:
-            self.logger.error(f"❌ 결과 저장 실패: {error}")
-
-    def run_comprehensive_backtest(self, stock_codes: List[str], stock_names: Dict[str, str] = None, days: int = 100):
-        """종합 백테스트 실행"""
-        self.logger.info("🚀 KIS API 기반 시간단위 매매 백테스트 시작!")
-        print("🚀 KIS API 기반 시간단위 매매 백테스트 시작!")
-        print("=" * 60)
-
-        if stock_names is None:
-            stock_names = {}
-
-        strategies = {
-            'momentum': self.momentum_strategy,
-            'mean_reversion': self.mean_reversion_strategy,
-            'breakout': self.breakout_strategy,
-            'scalping': self.scalping_strategy
-        }
-
-        # 전략 조합
-        strategy_combinations = [
-            ['momentum'],
-            ['mean_reversion'],
-            ['breakout'],
-            ['scalping'],
-            ['momentum', 'breakout'],
-            ['mean_reversion', 'scalping']
-        ]
-
-        all_results = []
-
-        for stock_code in stock_codes:
-            stock_name = stock_names.get(stock_code, stock_code)
-            print(f"📊 {stock_code}({stock_name}) 종목 분석 중...")
-            self.logger.info(f"📊 {stock_code}({stock_name}) 종목 분석 중...")
-
-            # 데이터 조회
-            df = self.get_stock_data(stock_code, count=days)
-            if df.empty:
-                self.logger.warning(f"❌ {stock_code} - 데이터 조회 실패")
-                continue
-
-            # 기술적 지표 계산
-            df = self.calculate_technical_indicators(df)
-
-            # 각 전략 조합별 백테스트
-            for combination in strategy_combinations:
-                try:
-                    if len(combination) == 1:
-                        # 단일 전략
-                        strategy_name = combination[0]
-                        result = self.backtest_strategy(df, strategies[strategy_name])
-                    else:
-                        # 전략 조합 (신호 평균)
-                        combined_signals = pd.Series(0, index=df.index)
-                        for strategy_name in combination:
-                            signals = strategies[strategy_name](df)
-                            combined_signals += signals
-                        combined_signals = combined_signals / len(combination)
-
-                        # 임계값으로 신호 변환
-                        final_signals = pd.Series(0, index=df.index)
-                        final_signals[combined_signals > 0.5] = 1
-                        final_signals[combined_signals < -0.5] = -1
-
-                        def combined_strategy(df):
-                            return final_signals
-
-                        result = self.backtest_strategy(df, combined_strategy)
-
-                    if 'error' in result:
-                        self.logger.error(f"❌ {stock_code} - {combination} 오류: {result['error']}")
-                        continue
-
-                    result['stock_code'] = stock_code
-                    result['strategy'] = ' + '.join(combination)
-                    all_results.append(result)
-
-                    print(f"✅ {stock_code} - {combination}: 수익률 {result['total_return']:.2%}")
-
-                except Exception as e:
-                    self.logger.error(f"❌ {stock_code} - {combination} 오류: {str(e)}")
-                    continue
-
-            # API 호출 제한 방지
-            time.sleep(0.1)
-
-        # 결과 정리 및 출력
-        if all_results:
-            results_df = pd.DataFrame(all_results)
-
-            print("\n" + "=" * 60)
-            print("📈 백테스트 결과 요약")
-            print("=" * 60)
-
-            # 전략별 평균 성과
-            strategy_summary = results_df.groupby('strategy').agg({
-                'total_return': 'mean',
-                'win_rate': 'mean',
-                'sharpe_ratio': 'mean',
-                'max_drawdown': 'mean'
-            }).round(4)
-
-            print("\n🏆 전략별 평균 성과:")
-            print(strategy_summary.to_string())
-
-            # 종목별 최고 성과
-            print(f"\n⭐ 종목별 최고 성과:")
-            best_by_stock = results_df.loc[results_df.groupby('stock_code')['total_return'].idxmax()].sort_values(by='total_return', ascending=False)
-            for _, row in best_by_stock.iterrows():
-                stock_name = stock_names.get(row['stock_code'], row['stock_code'])
-                print(f"{row['stock_code']}({stock_name}): {row['strategy']} - 수익률 {row['total_return']:.2%}")
-
-            # 전체 최고 성과
-            best_overall = results_df.loc[results_df['total_return'].idxmax()]
-            print(f"\n🥇 전체 최고 성과:")
-            print(f"종목: {best_overall['stock_code']}, 전략: {best_overall['strategy']}")
-            print(f"수익률: {best_overall['total_return']:.2%}, 승률: {best_overall['win_rate']:.2%}")
-            print(f"샤프비율: {best_overall['sharpe_ratio']:.3f}, 최대낙폭: {best_overall['max_drawdown']:.2%}")
-
-            # JSON 파일로 저장
-            self.save_backtest_results(results_df, stock_names)
-
-            return results_df
-        else:
-            self.logger.warning("❌ 백테스트 결과가 없습니다.")
-            return pd.DataFrame()
+            # JSON 저장
+            output_data = {
+                'timestamp': datetime.now().isoformat(),
+                'total_discoveries': len(self.backtest_results),
+                'discoveries': self.backtest_results,
+                'signal_performance': dict(self.signal_performance)
+            }
+            
+            with open(results_file, 'w', encoding='utf-8') as f:
+                json.dump(output_data, f, ensure_ascii=False, indent=2)
+            
+            self.logger.info(f"\n💾 결과 저장: {results_file}")
+            
+        except Exception as e:
+            self.logger.error(f"❌ 결과 저장 실패: {e}")
 
 
 def main():
-    """메인 실행 함수"""
+    """메인 실행"""
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='백테스팅 실행')
+    parser.add_argument('--start', type=str, required=True, help='시작일 (YYYY-MM-DD)')
+    parser.add_argument('--end', type=str, required=True, help='종료일 (YYYY-MM-DD)')
+    parser.add_argument('--interval', type=int, default=7, help='테스트 간격 (일)')
+    
+    args = parser.parse_args()
+    
     try:
-        # 환경변수 체크
-        from dotenv import load_dotenv
-        load_dotenv()
+        analyzer = BacktestAnalyzer()
+        analyzer.run_backtest(args.start, args.end, args.interval)
         
-        required_env_vars = ["KIS_APP_KEY", "KIS_APP_SECRET"]
-        missing_vars = [var for var in required_env_vars if not os.getenv(var)]
+        print("\n✅ 백테스팅 완료!")
         
-        if missing_vars:
-            print(f"❌ 필수 환경변수가 설정되지 않았습니다: {missing_vars}")
-            return
-
-        # 백테스터 초기화
-        backtester = KISBacktester()
-
-        # 분석할 종목 리스트
-        base_stock_info = {
-            "062040": "산일전기",
-            "278470": "에이피알",
-        }
-        
-        # 종목코드 리스트와 이름 딕셔너리 분리
-        base_stock_list = list(base_stock_info.keys())
-        base_stock_names = base_stock_info
-
-        # backtest_list.json에서 종목 로드
-        additional_codes, additional_names = load_stock_codes_from_file("backtest_list.json")
-        
-        # 종목 리스트와 이름 딕셔너리 합치기
-        all_stock_codes = list(set(base_stock_list + additional_codes))
-        all_stock_names = {**base_stock_names, **additional_names}
-        
-        print(f"📋 분석대상 목록: {', '.join([f'{code}({all_stock_names.get(code, code)})' for code in all_stock_codes[:5]])}{'...' if len(all_stock_codes) > 5 else ''}")
-        
-        # 백테스트 실행
-        results = backtester.run_comprehensive_backtest(all_stock_codes, all_stock_names, days=100)
-
-        if not results.empty:
-            print("\n✅ 백테스트 완료!")
-            print(f"📊 총 {len(results)}개 결과 생성")
-        else:
-            print("❌ 백테스트 결과 없음")
-
     except Exception as e:
-        print(f"❌ 백테스트 실행 중 오류: {e}")
-        logging.error(f"❌ 백테스트 실행 중 오류: {e}")
+        print(f"\n❌ 오류 발생: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+    
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
+
