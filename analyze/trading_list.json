@@ -14,13 +14,12 @@
       25811,
       18988,
       5914,
-      47092,
-      67524
+      47092
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-04 22:53:44",
-    "saved_at": "2026-02-04T22:57:54.344080",
+    "analysis_date": "2026-02-04 23:30:05",
+    "saved_at": "2026-02-04T23:31:30.989852",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
@@ -40,13 +39,12 @@
       32436,
       27406,
       26565,
-      -44068,
-      -39675
+      -44068
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-04 22:56:12",
-    "saved_at": "2026-02-04T22:57:54.344103",
+    "analysis_date": "2026-02-04 23:30:55",
+    "saved_at": "2026-02-04T23:31:30.989883",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
@@ -66,13 +64,12 @@
       159883,
       163972,
       -140922,
-      -35107,
-      167118
+      -35107
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-04 22:57:24",
-    "saved_at": "2026-02-04T22:57:54.344107",
+    "analysis_date": "2026-02-04 23:31:19",
+    "saved_at": "2026-02-04T23:31:30.989891",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true

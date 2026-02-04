@@ -15,6 +15,11 @@ logger = logging.getLogger(__name__)
 class DataFetcher(KISAPIClient):
     def __init__(self):
         super().__init__()
+        self.db_manager = None  # DB 매니저는 필요시 외부에서 설정
+
+    def set_db_manager(self, db_manager):
+        """DB 매니저 설정"""
+        self.db_manager = db_manager
 
     def get_current_price(self, stock_code):
         """실시간 현재가 조회"""
@@ -93,17 +98,17 @@ class DataFetcher(KISAPIClient):
         """실시간 현재가가 포함된 일봉 데이터 조회"""
         # 기간별 데이터 조회
         df = self.get_period_price_data(stock_code, days)
-        
+
         if df is None or df.empty:
             logger.error(f"❌ {stock_code}: 기간별 데이터 조회 실패")
             return None
-        
+
         # 실시간 현재가 추가
         current_price, current_volume = self.get_current_price(stock_code)
-        
+
         if current_price and current_volume:
             today = datetime.now().strftime("%Y%m%d")
-            
+
             # 오늘 데이터가 있으면 업데이트, 없으면 추가
             if len(df) > 0 and df.iloc[-1]["stck_bsop_date"] == today:
                 df.loc[df.index[-1], "stck_clpr"] = current_price
@@ -119,28 +124,90 @@ class DataFetcher(KISAPIClient):
                 }
                 df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
                 logger.debug(f"📈 {stock_code}: 오늘 데이터 추가")
-        
+
         return df
 
+    def get_daily_data_from_db(self, stock_code, days=90):
+        """로컬 DB에서 일봉 데이터 조회 (실시간 현재가 포함)
+
+        Args:
+            stock_code: 종목코드
+            days: 조회 일수 (기본 90일)
+
+        Returns:
+            DataFrame: 일봉 데이터 또는 None
+        """
+        if not self.db_manager:
+            logger.warning(f"⚠️ {stock_code}: DB 매니저가 설정되지 않음")
+            return None
+
+        try:
+            # DB에서 일봉 데이터 조회
+            data_list = self.db_manager.get_daily_prices(stock_code, days)
+
+            if not data_list:
+                logger.debug(f"⚠️ {stock_code}: DB에 데이터 없음")
+                return None
+
+            # DataFrame으로 변환
+            df = pd.DataFrame(data_list)
+
+            # 데이터 타입 변환
+            numeric_cols = ["stck_clpr", "stck_hgpr", "stck_lwpr", "acml_vol"]
+            for col in numeric_cols:
+                if col in df.columns:
+                    df[col] = pd.to_numeric(df[col], errors="coerce")
+
+            # 실시간 현재가 추가
+            current_price, current_volume = self.get_current_price(stock_code)
+
+            if current_price and current_volume:
+                today = datetime.now().strftime("%Y%m%d")
+
+                # 오늘 데이터가 있으면 업데이트, 없으면 추가
+                if len(df) > 0 and df.iloc[-1]["stck_bsop_date"] == today:
+                    df.loc[df.index[-1], "stck_clpr"] = current_price
+                    df.loc[df.index[-1], "acml_vol"] = current_volume
+                    logger.debug(f"💾 {stock_code}: DB 데이터 + 오늘 실시간 업데이트")
+                else:
+                    new_row = {
+                        "stck_bsop_date": today,
+                        "stck_clpr": current_price,
+                        "stck_hgpr": current_price,
+                        "stck_lwpr": current_price,
+                        "acml_vol": current_volume,
+                        "stck_oprc": current_price
+                    }
+                    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+                    logger.debug(f"💾 {stock_code}: DB 데이터 + 오늘 실시간 추가")
+            else:
+                logger.debug(f"💾 {stock_code}: DB 데이터 사용 ({len(df)}일)")
+
+            return df
+
+        except Exception as e:
+            logger.error(f"❌ {stock_code}: DB 데이터 조회 오류: {e}")
+            return None
+
     def get_foreign_netbuy_trend(self, stock_code, days=5):
-        """외국인 순매수 추세 분석"""
+        """외국인 순매수 추세 분석 (API 사용)"""
         url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-investor"
         params = {
             "fid_cond_mrkt_div_code": "J",
             "fid_input_iscd": stock_code
         }
-        
+
         try:
             data = self.api_request(url, params, "FHKST01010900")
             if not data or "output" not in data:
                 return [], "unknown"
-            
+
             netbuy_list = []
             for row in data["output"][:days]:
                 qty = row.get("frgn_ntby_qty", "").replace(",", "").strip()
                 if qty:
                     netbuy_list.append(int(qty))
-            
+
             # 추세 분석
             if len(netbuy_list) >= 3:
                 pos_days = sum(1 for x in netbuy_list if x > 0)
@@ -154,11 +221,67 @@ class DataFetcher(KISAPIClient):
                     trend = "mixed"
             else:
                 trend = "neutral"
-            
+
             return netbuy_list, trend
-            
+
         except Exception as e:
             logger.error(f"❌ {stock_code}: 외국인 추세 분석 오류: {e}")
+            return [], "unknown"
+
+    def get_foreign_netbuy_trend_from_db(self, stock_code, days=5):
+        """외국인 순매수 추세 분석 (로컬 DB 사용)
+
+        Args:
+            stock_code: 종목코드
+            days: 분석 일수 (기본 5일)
+
+        Returns:
+            tuple: (netbuy_list, trend)
+        """
+        if not self.db_manager:
+            logger.warning(f"⚠️ {stock_code}: DB 매니저가 설정되지 않음")
+            return [], "unknown"
+
+        try:
+            # DB에서 최근 일봉 데이터 조회
+            data_list = self.db_manager.get_daily_prices(stock_code, days=days)
+
+            if not data_list or len(data_list) < 3:
+                logger.debug(f"⚠️ {stock_code}: DB에 외국인 데이터 부족 (최소 3일 필요)")
+                return [], "unknown"
+
+            # 최근 데이터부터 역순으로 정렬 (최신이 앞)
+            data_list = sorted(data_list, key=lambda x: x['stck_bsop_date'], reverse=True)
+
+            # 외국인 순매수량 추출
+            netbuy_list = []
+            for data in data_list[:days]:
+                foreign_net_qty = data.get('foreign_net_qty')
+                if foreign_net_qty is not None:
+                    netbuy_list.append(int(foreign_net_qty))
+
+            if len(netbuy_list) < 3:
+                logger.debug(f"⚠️ {stock_code}: 외국인 데이터 부족")
+                return [], "unknown"
+
+            # 추세 분석
+            pos_days = sum(1 for x in netbuy_list if x > 0)
+            actual_days = len(netbuy_list)
+
+            if pos_days == actual_days:
+                trend = "steady_buying"
+            elif pos_days >= actual_days * 0.6:
+                trend = "accumulating"
+            elif pos_days <= actual_days * 0.2:
+                trend = "distributing"
+            else:
+                trend = "mixed"
+
+            logger.debug(f"💾 {stock_code}: DB에서 외국인 추세 분석 - {trend}")
+            return netbuy_list, trend
+
+        except Exception as e:
+            logger.error(f"❌ {stock_code}: DB 외국인 추세 분석 오류: {e}")
             return [], "unknown"
 
     def get_institution_netbuy_trend(self, stock_code, days=3):

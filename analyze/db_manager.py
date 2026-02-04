@@ -433,7 +433,7 @@ class DBManager:
             self.logger.error(f"❌ 배치 시작 기록 실패: {e}")
             return 0
     
-    def end_batch(self, batch_id: int, status: str, 
+    def end_batch(self, batch_id: int, status: str,
                   total_stocks: int, success_count: int, fail_count: int,
                   error_message: str = None):
         """배치 실행 종료 기록"""
@@ -445,13 +445,66 @@ class DBManager:
             WHERE batch_id = %s
             """
             self.cursor.execute(sql, (
-                datetime.now(), status, total_stocks, 
+                datetime.now(), status, total_stocks,
                 success_count, fail_count, error_message, batch_id
             ))
             self.connection.commit()
         except Exception as e:
             self.logger.error(f"❌ 배치 종료 기록 실패: {e}")
-    
+
+    def get_daily_prices(self, stock_code: str, days: int = 90) -> Optional[List[Dict]]:
+        """DB에서 일봉 데이터 조회
+
+        Args:
+            stock_code: 종목코드
+            days: 조회 일수 (기본 90일)
+
+        Returns:
+            List[Dict]: 일봉 데이터 리스트 (날짜 오름차순) 또는 None
+        """
+        try:
+            sql = """
+            SELECT
+                stock_code,
+                trade_date as stck_bsop_date,
+                open_price as stck_oprc,
+                high_price as stck_hgpr,
+                low_price as stck_lwpr,
+                close_price as stck_clpr,
+                volume as acml_vol,
+                trading_value as acml_tr_pbmn,
+                foreign_buy_qty,
+                foreign_sell_qty,
+                foreign_net_qty,
+                institution_buy_qty,
+                institution_sell_qty,
+                institution_net_qty,
+                individual_buy_qty,
+                individual_sell_qty,
+                individual_net_qty
+            FROM daily_stock_prices
+            WHERE stock_code = %s
+              AND trade_date >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
+            ORDER BY trade_date ASC
+            """
+
+            self.cursor.execute(sql, (stock_code, days))
+            results = self.cursor.fetchall()
+
+            if not results:
+                return None
+
+            # trade_date를 문자열로 변환 (YYYYMMDD 형식)
+            for row in results:
+                if isinstance(row['stck_bsop_date'], date):
+                    row['stck_bsop_date'] = row['stck_bsop_date'].strftime('%Y%m%d')
+
+            return results
+
+        except Exception as e:
+            self.logger.error(f"❌ 일봉 데이터 조회 실패 ({stock_code}): {e}")
+            return None
+
     def __enter__(self):
         """컨텍스트 매니저 진입"""
         self.connect()

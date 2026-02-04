@@ -26,12 +26,17 @@ load_dotenv()
 
 class EnhancedStockAnalyzer:
     """강화된 주식 분석 메인 클래스 - 절대조건 필터링"""
-    
+
     def __init__(self):
         self.logger = setup_logger()
         self.data_fetcher = DataFetcher()
         self.signal_analyzer = SignalAnalyzer(self.data_fetcher)
         self.webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
+
+        # 로컬 DB 사용 여부 확인 및 설정
+        self.db_manager = None
+        self.use_local_db = False
+        self._setup_local_db()
         
         # 결과 저장용
         self.backtest_candidates = []
@@ -42,7 +47,39 @@ class EnhancedStockAnalyzer:
         # 필터링 설정
         self.min_score_for_messaging = 3
         self.min_score_for_detail = 3
-        
+
+    def _setup_local_db(self):
+        """로컬 DB 설정 (config.yaml이 있을 경우)"""
+        try:
+            import yaml
+            from db_manager import DBManager
+
+            config_path = "config.yaml"
+            if not os.path.exists(config_path):
+                self.logger.info("💡 config.yaml 없음 - API로 일봉 데이터 조회")
+                return
+
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = yaml.safe_load(f)
+
+            db_config = config.get('database', {})
+            if not db_config:
+                self.logger.info("💡 config.yaml에 database 설정 없음 - API로 일봉 데이터 조회")
+                return
+
+            # DB 매니저 생성 및 연결
+            self.db_manager = DBManager(db_config, self.logger)
+            if self.db_manager.connect():
+                self.data_fetcher.set_db_manager(self.db_manager)
+                self.use_local_db = True
+                self.logger.info("✅ 로컬 DB 연결 성공 - 일봉 데이터는 로컬 DB 사용")
+            else:
+                self.logger.warning("⚠️ 로컬 DB 연결 실패 - API로 일봉 데이터 조회")
+
+        except ImportError:
+            self.logger.info("💡 PyYAML 미설치 - API로 일봉 데이터 조회")
+        except Exception as e:
+            self.logger.warning(f"⚠️ 로컬 DB 설정 실패: {e} - API로 일봉 데이터 조회")
 
     def _init_signal_lists(self):
         """개별 신호별 종목 리스트 초기화"""
@@ -85,20 +122,40 @@ class EnhancedStockAnalyzer:
         버그 수정 완료 버전
         """
         try:
-            # 외국인 순매수 추세 확인 (안전한 호출)
+            # 외국인 순매수 추세 확인 (로컬 DB 우선, 없으면 API)
             try:
-                foreign_netbuy_list, foreign_trend = self.data_fetcher.get_foreign_netbuy_trend(code)
+                if self.use_local_db:
+                    foreign_netbuy_list, foreign_trend = self.data_fetcher.get_foreign_netbuy_trend_from_db(code)
+                    # DB에서 데이터가 없거나 불충분하면 API 사용
+                    if not foreign_netbuy_list or foreign_trend == "unknown":
+                        self.logger.debug(f"🌐 {name}({code}): 외국인 데이터 API 사용")
+                        foreign_netbuy_list, foreign_trend = self.data_fetcher.get_foreign_netbuy_trend(code)
+                    else:
+                        self.logger.debug(f"💾 {name}({code}): 외국인 데이터 DB 사용")
+                else:
+                    foreign_netbuy_list, foreign_trend = self.data_fetcher.get_foreign_netbuy_trend(code)
             except Exception as e:
                 self.logger.warning(f"⚠️ {name}({code}) 외국인 데이터 조회 실패: {e}")
                 foreign_netbuy_list, foreign_trend = [], "unknown"
             
-            # 주가 데이터 조회 (실시간 포함)
+            # 주가 데이터 조회 (로컬 DB 우선, 없으면 API)
+            df = None
             try:
-                df = self.data_fetcher.get_daily_price_data_with_realtime(code)
+                # 로컬 DB 사용 시도
+                if self.use_local_db:
+                    df = self.data_fetcher.get_daily_data_from_db(code)
+                    if df is not None and not df.empty:
+                        self.logger.debug(f"💾 {name}({code}): 로컬 DB 데이터 사용")
+
+                # 로컬 DB에 데이터가 없거나 DB 미사용 시 API 사용
+                if df is None or df.empty:
+                    self.logger.debug(f"🌐 {name}({code}): API 데이터 사용")
+                    df = self.data_fetcher.get_daily_price_data_with_realtime(code)
+
             except Exception as e:
-                self.logger.warning(f"⚠️ {name}({code}) 실시간 데이터 실패, 기본 데이터 시도: {e}")
+                self.logger.warning(f"⚠️ {name}({code}) 실시간 데이터 실패, 기본 API 시도: {e}")
                 try:
-                    df = self.data_fetcher.get_daily_data(code)
+                    df = self.data_fetcher.get_period_price_data(code)
                 except Exception as e2:
                     self.logger.error(f"❌ {name}({code}) 모든 데이터 조회 실패: {e2}")
                     return False
@@ -132,7 +189,7 @@ class EnhancedStockAnalyzer:
                 else:
                     current_price = 0
             
-                if current_price > 300000:
+                if current_price > 400000:
                     self.logger.debug(f"🚫 {name}({code}) 구매가격이 너무 높음: {current_price/10000:.1f}만원")
                     return True
                     
@@ -238,7 +295,13 @@ class EnhancedStockAnalyzer:
         """전체 분석 실행 (절대조건 필터링 적용)"""
         self.logger.info("📊 절대조건 필터링 적용 - 시가총액 상위 200개 종목 분석 시작 (코스피+코스닥)...")
         self.logger.info("🔒 절대조건: ①현재가<20일선 ②거래량≥1000주 ③볼린저밴드내 ④외국인최근2~3일연속매수")
-        
+
+        # 로컬 DB 사용 여부 알림
+        if self.use_local_db:
+            self.logger.info("💾 일봉 데이터: 로컬 DB 사용 (daily_collector.py로 수집된 데이터)")
+        else:
+            self.logger.info("🌐 일봉 데이터: API 직접 조회")
+
         # 종목 리스트 조회
         stock_list = self.data_fetcher.get_top_200_stocks(top_n=300)
         if not stock_list:
@@ -251,16 +314,22 @@ class EnhancedStockAnalyzer:
         # 각 종목 분석
         for name, code in stock_list.items():
             success = self.analyze_stock(name, code)
-            
+
             # 절대조건 통과 여부 확인 (multi_signal_stocks에 추가되었는지로 판단)
             filter_passed = any(
-                stock['code'] == code 
-                for grade_stocks in self.multi_signal_stocks.values() 
+                stock['code'] == code
+                for grade_stocks in self.multi_signal_stocks.values()
                 for stock in grade_stocks
             )
-            
+
             progress.update(success, filter_passed)
-            time.sleep(0.2)
+
+            # API 호출 제한 (로컬 DB 사용 시에는 대기 시간 불필요)
+            if not self.use_local_db:
+                time.sleep(0.2)
+            else:
+                # 로컬 DB 사용 시에도 실시간 현재가 조회를 위한 최소 대기
+                time.sleep(0.05)
         
         # 결과 처리 - ProgressTracker의 카운트 사용
         summary = progress.get_summary()
@@ -398,35 +467,41 @@ class EnhancedStockAnalyzer:
 
 def main():
     """메인 실행 함수 (절대조건 필터링 적용)"""
+    analyzer = None
     try:
         # 환경변수 체크
         required_env_vars = ["KIS_APP_KEY", "KIS_APP_SECRET"]
         missing_vars = [var for var in required_env_vars if not os.getenv(var)]
-        
+
         if missing_vars:
             print(f"❌ 필수 환경변수가 설정되지 않았습니다: {missing_vars}")
             return
-        
+
         # 강화된 분석기 생성 및 실행
         analyzer = EnhancedStockAnalyzer()
         analyzer.logger.info("🚀 절대조건 필터링 주식 분석 시작")
-        
+
         success = analyzer.run_analysis()
-        
+
         if success:
             analyzer.logger.info("✅ 절대조건 필터링 분석 완료!")
             analyzer.logger.info("📱 메신저에는 절대조건 통과 종목만 전송되었습니다.")
         else:
             analyzer.logger.error("❌ 분석 실행 중 오류 발생")
-            
+
     except Exception as e:
         print(f"❌ 심각한 오류 발생: {e}")
-        
+
         # 에러 메시지 전송
         webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
         if webhook_url:
             error_msg = f"❌ **[절대조건 필터링 시스템 오류]**\n주식 분석 중 오류가 발생했습니다: {str(e)}"
             send_discord_message(error_msg, webhook_url)
+
+    finally:
+        # DB 연결 해제
+        if analyzer and analyzer.db_manager:
+            analyzer.db_manager.disconnect()
 
 
 if __name__ == "__main__":
