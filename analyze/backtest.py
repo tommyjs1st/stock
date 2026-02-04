@@ -32,15 +32,17 @@ class BacktestAnalyzer:
                 config = yaml.safe_load(f)
                 self.backtest_config = config.get('backtest_analysis', {})
                 self.analysis_config = config.get('analysis', {})
+                self.db_config = config.get('database', {})
         except Exception as e:
             self.logger.error(f"❌ 설정 로드 실패: {e}")
             self.backtest_config = {}
             self.analysis_config = {}
+            self.db_config = {}
         
         # 데이터 소스
         self.data_fetcher = DataFetcher()
         self.signal_analyzer = SignalAnalyzer(self.data_fetcher)
-        self.db_manager = DBManager()
+        self.db_manager = DBManager(self.db_config, self.logger)
         
         # 결과 저장
         self.backtest_results = []
@@ -445,4 +447,3 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
-

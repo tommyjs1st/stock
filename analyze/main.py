@@ -240,7 +240,7 @@ class EnhancedStockAnalyzer:
         self.logger.info("🔒 절대조건: ①현재가<20일선 ②거래량≥1000주 ③볼린저밴드내 ④외국인최근2~3일연속매수")
         
         # 종목 리스트 조회
-        stock_list = self.data_fetcher.get_top_200_stocks(top_n=200)
+        stock_list = self.data_fetcher.get_top_200_stocks(top_n=300)
         if not stock_list:
             self.logger.error("❌ 종목 리스트를 가져올 수 없습니다.")
             return False
