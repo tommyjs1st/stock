@@ -1,50 +1,25 @@
 [
   {
-    "code": "000100",
-    "name": "유한양행",
+    "code": "018260",
+    "name": "삼성에스디에스",
     "score": 3,
     "signals": [
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 108000,
-    "volume": 179308,
+    "price": 172400,
+    "volume": 51580,
     "foreign_netbuy": [
-      97789,
-      62708,
-      115147,
-      -168934
+      18988,
+      5914,
+      47092,
+      67524
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-01-27 11:11:42",
-    "saved_at": "2026-01-27T11:15:53.833948",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "100090",
-    "name": "SK오션플랜트",
-    "score": 3,
-    "signals": [
-      "RSI매수신호",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 18980,
-    "volume": 256920,
-    "foreign_netbuy": [
-      89982,
-      58866,
-      133910,
-      -137336
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-01-27 11:15:03",
-    "saved_at": "2026-01-27T11:15:53.833968",
+    "analysis_date": "2026-02-04 11:11:19",
+    "saved_at": "2026-02-04T11:14:25.831513",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true

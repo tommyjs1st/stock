@@ -199,42 +199,80 @@ class DataFetcher(KISAPIClient):
             return [], "unknown"
 
     def get_top_200_stocks(self):
-        """네이버에서 시가총액 상위 200개 종목 조회"""
-        stocks = {}
+        """네이버에서 시가총액 상위 200개 종목 조회 (코스피+코스닥 통합)"""
+        all_stocks = []  # (종목명, 종목코드, 시가총액, 시장구분)
         exclude_keywords = ["KODEX", "TIGER", "PLUS", "ACE", "TIMEFOLIO", "ETF", "ETN", "리츠", "우", "스팩","채권", "국채", "레버리지"]
-        
+
         try:
-            for page in range(1, 8):  # 10페이지까지 조회
-                url = f"https://finance.naver.com/sise/sise_market_sum.nhn?sosok=0&page={page}"
-                headers = {"User-Agent": "Mozilla/5.0"}
-                res = requests.get(url, headers=headers, timeout=10)
-                res.raise_for_status()
-                soup = BeautifulSoup(res.text, "html.parser")
-                rows = soup.select("table.type_2 tr")
-                
-                for row in rows:
-                    try:
-                        link = row.select_one("a.tltle")
-                        if link:
-                            name = link.text.strip()
-                            href = link["href"]
-                            code = href.split("=")[-1]
-                            
-                            # ETF 등 제외
-                            if any(keyword in name for keyword in exclude_keywords):
-                                continue
-                            
-                            stocks[name] = code
-                    except Exception:
-                        continue
-                
-                time.sleep(0.1)  # 요청 간격 조절
-                
+            # 코스피(sosok=0)와 코스닥(sosok=1) 모두 수집
+            for market_type in [0, 1]:
+                market_name = "코스피" if market_type == 0 else "코스닥"
+                logger.info(f"📋 {market_name} 종목 수집 중...")
+
+                for page in range(1, 12):  # 각 시장당 최대 12페이지
+                    url = f"https://finance.naver.com/sise/sise_market_sum.nhn?sosok={market_type}&page={page}"
+                    headers = {"User-Agent": "Mozilla/5.0"}
+                    res = requests.get(url, headers=headers, timeout=10)
+                    res.raise_for_status()
+                    soup = BeautifulSoup(res.text, "html.parser")
+                    rows = soup.select("table.type_2 tr")
+
+                    for row in rows:
+                        try:
+                            link = row.select_one("a.tltle")
+                            if link:
+                                name = link.text.strip()
+                                href = link["href"]
+                                code = href.split("=")[-1]
+
+                                # ETF 등 제외
+                                if any(keyword in name for keyword in exclude_keywords):
+                                    continue
+
+                                # 시가총액 파싱 (억원 단위)
+                                market_cap = 0
+                                cols = row.select("td")
+                                if len(cols) >= 7:
+                                    market_cap_text = cols[6].text.strip().replace(",", "")
+                                    try:
+                                        market_cap = int(market_cap_text) if market_cap_text else 0
+                                    except:
+                                        market_cap = 0
+
+                                all_stocks.append({
+                                    'name': name,
+                                    'code': code,
+                                    'market_cap': market_cap,
+                                    'market': market_name
+                                })
+                        except Exception:
+                            continue
+
+                    time.sleep(0.2)  # 요청 간격 조절
+
+                    # 충분히 수집했으면 중단
+                    if len(all_stocks) >= 400:
+                        break
+
+            # 시가총액 기준으로 정렬 (내림차순)
+            all_stocks.sort(key=lambda x: x['market_cap'], reverse=True)
+
+            # 상위 200개 선택
+            top_stocks = all_stocks[:200]
+
+            # 딕셔너리로 변환 (name: code)
+            result = {stock['name']: stock['code'] for stock in top_stocks}
+
+            # 통계 출력
+            kospi_count = sum(1 for s in top_stocks if s['market'] == '코스피')
+            kosdaq_count = sum(1 for s in top_stocks if s['market'] == '코스닥')
+
+            logger.info(f"📊 총 {len(result)}개 종목 조회 완료 (코스피: {kospi_count}개, 코스닥: {kosdaq_count}개)")
+            return result
+
         except Exception as e:
             logger.error(f"❌ 종목 리스트 조회 오류: {e}")
-        
-        logger.info(f"📊 총 {len(stocks)}개 종목 조회 완료")
-        return stocks
+            return {}
 
     def get_fundamental_data_from_naver(self, stock_code):
         """네이버에서 기본적 분석 데이터 추출"""

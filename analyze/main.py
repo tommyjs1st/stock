@@ -218,7 +218,7 @@ class EnhancedStockAnalyzer:
 
     def run_analysis(self):
         """전체 분석 실행 (절대조건 필터링 적용)"""
-        self.logger.info("📊 절대조건 필터링 적용 - 시가총액 상위 200개 종목 분석 시작...")
+        self.logger.info("📊 절대조건 필터링 적용 - 시가총액 상위 200개 종목 분석 시작 (코스피+코스닥)...")
         self.logger.info("🔒 절대조건: ①현재가<20일선 ②거래량≥1000주 ③볼린저밴드내 ④외국인최근2~3일연속매수")
         
         # 종목 리스트 조회

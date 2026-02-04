@@ -172,6 +172,172 @@ class DBManager:
             self.logger.error(f"❌ 종목 정보 저장 실패 ({stock_code}): {e}")
             return False
     
+    def upsert_fundamental_data(self, data: Dict[str, Any]) -> bool:
+        """펀더멘털 데이터 추가/업데이트
+        
+        Args:
+            data: {
+                'stock_code': str,
+                'trade_date': date,
+                'per': float,
+                'pbr': float,
+                'roe': float,
+                'debt_ratio': float,
+                'market_cap': int,
+                'listed_shares': int
+            }
+        
+        Returns:
+            bool: 성공 여부
+        """
+        try:
+            sql = """
+            INSERT INTO fundamental_data (
+                stock_code, trade_date, per, pbr, roe, debt_ratio, 
+                market_cap, listed_shares, created_at, updated_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
+            ON DUPLICATE KEY UPDATE
+                per = VALUES(per),
+                pbr = VALUES(pbr),
+                roe = VALUES(roe),
+                debt_ratio = VALUES(debt_ratio),
+                market_cap = VALUES(market_cap),
+                listed_shares = VALUES(listed_shares),
+                updated_at = NOW()
+            """
+            
+            self.cursor.execute(sql, (
+                data.get('stock_code'),
+                data.get('trade_date'),
+                data.get('per'),
+                data.get('pbr'),
+                data.get('roe'),
+                data.get('debt_ratio'),
+                data.get('market_cap'),
+                data.get('listed_shares')
+            ))
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"❌ 펀더멘털 데이터 저장 실패 ({data.get('stock_code')}): {e}")
+            return False
+    
+    
+    def get_fundamental_data(self, stock_code: str, days: int = 30) -> Optional[Dict]:
+        """DB에서 펀더멘털 데이터 조회
+        
+        Args:
+            stock_code: 종목코드
+            days: 조회 기간 (기본 30일)
+        
+        Returns:
+            Dict: 최신 펀더멘털 데이터 또는 None
+        """
+        try:
+            sql = """
+            SELECT stock_code, trade_date, per, pbr, roe, debt_ratio, 
+                   market_cap, listed_shares, created_at, updated_at
+            FROM fundamental_data
+            WHERE stock_code = %s
+              AND trade_date >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
+            ORDER BY trade_date DESC
+            LIMIT 1
+            """
+            
+            self.cursor.execute(sql, (stock_code, days))
+            result = self.cursor.fetchone()
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"❌ 펀더멘털 데이터 조회 실패 ({stock_code}): {e}")
+            return None
+    
+    def upsert_fundamental_data(self, data: Dict[str, Any]) -> bool:
+        """펀더멘털 데이터 추가/업데이트
+        
+        Args:
+            data: {
+                'stock_code': str,
+                'trade_date': date,
+                'per': float,
+                'pbr': float,
+                'roe': float,
+                'debt_ratio': float,
+                'market_cap': int,
+                'listed_shares': int
+            }
+        
+        Returns:
+            bool: 성공 여부
+        """
+        try:
+            sql = """
+            INSERT INTO fundamental_data (
+                stock_code, trade_date, per, pbr, roe, debt_ratio, 
+                market_cap, listed_shares, created_at, updated_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
+            ON DUPLICATE KEY UPDATE
+                per = VALUES(per),
+                pbr = VALUES(pbr),
+                roe = VALUES(roe),
+                debt_ratio = VALUES(debt_ratio),
+                market_cap = VALUES(market_cap),
+                listed_shares = VALUES(listed_shares),
+                updated_at = NOW()
+            """
+            
+            self.cursor.execute(sql, (
+                data.get('stock_code'),
+                data.get('trade_date'),
+                data.get('per'),
+                data.get('pbr'),
+                data.get('roe'),
+                data.get('debt_ratio'),
+                data.get('market_cap'),
+                data.get('listed_shares')
+            ))
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"❌ 펀더멘털 데이터 저장 실패 ({data.get('stock_code')}): {e}")
+            return False
+    
+    
+    def get_fundamental_data(self, stock_code: str, days: int = 30) -> Optional[Dict]:
+        """DB에서 펀더멘털 데이터 조회
+        
+        Args:
+            stock_code: 종목코드
+            days: 조회 기간 (기본 30일)
+        
+        Returns:
+            Dict: 최신 펀더멘털 데이터 또는 None
+        """
+        try:
+            sql = """
+            SELECT stock_code, trade_date, per, pbr, roe, debt_ratio, 
+                   market_cap, listed_shares, created_at, updated_at
+            FROM fundamental_data
+            WHERE stock_code = %s
+              AND trade_date >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
+            ORDER BY trade_date DESC
+            LIMIT 1
+            """
+            
+            self.cursor.execute(sql, (stock_code, days))
+            result = self.cursor.fetchone()
+            
+            return result
+        
+        except Exception as e:
+            self.logger.error(f"❌ 펀더멘털 데이터 조회 실패 ({stock_code}): {e}")
+            return None
+
     def bulk_insert_daily_prices(self, data_list: List[Dict[str, Any]]) -> tuple:
         """일봉 데이터 대량 삽입 (투자자별 매매 데이터 포함)"""
         success_count = 0
