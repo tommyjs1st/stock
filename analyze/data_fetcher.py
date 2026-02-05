@@ -105,7 +105,7 @@ class DataFetcher(KISAPIClient):
             return None
 
         # 실시간 현재가 추가
-        current_price, current_volume = self.get_current_price(stock_code)
+        current_price, current_volume, prev_close = self.get_current_price(stock_code)
 
         if current_price and current_volume:
             today = datetime.now().strftime("%Y%m%d")
@@ -160,7 +160,7 @@ class DataFetcher(KISAPIClient):
                     df[col] = pd.to_numeric(df[col], errors="coerce")
 
             # 실시간 현재가 추가
-            current_price, current_volume = self.get_current_price(stock_code)
+            current_price, current_volume, prev_close = self.get_current_price(stock_code)
 
             if current_price and current_volume:
                 today = datetime.now().strftime("%Y%m%d")

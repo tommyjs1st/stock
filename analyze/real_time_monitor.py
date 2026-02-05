@@ -1,6 +1,6 @@
 """
 실시간 주식 가격 모니터링 GUI 프로그램 (PyQt6)
-상단: 키움 보유종목 모니터링
+상단: 일별 수익률 차트 + 키움 보유종목 모니터링
 하단: trading_list.json 종목 모니터링
 """
 import sys
@@ -9,12 +9,43 @@ import logging
 from datetime import datetime
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QTableWidget, QTableWidgetItem,
-    QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QLabel, QSpinBox, 
+    QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QLabel, QSpinBox,
     QHeaderView, QCheckBox, QSplitter
 )
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QColor, QFont
 from data_fetcher import DataFetcher
+
+# matplotlib 관련
+import matplotlib
+matplotlib.use('QtAgg')  # PyQt6와 호환
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import matplotlib.font_manager as fm
+
+# 한글 폰트 설정 함수
+def setup_korean_font():
+    """시스템에서 사용 가능한 한글 폰트 찾기 및 설정"""
+    korean_fonts = ['AppleGothic', 'Apple SD Gothic Neo', 'NanumGothic', 'Malgun Gothic', '맑은 고딕']
+    available_fonts = [f.name for f in fm.fontManager.ttflist]
+
+    for font in korean_fonts:
+        if font in available_fonts:
+            plt.rcParams['font.family'] = font
+            plt.rcParams['axes.unicode_minus'] = False  # 마이너스 기호 깨짐 방지
+            logging.info(f"✅ 한글 폰트 설정: {font}")
+            return font
+
+    # 대체 폰트 (sans-serif)
+    plt.rcParams['font.family'] = 'sans-serif'
+    plt.rcParams['axes.unicode_minus'] = False
+    logging.warning("⚠️ 한글 폰트를 찾을 수 없습니다. 기본 폰트 사용")
+    return 'sans-serif'
+
+# 한글 폰트 초기화
+KOREAN_FONT = setup_korean_font()
 
 # 키움 API 추가
 try:
@@ -91,11 +122,11 @@ class RealTimeMonitor(QMainWindow):
         manual_update_btn.clicked.connect(self.update_data)
         control_layout.addWidget(manual_update_btn)
         
-        # 키움 보유종목 새로고침 버튼
+        # 종목 새로고침 버튼
         if KIWOOM_AVAILABLE:
-            refresh_holdings_btn = QPushButton("💼 보유종목 새로고침")
+            refresh_holdings_btn = QPushButton("💼 종목 새로고침")
             refresh_holdings_btn.setFixedHeight(30)
-            refresh_holdings_btn.clicked.connect(self.load_holdings)
+            refresh_holdings_btn.clicked.connect(self.refresh_all_stocks)
             control_layout.addWidget(refresh_holdings_btn)
 
         # 업데이트 간격 설정
@@ -113,6 +144,19 @@ class RealTimeMonitor(QMainWindow):
         control_layout.addStretch()
 
         main_layout.addLayout(control_layout)
+
+        # =================================================================
+        # 일별 수익률 차트
+        # =================================================================
+        if KIWOOM_AVAILABLE:
+            chart_label = QLabel("📈 일별 수익률 추이 (최근 30일)")
+            chart_label.setFont(QFont("맑은 고딕", 12, QFont.Weight.Bold))
+            main_layout.addWidget(chart_label)
+
+            # matplotlib 차트 위젯 생성
+            self.chart_widget = self.create_chart_widget()
+            self.chart_widget.setMaximumHeight(250)  # 차트 높이 제한
+            main_layout.addWidget(self.chart_widget)
 
         # =================================================================
         # 상단: 키움 보유종목 테이블
@@ -200,6 +244,125 @@ class RealTimeMonitor(QMainWindow):
         status_layout.addWidget(self.status_label)
         status_layout.addStretch()
         main_layout.addLayout(status_layout)
+
+    def create_chart_widget(self):
+        """일별 수익률 차트 위젯 생성"""
+        # Figure와 Canvas 생성
+        self.figure = Figure(figsize=(12, 3), facecolor='#2b2b2b')
+        self.canvas = FigureCanvas(self.figure)
+
+        # Axes 생성
+        self.ax = self.figure.add_subplot(111)
+        self.ax.set_facecolor('#2b2b2b')
+
+        # 스타일 설정 (다크 테마)
+        self.ax.tick_params(colors='#e0e0e0', which='both', labelsize=9)
+        self.ax.spines['bottom'].set_color('#3a3a3a')
+        self.ax.spines['top'].set_color('#3a3a3a')
+        self.ax.spines['right'].set_color('#3a3a3a')
+        self.ax.spines['left'].set_color('#3a3a3a')
+
+        # 그리드 설정
+        self.ax.grid(True, alpha=0.2, color='#555555')
+
+        # 초기 빈 차트 (한글 폰트 적용)
+        self.ax.set_title('일별 수익률 추이',
+                         fontsize=12, fontweight='bold', color='#e0e0e0',
+                         fontfamily=KOREAN_FONT)
+        self.ax.set_xlabel('날짜',
+                          fontsize=10, color='#e0e0e0',
+                          fontfamily=KOREAN_FONT)
+        self.ax.set_ylabel('수익률 (%)',
+                          fontsize=10, color='#e0e0e0',
+                          fontfamily=KOREAN_FONT)
+
+        # 레이아웃 조정
+        self.figure.tight_layout()
+
+        return self.canvas
+
+    def update_profit_chart(self):
+        """일별 수익률 차트 업데이트"""
+        if not self.kiwoom_client:
+            return
+
+        try:
+            # 일별 수익률 히스토리 조회
+            df = self.kiwoom_client.get_daily_profit_history(days=30)
+
+            if df.empty:
+                logger.warning("⚠️ 일별 수익률 데이터가 없습니다.")
+                return
+
+            # 차트 초기화
+            self.ax.clear()
+
+            # 날짜와 수익률 추출
+            dates = df['date'].tolist()
+            profit_rates = df['profit_rate'].tolist()
+
+            # 개장일 인덱스 생성 (주말 공백 제거)
+            x_indices = list(range(len(dates)))
+
+            # 선 그래프 그리기 (인덱스 사용)
+            line = self.ax.plot(x_indices, profit_rates,
+                               color='#4a9eff', linewidth=2,
+                               marker='o', markersize=4,
+                               label='수익률')[0]
+
+            # 0% 기준선 추가
+            self.ax.axhline(y=0, color='#888888', linestyle='--', linewidth=1, alpha=0.5)
+
+            # 양수는 빨간색, 음수는 파란색 영역 채우기
+            self.ax.fill_between(x_indices, profit_rates, 0,
+                                where=[pr >= 0 for pr in profit_rates],
+                                color='#ff4444', alpha=0.2, interpolate=True)
+            self.ax.fill_between(x_indices, profit_rates, 0,
+                                where=[pr < 0 for pr in profit_rates],
+                                color='#4488ff', alpha=0.2, interpolate=True)
+
+            # 스타일 설정
+            self.ax.set_facecolor('#2b2b2b')
+            self.ax.tick_params(colors='#e0e0e0', which='both')
+            self.ax.spines['bottom'].set_color('#3a3a3a')
+            self.ax.spines['top'].set_color('#3a3a3a')
+            self.ax.spines['right'].set_color('#3a3a3a')
+            self.ax.spines['left'].set_color('#3a3a3a')
+
+            # 제목 및 레이블 (한글 폰트 적용)
+            latest_rate = profit_rates[-1] if profit_rates else 0
+            rate_color = '#ff4444' if latest_rate >= 0 else '#4488ff'
+            self.ax.set_title(f'일별 수익률 추이 (현재: {latest_rate:+.2f}%)',
+                            fontsize=12, fontweight='bold', color=rate_color,
+                            fontfamily=KOREAN_FONT)
+            self.ax.set_xlabel('날짜',
+                              fontsize=10, color='#e0e0e0',
+                              fontfamily=KOREAN_FONT)
+            self.ax.set_ylabel('수익률 (%)',
+                              fontsize=10, color='#e0e0e0',
+                              fontfamily=KOREAN_FONT)
+
+            # X축을 개장일 기준으로 설정 (3일 간격으로 레이블 표시)
+            tick_interval = max(1, len(dates) // 10)  # 최대 10개 레이블
+            tick_positions = x_indices[::tick_interval]
+            tick_labels = [dates[i].strftime('%m/%d') for i in tick_positions]
+
+            self.ax.set_xticks(tick_positions)
+            self.ax.set_xticklabels(tick_labels, rotation=45, ha='right')
+
+            # 그리드
+            self.ax.grid(True, alpha=0.2, color='#555555')
+
+            # 레이아웃 조정
+            self.figure.tight_layout()
+
+            # 캔버스 갱신
+            self.canvas.draw()
+
+            logger.info(f"✅ 수익률 차트 업데이트 완료: {len(df)}일")
+
+        except Exception as e:
+            logger.error(f"❌ 차트 업데이트 실패: {e}")
 
     def apply_dark_theme(self):
         """어두운 테마 적용"""
@@ -382,20 +545,39 @@ class RealTimeMonitor(QMainWindow):
             logger.error(f"❌ 보유종목 로드 실패: {e}")
             self.holdings = []
 
+    def refresh_all_stocks(self):
+        """보유종목과 관심종목 모두 새로고침"""
+        logger.info("🔄 전체 종목 새로고침 시작...")
+
+        # 관심종목 다시 로드
+        self.load_stocks()
+
+        # 보유종목 다시 로드
+        self.load_holdings()
+
+        # 데이터 업데이트
+        self.update_data()
+
+        logger.info("✅ 전체 종목 새로고침 완료")
+
     def update_data(self):
-        """실시간 데이터 업데이트 (보유종목 + 관심종목)"""
+        """실시간 데이터 업데이트 (차트 + 보유종목 + 관심종목)"""
         logger.info("📊 가격 업데이트 시작...")
-        
-        # 1. 보유종목 업데이트
+
+        # 1. 일별 수익률 차트 업데이트
+        if self.kiwoom_client and KIWOOM_AVAILABLE:
+            self.update_profit_chart()
+
+        # 2. 보유종목 업데이트
         self.update_holdings_data()
-        
-        # 2. 관심종목 업데이트 (기존 로직)
+
+        # 3. 관심종목 업데이트 (기존 로직)
         self.update_watchlist_data()
-        
+
         # 마지막 업데이트 시간
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.last_update_label.setText(f"마지막 업데이트: {current_time}")
-        
+
         logger.info("✅ 가격 업데이트 완료")
     
     def update_holdings_data(self):

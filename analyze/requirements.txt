@@ -4,3 +4,4 @@ numpy>=1.21.0
 beautifulsoup4>=4.9.3
 python-dotenv>=0.19.0
 pandas-ta>=0.3.14b0
+matplotlib>=3.5.0

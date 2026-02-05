@@ -361,36 +361,103 @@ class KiwoomAPIClient(BaseAPIClient):
     def get_holdings_by_accounts(self, account_aliases: List[str]) -> pd.DataFrame:
         """
         특정 계좌들의 보유종목 조회
-        
+
         Args:
             account_aliases: 계좌 별칭 리스트 (예: ['main', 'sub1'])
-            
+
         Returns:
             DataFrame: 보유종목 정보
         """
         all_holdings = []
-        
+
         for alias in account_aliases:
             account_info = self.config.get_account(alias)
-            
+
             if not account_info:
                 self.logger.warning(f"⚠️ 알 수 없는 계좌 별칭: {alias}")
                 continue
-            
+
             if not account_info['enabled']:
                 self.logger.info(f"⏭️ 비활성화된 계좌 스킵: {alias}")
                 continue
-            
+
             account_no = account_info['account_no']
             df = self.get_holdings(account_no)
-            
+
             if not df.empty:
                 df['account_alias'] = alias
                 df['account_description'] = account_info['description']
                 all_holdings.append(df)
-        
+
         if all_holdings:
             return pd.concat(all_holdings, ignore_index=True)
+        else:
+            return pd.DataFrame()
+
+    def get_daily_profit_history(self, days: int = 30) -> pd.DataFrame:
+        """
+        일별 수익률 히스토리 조회 (모든 활성화된 계좌 통합)
+
+        Args:
+            days: 조회할 일수 (기본 30일)
+
+        Returns:
+            DataFrame: 일별 수익률 데이터 (columns: date, profit_rate, total_eval_amount, total_profit_loss)
+        """
+        enabled_accounts = self.config.get_enabled_accounts()
+
+        if not enabled_accounts:
+            self.logger.warning("⚠️ 활성화된 계좌가 없습니다.")
+            return pd.DataFrame()
+
+        url = f"{self.base_url}/api/dostk/acnt"
+
+        # 날짜 범위 생성 (오늘부터 과거로)
+        date_list = []
+        for i in range(days):
+            date = datetime.now() - timedelta(days=i)
+            # 주말 제외 (토요일: 5, 일요일: 6)
+            if date.weekday() < 5:
+                date_list.append(date.strftime('%Y%m%d'))
+
+        daily_data = []
+
+        for date_str in date_list:
+            # 각 날짜별로 조회
+            params = {'qry_dt': date_str}
+
+            try:
+                data = self.api_request(url, params, api_id="ka01690")
+
+                if data:
+                    # 총평가금액, 총손익, 수익률 추출
+                    total_eval = float(data.get('tot_evlt_amt', 0))
+                    total_purchase = float(data.get('tot_buy_amt', 0))
+                    total_profit = float(data.get('tot_evltv_prft', 0))
+
+                    # 수익률 계산
+                    if total_purchase > 0:
+                        profit_rate = (total_profit / total_purchase) * 100
+                    else:
+                        profit_rate = 0
+
+                    daily_data.append({
+                        'date': datetime.strptime(date_str, '%Y%m%d'),
+                        'profit_rate': profit_rate,
+                        'total_eval_amount': total_eval,
+                        'total_profit_loss': total_profit
+                    })
+
+                    self.logger.debug(f"✅ {date_str} 수익률: {profit_rate:.2f}%")
+
+            except Exception as e:
+                self.logger.error(f"❌ {date_str} 조회 실패: {e}")
+
+        if daily_data:
+            df = pd.DataFrame(daily_data)
+            df = df.sort_values('date')  # 날짜순 정렬
+            self.logger.info(f"✅ 일별 수익률 히스토리 조회 완료: {len(df)}일")
+            return df
         else:
             return pd.DataFrame()
     

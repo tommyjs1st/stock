@@ -1,5 +1,29 @@
 [
   {
+    "code": "011170",
+    "name": "롯데케미칼",
+    "score": 3,
+    "signals": [
+      "거래량급증",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 75600.0,
+    "volume": 529033,
+    "foreign_netbuy": [
+      41220,
+      36337,
+      57340
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-02-05 18:11:19",
+    "saved_at": "2026-02-05T18:12:40.398992",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
     "code": "007070",
     "name": "GS리테일",
     "score": 3,
@@ -8,8 +32,8 @@
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 20800,
-    "volume": 494550,
+    "price": 20950.0,
+    "volume": 789965,
     "foreign_netbuy": [
       5773,
       20118,
@@ -17,8 +41,8 @@
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-05 11:17:13",
-    "saved_at": "2026-02-05T11:19:20.508552",
+    "analysis_date": "2026-02-05 18:12:01",
+    "saved_at": "2026-02-05T18:12:40.399024",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
