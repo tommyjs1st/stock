@@ -22,24 +22,25 @@ class DataFetcher(KISAPIClient):
         self.db_manager = db_manager
 
     def get_current_price(self, stock_code):
-        """실시간 현재가 조회"""
+        """실시간 현재가 조회 (전일 종가 포함)"""
         url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-price"
         params = {
             "fid_cond_mrkt_div_code": "J",
             "fid_input_iscd": stock_code
         }
-        
+
         try:
             data = self.api_request(url, params, "FHKST01010100")
             if data and "output" in data:
                 output = data["output"]
-                current_price = float(output.get("stck_prpr", 0))
-                current_volume = int(output.get("acml_vol", 0))
-                return current_price, current_volume
+                current_price = float(output.get("stck_prpr", 0))  # 현재가
+                current_volume = int(output.get("acml_vol", 0))    # 거래량
+                prev_close = float(output.get("stck_sdpr", 0))     # 전일종가
+                return current_price, current_volume, prev_close
         except Exception as e:
             logger.error(f"❌ {stock_code}: 현재가 조회 오류: {e}")
-        
-        return None, None
+
+        return None, None, None
 
     def get_period_price_data(self, stock_code, days=90, period="D"):
         """기간별 주가 데이터 조회"""

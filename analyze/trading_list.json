@@ -1,75 +1,24 @@
 [
   {
-    "code": "018260",
-    "name": "삼성에스디에스",
+    "code": "007070",
+    "name": "GS리테일",
     "score": 3,
     "signals": [
-      "RSI매수신호",
+      "거래량급증",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 172700,
-    "volume": 149462,
+    "price": 20800,
+    "volume": 494550,
     "foreign_netbuy": [
-      25811,
-      18988,
-      5914,
-      47092
+      5773,
+      20118,
+      8897
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-04 23:30:05",
-    "saved_at": "2026-02-04T23:31:30.989852",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "011210",
-    "name": "현대위아",
-    "score": 3,
-    "signals": [
-      "RSI매수신호",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 85300,
-    "volume": 169341,
-    "foreign_netbuy": [
-      32436,
-      27406,
-      26565,
-      -44068
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-04 23:30:55",
-    "saved_at": "2026-02-04T23:31:30.989883",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "100090",
-    "name": "SK오션플랜트",
-    "score": 3,
-    "signals": [
-      "볼린저밴드복귀",
-      "RSI매수신호",
-      "볼린저밴드내위치"
-    ],
-    "price": 18390,
-    "volume": 765755,
-    "foreign_netbuy": [
-      159883,
-      163972,
-      -140922,
-      -35107
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-04 23:31:19",
-    "saved_at": "2026-02-04T23:31:30.989891",
+    "analysis_date": "2026-02-05 11:17:13",
+    "saved_at": "2026-02-05T11:19:20.508552",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
