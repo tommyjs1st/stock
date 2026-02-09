@@ -140,10 +140,29 @@ class DBManager:
                 INDEX idx_type_date (batch_type, start_time DESC)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='배치 실행 이력';
             """
-            
+
+            # 분봉 데이터 테이블 (외래 키 없이 독립적으로 운영)
+            create_minute_prices = """
+            CREATE TABLE IF NOT EXISTS minute_stock_prices (
+                stock_code VARCHAR(6) NOT NULL COMMENT '종목코드',
+                trade_datetime DATETIME NOT NULL COMMENT '거래일시',
+                open_price INT COMMENT '시가',
+                high_price INT COMMENT '고가',
+                low_price INT COMMENT '저가',
+                close_price INT NOT NULL COMMENT '종가(현재가)',
+                volume BIGINT COMMENT '거래량',
+                trading_value BIGINT COMMENT '거래대금',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '생성일시',
+                PRIMARY KEY (stock_code, trade_datetime),
+                INDEX idx_code_datetime (stock_code, trade_datetime DESC),
+                INDEX idx_datetime (trade_datetime DESC)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='분봉 주가 데이터';
+            """
+
             self.cursor.execute(create_stock_info)
             self.cursor.execute(create_daily_prices)
             self.cursor.execute(create_batch_history)
+            self.cursor.execute(create_minute_prices)
             self.connection.commit()
             
             self.logger.info("✅ 테이블 생성/확인 완료")
@@ -505,11 +524,161 @@ class DBManager:
             self.logger.error(f"❌ 일봉 데이터 조회 실패 ({stock_code}): {e}")
             return None
 
+    def bulk_insert_minute_prices(self, data_list: List[Dict[str, Any]]) -> tuple:
+        """분봉 데이터 대량 삽입
+
+        Args:
+            data_list: 분봉 데이터 리스트
+                [{'stock_code': str, 'trade_datetime': datetime, 'open_price': int, ...}, ...]
+
+        Returns:
+            tuple: (성공 건수, 실패 건수)
+        """
+        success_count = 0
+        fail_count = 0
+
+        try:
+            sql = """
+            INSERT INTO minute_stock_prices (
+                stock_code, trade_datetime, open_price, high_price, low_price,
+                close_price, volume, trading_value
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s
+            )
+            ON DUPLICATE KEY UPDATE
+                open_price = VALUES(open_price),
+                high_price = VALUES(high_price),
+                low_price = VALUES(low_price),
+                close_price = VALUES(close_price),
+                volume = VALUES(volume),
+                trading_value = VALUES(trading_value)
+            """
+
+            values = []
+            for data in data_list:
+                values.append((
+                    data.get('stock_code'),
+                    data.get('trade_datetime'),
+                    data.get('open_price'),
+                    data.get('high_price'),
+                    data.get('low_price'),
+                    data.get('close_price'),
+                    data.get('volume'),
+                    data.get('trading_value')
+                ))
+
+            self.cursor.executemany(sql, values)
+            success_count = len(data_list)
+
+        except Exception as e:
+            self.logger.error(f"❌ 분봉 대량 삽입 실패: {e}")
+            fail_count = len(data_list)
+
+        return success_count, fail_count
+
+    def get_minute_prices(self, stock_code: str, minutes: int = 60) -> Optional[List[Dict]]:
+        """DB에서 분봉 데이터 조회
+
+        Args:
+            stock_code: 종목코드
+            minutes: 조회할 분 수 (기본 60분)
+
+        Returns:
+            List[Dict]: 분봉 데이터 리스트 (시간 오름차순) 또는 None
+        """
+        try:
+            sql = """
+            SELECT
+                stock_code,
+                trade_datetime,
+                open_price,
+                high_price,
+                low_price,
+                close_price,
+                volume,
+                trading_value
+            FROM minute_stock_prices
+            WHERE stock_code = %s
+              AND trade_datetime >= DATE_SUB(NOW(), INTERVAL %s MINUTE)
+            ORDER BY trade_datetime ASC
+            """
+
+            self.cursor.execute(sql, (stock_code, minutes))
+            results = self.cursor.fetchall()
+
+            return results if results else None
+
+        except Exception as e:
+            self.logger.error(f"❌ 분봉 데이터 조회 실패 ({stock_code}): {e}")
+            return None
+
+    def get_minute_prices_by_date(self, stock_code: str, trade_date: date) -> Optional[List[Dict]]:
+        """특정 날짜의 분봉 데이터 조회
+
+        Args:
+            stock_code: 종목코드
+            trade_date: 조회 날짜
+
+        Returns:
+            List[Dict]: 분봉 데이터 리스트 또는 None
+        """
+        try:
+            sql = """
+            SELECT
+                stock_code,
+                trade_datetime,
+                open_price,
+                high_price,
+                low_price,
+                close_price,
+                volume,
+                trading_value
+            FROM minute_stock_prices
+            WHERE stock_code = %s
+              AND DATE(trade_datetime) = %s
+            ORDER BY trade_datetime ASC
+            """
+
+            self.cursor.execute(sql, (stock_code, trade_date))
+            results = self.cursor.fetchall()
+
+            return results if results else None
+
+        except Exception as e:
+            self.logger.error(f"❌ 분봉 데이터 조회 실패 ({stock_code}): {e}")
+            return None
+
+    def delete_old_minute_prices(self, days: int = 30) -> int:
+        """오래된 분봉 데이터 삭제 (디스크 공간 관리)
+
+        Args:
+            days: 보관 일수 (기본 30일)
+
+        Returns:
+            int: 삭제된 행 수
+        """
+        try:
+            sql = """
+            DELETE FROM minute_stock_prices
+            WHERE trade_datetime < DATE_SUB(NOW(), INTERVAL %s DAY)
+            """
+
+            self.cursor.execute(sql, (days,))
+            deleted_count = self.cursor.rowcount
+            self.connection.commit()
+
+            self.logger.info(f"✅ 오래된 분봉 데이터 {deleted_count}건 삭제 완료")
+            return deleted_count
+
+        except Exception as e:
+            self.logger.error(f"❌ 분봉 데이터 삭제 실패: {e}")
+            return 0
+
     def __enter__(self):
         """컨텍스트 매니저 진입"""
         self.connect()
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         """컨텍스트 매니저 종료"""
         if exc_type:

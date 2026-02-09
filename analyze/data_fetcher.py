@@ -398,6 +398,165 @@ class DataFetcher(KISAPIClient):
             logger.error(f"❌ 종목 리스트 조회 오류: {e}")
             return {}
 
+    def get_minute_price_data(self, stock_code: str, time_unit: int = 1) -> pd.DataFrame:
+        """분봉 데이터 조회
+
+        Args:
+            stock_code: 종목코드 (6자리)
+            time_unit: 분 단위 (1, 3, 5, 10, 15, 30, 60)
+
+        Returns:
+            DataFrame: 분봉 데이터 (최대 30건)
+        """
+        url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice"
+
+        params = {
+            "FID_ETC_CLS_CODE": "",
+            "FID_COND_MRKT_DIV_CODE": "J",
+            "FID_INPUT_ISCD": stock_code,
+            "FID_INPUT_HOUR_1": "",  # 빈값: 전체 시간 조회
+            "FID_PW_DATA_INCU_YN": "N"
+        }
+
+        try:
+            data = self.api_request(url, params, "FHKST03010200")
+            if not data or "output2" not in data or not data["output2"]:
+                logger.warning(f"⚠️ {stock_code}: 분봉 데이터 없음")
+                return pd.DataFrame()
+
+            df = pd.DataFrame(data["output2"])
+
+            # 컬럼 매핑
+            column_mapping = {
+                'stck_bsop_date': 'trade_date',      # 거래일자
+                'stck_cntg_hour': 'trade_time',      # 체결시간
+                'stck_prpr': 'close_price',          # 현재가(종가)
+                'stck_oprc': 'open_price',           # 시가
+                'stck_hgpr': 'high_price',           # 고가
+                'stck_lwpr': 'low_price',            # 저가
+                'cntg_vol': 'volume',                # 체결량
+                'acml_tr_pbmn': 'trading_value'      # 누적거래대금
+            }
+
+            # 필요한 컬럼만 선택하고 이름 변경
+            available_cols = [col for col in column_mapping.keys() if col in df.columns]
+            df = df[available_cols].rename(columns=column_mapping)
+
+            # 데이터 타입 변환
+            numeric_cols = ['close_price', 'open_price', 'high_price', 'low_price', 'volume', 'trading_value']
+            for col in numeric_cols:
+                if col in df.columns:
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+
+            # trade_datetime 생성 (날짜 + 시간)
+            if 'trade_date' in df.columns and 'trade_time' in df.columns:
+                df['trade_datetime'] = pd.to_datetime(
+                    df['trade_date'] + df['trade_time'],
+                    format='%Y%m%d%H%M%S'
+                )
+
+            # 시간순 정렬
+            if 'trade_datetime' in df.columns:
+                df = df.sort_values('trade_datetime').reset_index(drop=True)
+
+            logger.debug(f"✅ {stock_code}: 분봉 {len(df)}건 조회 완료")
+            return df
+
+        except Exception as e:
+            logger.error(f"❌ {stock_code}: 분봉 데이터 조회 오류: {e}")
+            return pd.DataFrame()
+
+    def get_minute_price_data_extended(self, stock_code: str, count: int = 120) -> pd.DataFrame:
+        """분봉 데이터 확장 조회 (여러 번 호출하여 더 많은 데이터 수집)
+
+        Args:
+            stock_code: 종목코드
+            count: 수집할 분봉 개수 (최대 약 400개까지)
+
+        Returns:
+            DataFrame: 분봉 데이터
+        """
+        url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice"
+
+        all_data = []
+        last_time = ""  # 빈값: 현재 시간부터 조회
+
+        # 한 번에 30건씩 조회, 필요한 만큼 반복
+        for i in range(max(1, count // 30)):
+            params = {
+                "FID_ETC_CLS_CODE": "",
+                "FID_COND_MRKT_DIV_CODE": "J",
+                "FID_INPUT_ISCD": stock_code,
+                "FID_INPUT_HOUR_1": last_time,
+                "FID_PW_DATA_INCU_YN": "Y"  # 과거 데이터 포함
+            }
+
+            try:
+                data = self.api_request(url, params, "FHKST03010200")
+                if not data or "output2" not in data or not data["output2"]:
+                    break
+
+                records = data["output2"]
+                if not records:
+                    break
+
+                all_data.extend(records)
+
+                # 다음 조회를 위해 마지막 시간 갱신
+                last_record = records[-1]
+                last_time = last_record.get('stck_cntg_hour', '090000')
+
+                # 장 시작 시간 이전이면 중단
+                if last_time < '090000':
+                    break
+
+                time.sleep(0.15)  # API 호출 제한 고려
+
+            except Exception as e:
+                logger.error(f"❌ {stock_code}: 분봉 확장 조회 오류: {e}")
+                break
+
+        if not all_data:
+            return pd.DataFrame()
+
+        df = pd.DataFrame(all_data)
+
+        # 컬럼 매핑 및 변환
+        column_mapping = {
+            'stck_bsop_date': 'trade_date',
+            'stck_cntg_hour': 'trade_time',
+            'stck_prpr': 'close_price',
+            'stck_oprc': 'open_price',
+            'stck_hgpr': 'high_price',
+            'stck_lwpr': 'low_price',
+            'cntg_vol': 'volume',
+            'acml_tr_pbmn': 'trading_value'
+        }
+
+        available_cols = [col for col in column_mapping.keys() if col in df.columns]
+        df = df[available_cols].rename(columns=column_mapping)
+
+        # 데이터 타입 변환
+        numeric_cols = ['close_price', 'open_price', 'high_price', 'low_price', 'volume', 'trading_value']
+        for col in numeric_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+
+        # trade_datetime 생성
+        if 'trade_date' in df.columns and 'trade_time' in df.columns:
+            df['trade_datetime'] = pd.to_datetime(
+                df['trade_date'] + df['trade_time'],
+                format='%Y%m%d%H%M%S'
+            )
+
+        # 중복 제거 및 정렬
+        if 'trade_datetime' in df.columns:
+            df = df.drop_duplicates(subset=['trade_datetime'])
+            df = df.sort_values('trade_datetime').reset_index(drop=True)
+
+        logger.info(f"✅ {stock_code}: 분봉 {len(df)}건 확장 조회 완료")
+        return df
+
     def get_fundamental_data_from_naver(self, stock_code):
         """네이버에서 기본적 분석 데이터 추출"""
         try:

@@ -1,48 +1,145 @@
 [
   {
-    "code": "011170",
-    "name": "롯데케미칼",
-    "score": 3,
+    "code": "368590",
+    "name": "RISE 미국나스닥100",
+    "score": 4,
     "signals": [
-      "거래량급증",
+      "볼린저밴드복귀",
+      "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 75600.0,
-    "volume": 529033,
+    "price": 27020.0,
+    "volume": 521766,
     "foreign_netbuy": [
-      41220,
-      36337,
-      57340
+      680,
+      123,
+      84
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-05 18:11:19",
-    "saved_at": "2026-02-05T18:12:40.398992",
+    "analysis_date": "2026-02-09 18:12:15",
+    "saved_at": "2026-02-09T18:12:41.107788",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "007070",
-    "name": "GS리테일",
+    "code": "051910",
+    "name": "LG화학",
     "score": 3,
     "signals": [
-      "거래량급증",
+      "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 20950.0,
-    "volume": 789965,
+    "price": 310500.0,
+    "volume": 259118,
     "foreign_netbuy": [
-      5773,
-      20118,
-      8897
+      5620,
+      13881,
+      91741
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-05 18:12:01",
-    "saved_at": "2026-02-05T18:12:40.399024",
+    "analysis_date": "2026-02-09 18:10:25",
+    "saved_at": "2026-02-09T18:12:41.107807",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "011780",
+    "name": "금호석유화학",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 138600.0,
+    "volume": 77128,
+    "foreign_netbuy": [
+      370,
+      4290,
+      15526
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-02-09 18:11:15",
+    "saved_at": "2026-02-09T18:12:41.107811",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "475830",
+    "name": "오름테라퓨틱",
+    "score": 3,
+    "signals": [
+      "골든크로스",
+      "RSI매수신호",
+      "볼린저밴드내위치"
+    ],
+    "price": 110300.0,
+    "volume": 147251,
+    "foreign_netbuy": [
+      3689,
+      2528,
+      -27964
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-02-09 18:11:47",
+    "saved_at": "2026-02-09T18:12:41.107814",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "011210",
+    "name": "현대위아",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 83200.0,
+    "volume": 166316,
+    "foreign_netbuy": [
+      40855,
+      26231,
+      32436
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-02-09 18:11:49",
+    "saved_at": "2026-02-09T18:12:41.107818",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "466920",
+    "name": "SOL 조선TOP3플러스",
+    "score": 3,
+    "signals": [
+      "볼린저밴드복귀",
+      "RSI매수신호",
+      "볼린저밴드내위치"
+    ],
+    "price": 35430.0,
+    "volume": 1933760,
+    "foreign_netbuy": [
+      66146,
+      5544,
+      -116177
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-02-09 18:11:59",
+    "saved_at": "2026-02-09T18:12:41.107821",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true

@@ -65,7 +65,11 @@ class ConfigManager:
     def get_minute_timing_config(self) -> Dict[str, Any]:
         """분봉 타이밍 설정 반환"""
         return self.config.get('minute_timing', {})
-    
+
+    def get_database_config(self) -> Dict[str, Any]:
+        """데이터베이스 설정 반환"""
+        return self.config.get('database', {})
+
     def create_sample_config(self):
         """샘플 설정 파일 생성"""
         sample_config = {
