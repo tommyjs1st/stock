@@ -1,72 +1,24 @@
 [
   {
-    "code": "011780",
-    "name": "금호석유화학",
+    "code": "319400",
+    "name": "현대무벡스",
     "score": 3,
     "signals": [
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 139900.0,
-    "volume": 98775,
+    "price": 29300.0,
+    "volume": 1983163,
     "foreign_netbuy": [
-      25285,
-      17676,
-      370
+      88122,
+      1109,
+      42235
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-11 18:11:23",
-    "saved_at": "2026-02-11T18:12:56.582733",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "368590",
-    "name": "RISE 미국나스닥100",
-    "score": 3,
-    "signals": [
-      "MACD돌파직전",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 26965.0,
-    "volume": 210572,
-    "foreign_netbuy": [
-      318,
-      282,
-      680
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-11 18:12:30",
-    "saved_at": "2026-02-11T18:12:56.582775",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "484870",
-    "name": "엠앤씨솔루션",
-    "score": 3,
-    "signals": [
-      "RSI매수신호",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 131800.0,
-    "volume": 29782,
-    "foreign_netbuy": [
-      2113,
-      7569,
-      14756
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-11 18:12:34",
-    "saved_at": "2026-02-11T18:12:56.582782",
+    "analysis_date": "2026-02-12 18:11:04",
+    "saved_at": "2026-02-12T18:12:01.707083",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
