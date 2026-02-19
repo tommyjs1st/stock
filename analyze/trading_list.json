@@ -1,5 +1,31 @@
 [
   {
+    "code": "368590",
+    "name": "RISE 미국나스닥100",
+    "score": 4,
+    "signals": [
+      "볼린저밴드복귀",
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 26690.0,
+    "volume": 95200,
+    "foreign_netbuy": [
+      459,
+      382,
+      468,
+      318
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-02-19 11:14:12",
+    "saved_at": "2026-02-19T11:14:48.494055",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
     "code": "319400",
     "name": "현대무벡스",
     "score": 3,
@@ -8,18 +34,18 @@
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 27400.0,
-    "volume": 3143555,
+    "price": 27650.0,
+    "volume": 1940682,
     "foreign_netbuy": [
+      81349,
       139179,
       88122,
-      1109,
-      42235
+      1109
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-13 15:11:36",
-    "saved_at": "2026-02-13T15:12:44.387020",
+    "analysis_date": "2026-02-19 11:12:36",
+    "saved_at": "2026-02-19T11:14:48.494101",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
