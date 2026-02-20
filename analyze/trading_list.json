@@ -1,26 +1,26 @@
 [
   {
-    "code": "368590",
-    "name": "RISE 미국나스닥100",
-    "score": 4,
+    "code": "066970",
+    "name": "엘앤에프",
+    "score": 3,
     "signals": [
-      "볼린저밴드복귀",
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 26690.0,
-    "volume": 95200,
+    "price": 118200.0,
+    "volume": 403673,
     "foreign_netbuy": [
-      459,
-      382,
-      468,
-      318
+      102106,
+      378512,
+      42546,
+      -33625,
+      -52977
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-19 11:14:12",
-    "saved_at": "2026-02-19T11:14:48.494055",
+    "analysis_date": "2026-02-19 18:11:49",
+    "saved_at": "2026-02-19T18:14:35.562973",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
@@ -34,9 +34,10 @@
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 27650.0,
-    "volume": 1940682,
+    "price": 27950.0,
+    "volume": 2944847,
     "foreign_netbuy": [
+      94657,
       81349,
       139179,
       88122,
@@ -44,8 +45,86 @@
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-19 11:12:36",
-    "saved_at": "2026-02-19T11:14:48.494101",
+    "analysis_date": "2026-02-19 18:12:26",
+    "saved_at": "2026-02-19T18:14:35.563000",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "226950",
+    "name": "올릭스",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 131300.0,
+    "volume": 266911,
+    "foreign_netbuy": [
+      19795,
+      17152,
+      31673,
+      -35106,
+      4104
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-02-19 18:12:55",
+    "saved_at": "2026-02-19T18:14:35.563005",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "368590",
+    "name": "RISE 미국나스닥100",
+    "score": 3,
+    "signals": [
+      "볼린저밴드복귀",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 26615.0,
+    "volume": 218656,
+    "foreign_netbuy": [
+      325,
+      459,
+      382,
+      468,
+      318
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-02-19 18:14:01",
+    "saved_at": "2026-02-19T18:14:35.563009",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "249420",
+    "name": "일동제약",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 37000.0,
+    "volume": 252549,
+    "foreign_netbuy": [
+      130561,
+      14082,
+      14373,
+      -434,
+      40454
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-02-19 18:14:11",
+    "saved_at": "2026-02-19T18:14:35.563012",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
