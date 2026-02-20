@@ -8,9 +8,10 @@
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 26580.0,
-    "volume": 101564,
+    "price": 26585.0,
+    "volume": 204216,
     "foreign_netbuy": [
+      561,
       325,
       459,
       382,
@@ -18,8 +19,8 @@
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-20 11:14:41",
-    "saved_at": "2026-02-20T11:15:21.749479",
+    "analysis_date": "2026-02-20 18:13:47",
+    "saved_at": "2026-02-20T18:14:16.362086",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
