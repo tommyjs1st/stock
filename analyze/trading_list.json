@@ -1,52 +1,48 @@
 [
   {
-    "code": "373220",
-    "name": "LG에너지솔루션",
+    "code": "403870",
+    "name": "HPSP",
     "score": 3,
     "signals": [
-      "RSI매수신호",
+      "거래량급증",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 396000.0,
-    "volume": 268719,
+    "price": 40950.0,
+    "volume": 13708003,
     "foreign_netbuy": [
-      27353,
-      8218,
-      14912,
-      -61381,
-      21814
+      53682,
+      104126,
+      627784
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-23 18:10:11",
-    "saved_at": "2026-02-23T18:14:18.451842",
+    "analysis_date": "2026-02-24 18:11:06",
+    "saved_at": "2026-02-24T18:12:06.223894",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "000990",
-    "name": "DB하이텍",
+    "code": "368590",
+    "name": "RISE 미국나스닥100",
     "score": 3,
     "signals": [
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 93000.0,
-    "volume": 304216,
+    "price": 26395.0,
+    "volume": 273571,
     "foreign_netbuy": [
-      12701,
-      54385,
-      114083,
-      31775,
-      -8033
+      2004,
+      561,
+      325
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-23 18:11:59",
-    "saved_at": "2026-02-23T18:14:18.451902",
+    "analysis_date": "2026-02-24 18:11:50",
+    "saved_at": "2026-02-24T18:12:06.223947",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
@@ -60,45 +56,17 @@
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 64100.0,
-    "volume": 30978,
+    "price": 64700.0,
+    "volume": 43366,
     "foreign_netbuy": [
       1681,
       10889,
-      8763,
-      -16673,
-      -9082
+      8763
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-23 18:14:02",
-    "saved_at": "2026-02-23T18:14:18.451910",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "195870",
-    "name": "해성디에스",
-    "score": 3,
-    "signals": [
-      "RSI매수신호",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 58400.0,
-    "volume": 175661,
-    "foreign_netbuy": [
-      3849,
-      46832,
-      25793,
-      40769,
-      2294
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-23 18:14:15",
-    "saved_at": "2026-02-23T18:14:18.451916",
+    "analysis_date": "2026-02-24 18:11:56",
+    "saved_at": "2026-02-24T18:12:06.223956",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
