@@ -1,72 +1,26 @@
 [
   {
-    "code": "403870",
-    "name": "HPSP",
-    "score": 3,
-    "signals": [
-      "거래량급증",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 40950.0,
-    "volume": 13708003,
-    "foreign_netbuy": [
-      53682,
-      104126,
-      627784
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-24 18:11:06",
-    "saved_at": "2026-02-24T18:12:06.223894",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
     "code": "368590",
     "name": "RISE 미국나스닥100",
-    "score": 3,
+    "score": 4,
     "signals": [
       "RSI매수신호",
+      "MACD돌파직전",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 26395.0,
-    "volume": 273571,
+    "price": 26510.0,
+    "volume": 403624,
     "foreign_netbuy": [
-      2004,
-      561,
-      325
+      174,
+      122,
+      50,
+      2004
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-24 18:11:50",
-    "saved_at": "2026-02-24T18:12:06.223947",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "285130",
-    "name": "SK케미칼",
-    "score": 3,
-    "signals": [
-      "RSI매수신호",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 64700.0,
-    "volume": 43366,
-    "foreign_netbuy": [
-      1681,
-      10889,
-      8763
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-02-24 18:11:56",
-    "saved_at": "2026-02-24T18:12:06.223956",
+    "analysis_date": "2026-02-27 18:12:23",
+    "saved_at": "2026-02-27T18:12:43.100717",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true

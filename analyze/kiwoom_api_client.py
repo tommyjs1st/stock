@@ -100,22 +100,68 @@ class KiwoomAPIClient(BaseAPIClient):
     def get_access_token(self) -> str:
         """
         키움 REST API 액세스 토큰 발급 또는 재사용
-        
-        Returns:
-            str: 액세스 토큰
+
+        ※ 키움 API 특성: 신규 토큰 발급 시 이전 토큰 즉시 무효화.
+           파일 만료시각이 유효해 보여도 다른 프로세스가 재발급했다면 서버에서 무효.
+           따라서 파일 토큰 로드 후 반드시 서버 검증을 거칩니다.
+
+        흐름:
+          1. 메모리 토큰 (같은 프로세스 내 발급) → 재사용
+          2. 파일 토큰 로드 → 서버 검증 통과 시 재사용
+          3. 파일 토큰 무효 또는 없음 → 신규 발급 후 파일 갱신
         """
-        # 기존 토큰이 유효하면 재사용
+        # 1. 이번 프로세스에서 발급한 메모리 토큰 재사용 (23시간 이내)
         if self.access_token and self.last_token_time:
             if datetime.now() - self.last_token_time < timedelta(hours=23):
                 return self.access_token
-        
-        # 저장된 토큰 로드 시도
-        if self.load_saved_token():
-            return self.access_token
-        
-        # 새 토큰 발급
+
+        # 2. 파일 토큰 로드 후 서버 검증
+        if self.load_saved_token() and self.access_token:
+            if self._is_token_valid(self.access_token):
+                self.last_token_time = datetime.now()
+                self.logger.info("✅ 파일 토큰 서버 검증 성공, 재사용")
+                return self.access_token
+            else:
+                self.logger.warning(
+                    "⚠️ 파일 토큰 서버 검증 실패 (다른 프로세스가 재발급한 것으로 추정). "
+                    "신규 발급합니다."
+                )
+                self.access_token = None
+                self.last_token_time = None
+
+        # 3. 신규 토큰 발급
+        return self._request_new_token()
+
+    def _is_token_valid(self, token: str) -> bool:
+        """토큰 서버 유효성 검증 (ka10080으로 실제 확인)"""
+        if not token:
+            return False
+        try:
+            resp = requests.post(
+                f"{self.base_url}/api/dostk/chart",
+                headers={
+                    "Content-Type": "application/json;charset=UTF-8",
+                    "authorization": f"Bearer {token}",
+                    "api-id": "ka10080",
+                },
+                json={"stk_cd": "005930", "tic_scope": "1", "upd_stkpc_tp": "1"},
+                timeout=5
+            )
+            if resp.status_code != 200:
+                return False
+            data = resp.json()
+            rc  = data.get('return_code', -1)
+            msg = data.get('return_msg', '')
+            if '8005' in msg or 'Token이 유효하지 않습니다' in msg:
+                return False
+            return rc in (0, 2)
+        except Exception:
+            return False
+
+    def _request_new_token(self) -> str:
+        """신규 토큰 발급 및 파일 저장"""
         self.logger.info("🔄 새로운 토큰 발급 중...")
-        
+
         url = f"{self.base_url}/oauth2/token"
         headers = {"Content-Type": "application/json; charset=UTF-8"}
         data = {
@@ -123,28 +169,22 @@ class KiwoomAPIClient(BaseAPIClient):
             "appkey": self.app_key,
             "secretkey": self.app_secret
         }
-        
+
         try:
             response = requests.post(
-                url,
-                headers=headers,
+                url, headers=headers,
                 data=json.dumps(data),
                 timeout=self.config.TIMEOUT
             )
             response.raise_for_status()
 
             token_response = response.json()
-
-            # 키움 API는 return_code로 성공/실패 확인
             return_code = token_response.get('return_code')
             if return_code != 0:
-                error_msg = token_response.get('return_msg', 'Unknown error')
-                raise Exception(f"토큰 발급 실패: {error_msg}")
+                raise Exception(f"토큰 발급 실패: {token_response.get('return_msg', '')}")
 
             self.access_token = token_response.get('token')
             self.last_token_time = datetime.now()
-
-            # 토큰 저장
             self.save_token(token_response)
 
             self.logger.info("✅ 새 토큰 발급 완료")
@@ -153,7 +193,8 @@ class KiwoomAPIClient(BaseAPIClient):
         except Exception as e:
             self.logger.error(f"❌ 토큰 발급 실패: {e}")
             raise
-    
+
+
     def api_request(
         self,
         url: str,
@@ -461,6 +502,121 @@ class KiwoomAPIClient(BaseAPIClient):
         else:
             return pd.DataFrame()
     
+
+    def get_minute_price_data(self, stock_code: str, count: int = 120) -> list:
+        """
+        키움 REST API (ka10080) 주식분봉차트 조회
+        NXT 시간외 거래(15:30 ~ 20:00) 포함 데이터 수집
+
+        Args:
+            stock_code: 종목코드 (6자리)
+            count: 수집할 분봉 개수 (기본 120개)
+
+        Returns:
+            List[Dict]: DB 저장용 분봉 레코드 리스트
+              - stock_code, trade_datetime, open_price, high_price,
+                low_price, close_price, volume, trading_value
+        """
+        url = f"{self.base_url}/api/dostk/chart"
+
+        all_records = []
+        cont_yn  = "N"
+        next_key = ""
+
+        # 1회 900건 반환 → count를 채울 때까지 연속조회
+        max_pages = max(1, (count // 900) + 2)   # 여유분 포함
+
+        for page in range(max_pages):
+            headers = {
+                "Content-Type": "application/json;charset=UTF-8",
+                "authorization": f"Bearer {self.get_access_token()}",
+                "api-id": "ka10080",
+            }
+            if cont_yn == "Y":
+                headers["cont-yn"]  = "Y"
+                headers["next-key"] = next_key
+
+            params = {
+                "stk_cd":       stock_code,
+                "tic_scope":    "1",        # 1분봉 고정
+                "upd_stkpc_tp": "1",        # 수정주가 적용 (필수값)
+            }
+
+            try:
+                time.sleep(self.config.API_DELAY)
+                response = requests.post(
+                    url,
+                    headers=headers,
+                    json=params,
+                    timeout=self.config.TIMEOUT
+                )
+                response.raise_for_status()
+                data = response.json()
+
+            except Exception as e:
+                self.logger.error(f"❌ {stock_code} 분봉 조회 실패 (page {page+1}): {e}")
+                break
+
+            if data.get("return_code", -1) != 0:
+                self.logger.warning(
+                    f"⚠️ {stock_code} 분봉 API 오류: {data.get('return_msg', '')}"
+                )
+                break
+
+            raw_list = data.get("stk_min_pole_chart_qry", [])
+            if not raw_list:
+                break
+
+            # 필드 변환 → DB 포맷
+            for row in raw_list:
+                try:
+                    # cntr_tm: "20260226153000" → datetime
+                    cntr_tm = str(row.get("cntr_tm", "")).strip()
+                    if len(cntr_tm) != 14 or not cntr_tm.isdigit():
+                        continue
+                    trade_dt = datetime.strptime(cntr_tm, "%Y%m%d%H%M%S")
+
+                    def to_int(val):
+                        """'+1099000', '-500', '12345' → int"""
+                        try:
+                            return int(str(val).replace("+", "").replace(",", ""))
+                        except (ValueError, TypeError):
+                            return None
+
+                    record = {
+                        "stock_code":    stock_code,
+                        "trade_datetime": trade_dt,
+                        "open_price":    to_int(row.get("open_pric")),
+                        "high_price":    to_int(row.get("high_pric")),
+                        "low_price":     to_int(row.get("low_pric")),
+                        "close_price":   to_int(row.get("cur_prc")),
+                        "volume":        to_int(row.get("trde_qty")),
+                        "trading_value": to_int(row.get("trde_qty")),  # 거래대금 없음 → 거래량 대체
+                    }
+                    all_records.append(record)
+
+                except Exception as e:
+                    self.logger.debug(f"레코드 변환 오류 ({stock_code}): {e}")
+                    continue
+
+            # count 충족 시 종료
+            if len(all_records) >= count:
+                all_records = all_records[:count]
+                break
+
+            # 연속조회 여부 확인 (헤더 우선, 없으면 본문)
+            cont_yn  = response.headers.get("cont-yn",  data.get("cont_yn",  "N"))
+            next_key = response.headers.get("next-key", data.get("next_key", ""))
+
+            if cont_yn != "Y" or not next_key:
+                break
+
+        self.logger.info(
+            f"✅ {stock_code}: 분봉 {len(all_records)}건 수집 "
+            f"(NXT 포함, 키움 ka10080)"
+        )
+        return all_records
+
     def get_kis_token(self) -> str:
         """KIS API 토큰 발급"""
         # 기존 토큰이 유효하면 재사용

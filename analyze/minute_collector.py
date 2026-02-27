@@ -1,6 +1,7 @@
 """
 분봉 데이터 수집 프로그램
-키움증권 보유종목에 대한 분봉 데이터를 KIS API로 조회하여 DB에 저장
+키움증권 보유종목에 대한 분봉 데이터를 키움 REST API(ka10080)로 조회하여 DB에 저장
+NXT 시간외 거래(15:30~20:00) 포함
 
 사용법:
   python minute_collector.py                  # 보유종목 분봉 수집 (기본)
@@ -86,7 +87,7 @@ class ConfigManager:
 class MinuteDataCollector:
     """분봉 데이터 수집 클래스"""
 
-    def __init__(self, minute_count: int = 120, test_mode: bool = False, specific_codes: List[str] = None):
+    def __init__(self, minute_count: int = 660, test_mode: bool = False, specific_codes: List[str] = None):
         """
         초기화
 
@@ -119,11 +120,12 @@ class MinuteDataCollector:
         self.data_fetcher = DataFetcher()
 
         # 키움 API 클라이언트 초기화
+        # 분봉 조회(ka10080, NXT 포함)에도 사용하므로 specific_codes 여부와 무관하게 초기화
         self.kiwoom_client = None
-        if KIWOOM_AVAILABLE and not specific_codes:
+        if KIWOOM_AVAILABLE:
             try:
                 self.kiwoom_client = KiwoomAPIClient()
-                self.logger.info("키움 API 클라이언트 초기화 완료")
+                self.logger.info("키움 API 클라이언트 초기화 완료 (분봉 수집용)")
             except Exception as e:
                 self.logger.warning(f"키움 API 초기화 실패: {e}")
 
@@ -232,43 +234,39 @@ class MinuteDataCollector:
         return holdings
 
     def collect_minute_data(self, stock_code: str, stock_name: str) -> List[Dict]:
-        """종목별 분봉 데이터 수집
+        """종목별 분봉 데이터 수집 (키움 REST API ka10080, NXT 포함)
+
+        KIS API 대신 키움 REST API를 사용하여 NXT 시간외 거래
+        (정규장 마감 15:30 ~ 20:00) 데이터까지 수집합니다.
 
         Args:
             stock_code: 종목코드
             stock_name: 종목명
 
         Returns:
-            List[Dict]: 분봉 레코드 리스트
+            List[Dict]: 분봉 레코드 리스트 (DB 포맷 동일)
         """
         try:
-            # 분봉 데이터 조회
-            df = self.data_fetcher.get_minute_price_data_extended(stock_code, self.minute_count)
+            if not self.kiwoom_client:
+                self.logger.error(
+                    f"{stock_name}({stock_code}): 키움 API 클라이언트 없음 "
+                    f"(kiwoom_api_client 초기화 실패 여부 확인)"
+                )
+                return []
 
-            if df is None or df.empty:
+            records = self.kiwoom_client.get_minute_price_data(
+                stock_code, self.minute_count
+            )
+
+            if not records:
                 self.logger.warning(f"{stock_name}({stock_code}): 분봉 데이터 없음")
                 return []
 
-            # 레코드 변환
-            records = []
-            for _, row in df.iterrows():
-                try:
-                    record = {
-                        'stock_code': stock_code,
-                        'trade_datetime': row.get('trade_datetime'),
-                        'open_price': int(row.get('open_price', 0)) if row.get('open_price') else None,
-                        'high_price': int(row.get('high_price', 0)) if row.get('high_price') else None,
-                        'low_price': int(row.get('low_price', 0)) if row.get('low_price') else None,
-                        'close_price': int(row.get('close_price', 0)) if row.get('close_price') else None,
-                        'volume': int(row.get('volume', 0)) if row.get('volume') else None,
-                        'trading_value': int(row.get('trading_value', 0)) if row.get('trading_value') else None
-                    }
-                    records.append(record)
-                except Exception as e:
-                    self.logger.debug(f"레코드 변환 오류: {e}")
-                    continue
+            # stock_code 필드 보정 (get_minute_price_data 내부에서 설정되지만 명시적으로 재확인)
+            for r in records:
+                r['stock_code'] = stock_code
 
-            self.logger.info(f"{stock_name}({stock_code}): {len(records)}건 수집")
+            self.logger.info(f"{stock_name}({stock_code}): {len(records)}건 수집 (NXT 포함)")
             return records
 
         except Exception as e:
@@ -480,9 +478,9 @@ def main():
     parser.add_argument(
         '--count',
         type=int,
-        default=120,
+        default=660,
         metavar='N',
-        help='수집할 분봉 개수 (기본값: 120)'
+        help='수집할 분봉 개수 (기본값: 660, 당일 09:00~20:00)'
     )
 
     parser.add_argument(
