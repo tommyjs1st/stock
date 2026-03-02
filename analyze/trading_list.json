@@ -17,8 +17,8 @@
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-03-02 11:11:14",
-    "saved_at": "2026-03-02T11:12:49.167766",
+    "analysis_date": "2026-03-02 18:10:55",
+    "saved_at": "2026-03-02T18:12:02.335677",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
