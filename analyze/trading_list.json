@@ -1,24 +1,78 @@
 [
   {
-    "code": "140410",
-    "name": "메지온",
+    "code": "0009K0",
+    "name": "에임드바이오",
     "score": 3,
     "signals": [
-      "RSI매수신호",
+      "거래량급증",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 141500.0,
-    "volume": 201222,
+    "price": 51300.0,
+    "volume": 1598164,
     "foreign_netbuy": [
-      10258,
-      1384,
-      16542
+      180107,
+      172659,
+      436016,
+      -14284,
+      -27080
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-03-02 18:10:55",
-    "saved_at": "2026-03-02T18:12:02.335677",
+    "analysis_date": "2026-03-04 18:12:03",
+    "saved_at": "2026-03-04T18:14:24.245547",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "003570",
+    "name": "SNT다이내믹스",
+    "score": 3,
+    "signals": [
+      "거래량급증",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 48000.0,
+    "volume": 427765,
+    "foreign_netbuy": [
+      63397,
+      10417,
+      25778,
+      8703,
+      -1799
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-04 18:13:22",
+    "saved_at": "2026-03-04T18:14:24.245595",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "484870",
+    "name": "엠앤씨솔루션",
+    "score": 3,
+    "signals": [
+      "거래량급증",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 119500.0,
+    "volume": 128257,
+    "foreign_netbuy": [
+      21067,
+      28950,
+      15318,
+      1830,
+      -5508
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-04 18:13:52",
+    "saved_at": "2026-03-04T18:14:24.245603",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
