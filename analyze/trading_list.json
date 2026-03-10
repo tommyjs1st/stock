@@ -1,24 +1,483 @@
 [
   {
-    "code": "484870",
-    "name": "엠앤씨솔루션",
-    "score": 3,
+    "code": "011780",
+    "name": "금호석유화학",
+    "score": 4,
     "signals": [
-      "MACD돌파직전",
+      "볼린저밴드복귀",
+      "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 131500.0,
-    "volume": 43660,
+    "price": 122000.0,
+    "volume": 101486,
     "foreign_netbuy": [
-      4908,
-      20541,
-      21067
+      46660,
+      35460,
+      61807
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-03-09 15:13:08",
-    "saved_at": "2026-03-09T15:13:29.636815",
+    "analysis_date": "2026-03-10 15:12:00",
+    "saved_at": "2026-03-10T15:13:53.624657",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "298020",
+    "name": "효성티앤씨",
+    "score": 4,
+    "signals": [
+      "볼린저밴드복귀",
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 329500.0,
+    "volume": 28261,
+    "foreign_netbuy": [
+      9229,
+      13323,
+      405
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-10 15:13:13",
+    "saved_at": "2026-03-10T15:13:53.624689",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "249420",
+    "name": "일동제약",
+    "score": 4,
+    "signals": [
+      "볼린저밴드복귀",
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 31400.0,
+    "volume": 196566,
+    "foreign_netbuy": [
+      3188,
+      808,
+      28225
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-10 15:13:34",
+    "saved_at": "2026-03-10T15:13:53.624696",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "196170",
+    "name": "알테오젠",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 373000.0,
+    "volume": 294181,
+    "foreign_netbuy": [
+      35814,
+      917,
+      58108
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-10 15:10:40",
+    "saved_at": "2026-03-10T15:13:53.624702",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "033780",
+    "name": "KT&G",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 154900.0,
+    "volume": 325093,
+    "foreign_netbuy": [
+      83148,
+      43975,
+      107177
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-10 15:10:45",
+    "saved_at": "2026-03-10T15:13:53.624710",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "086280",
+    "name": "현대글로비스",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 234500.0,
+    "volume": 186728,
+    "foreign_netbuy": [
+      72876,
+      2214,
+      18340
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-10 15:10:46",
+    "saved_at": "2026-03-10T15:13:53.624717",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "003550",
+    "name": "LG",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 93800.0,
+    "volume": 365699,
+    "foreign_netbuy": [
+      75028,
+      40691,
+      77439
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-10 15:10:50",
+    "saved_at": "2026-03-10T15:13:53.624723",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "000100",
+    "name": "유한양행",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 98400.0,
+    "volume": 180370,
+    "foreign_netbuy": [
+      99246,
+      58155,
+      112807
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-10 15:11:06",
+    "saved_at": "2026-03-10T15:13:53.624745",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "161390",
+    "name": "한국타이어앤테크놀로지",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 58900.0,
+    "volume": 469331,
+    "foreign_netbuy": [
+      95081,
+      133044,
+      72835
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-10 15:11:12",
+    "saved_at": "2026-03-10T15:13:53.624752",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "018880",
+    "name": "한온시스템",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 4025.0,
+    "volume": 9655214,
+    "foreign_netbuy": [
+      173261,
+      166461,
+      1073155
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-10 15:11:39",
+    "saved_at": "2026-03-10T15:13:53.624759",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "214150",
+    "name": "클래시스",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 54500.0,
+    "volume": 185005,
+    "foreign_netbuy": [
+      46370,
+      38044,
+      43833
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-10 15:11:50",
+    "saved_at": "2026-03-10T15:13:53.624765",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "302440",
+    "name": "SK바이오사이언스",
+    "score": 3,
+    "signals": [
+      "볼린저밴드복귀",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 42850.0,
+    "volume": 117360,
+    "foreign_netbuy": [
+      6073,
+      8436,
+      29854
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-10 15:11:54",
+    "saved_at": "2026-03-10T15:13:53.624771",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "004170",
+    "name": "신세계",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 332000.0,
+    "volume": 50449,
+    "foreign_netbuy": [
+      24290,
+      9800,
+      5924
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-10 15:11:58",
+    "saved_at": "2026-03-10T15:13:53.624777",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "145020",
+    "name": "휴젤",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 252500.0,
+    "volume": 51407,
+    "foreign_netbuy": [
+      654,
+      6220,
+      22118
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-10 15:12:03",
+    "saved_at": "2026-03-10T15:13:53.624782",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "081660",
+    "name": "미스토홀딩스",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 48350.0,
+    "volume": 81685,
+    "foreign_netbuy": [
+      25719,
+      12406,
+      11573
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-10 15:12:26",
+    "saved_at": "2026-03-10T15:13:53.624789",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "204320",
+    "name": "HL만도",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 52400.0,
+    "volume": 285571,
+    "foreign_netbuy": [
+      44426,
+      36571,
+      171486
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-10 15:12:33",
+    "saved_at": "2026-03-10T15:13:53.624795",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "030530",
+    "name": "원익홀딩스",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 31800.0,
+    "volume": 1065164,
+    "foreign_netbuy": [
+      95424,
+      13031,
+      209801
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-10 15:12:34",
+    "saved_at": "2026-03-10T15:13:53.624800",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "069960",
+    "name": "현대백화점",
+    "score": 3,
+    "signals": [
+      "볼린저밴드복귀",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 87000.0,
+    "volume": 109614,
+    "foreign_netbuy": [
+      26167,
+      476,
+      24579
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-10 15:12:50",
+    "saved_at": "2026-03-10T15:13:53.624806",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "069620",
+    "name": "대웅제약",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 165000.0,
+    "volume": 18732,
+    "foreign_netbuy": [
+      3523,
+      393,
+      8120
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-10 15:12:51",
+    "saved_at": "2026-03-10T15:13:53.624812",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "483650",
+    "name": "달바글로벌",
+    "score": 3,
+    "signals": [
+      "볼린저밴드복귀",
+      "RSI매수신호",
+      "볼린저밴드내위치"
+    ],
+    "price": 149800.0,
+    "volume": 54168,
+    "foreign_netbuy": [
+      10487,
+      10802,
+      -19414
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-10 15:12:53",
+    "saved_at": "2026-03-10T15:13:53.624817",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
