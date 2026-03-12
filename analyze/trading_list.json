@@ -9,7 +9,7 @@
       "외국인강력매수"
     ],
     "price": 60700.0,
-    "volume": 210227,
+    "volume": 277496,
     "foreign_netbuy": [
       68702,
       7019,
@@ -17,8 +17,8 @@
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-03-12 15:11:48",
-    "saved_at": "2026-03-12T15:14:51.071438",
+    "analysis_date": "2026-03-12 18:11:03",
+    "saved_at": "2026-03-12T18:12:46.967353",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
@@ -32,8 +32,8 @@
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 339000.0,
-    "volume": 35438,
+    "price": 336500.0,
+    "volume": 50606,
     "foreign_netbuy": [
       4108,
       465,
@@ -41,8 +41,32 @@
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-03-12 15:12:31",
-    "saved_at": "2026-03-12T15:14:51.071475",
+    "analysis_date": "2026-03-12 18:11:28",
+    "saved_at": "2026-03-12T18:12:46.967384",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "097950",
+    "name": "CJ제일제당",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 201500.0,
+    "volume": 48437,
+    "foreign_netbuy": [
+      11349,
+      7953,
+      8865
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-03-12 18:11:33",
+    "saved_at": "2026-03-12T18:12:46.967392",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
@@ -57,7 +81,7 @@
       "외국인강력매수"
     ],
     "price": 32400.0,
-    "volume": 30554,
+    "volume": 31465,
     "foreign_netbuy": [
       4994,
       1848,
@@ -65,8 +89,8 @@
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-03-12 15:14:31",
-    "saved_at": "2026-03-12T15:14:51.071483",
+    "analysis_date": "2026-03-12 18:12:30",
+    "saved_at": "2026-03-12T18:12:46.967399",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
