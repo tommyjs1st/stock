@@ -1,48 +1,26 @@
 [
   {
-    "code": "031210",
-    "name": "서울보증보험",
-    "score": 3,
+    "code": "003690",
+    "name": "코리안리",
+    "score": 4,
     "signals": [
+      "RSI매수신호",
       "MACD돌파직전",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 49400.0,
-    "volume": 27741,
+    "price": 12310.0,
+    "volume": 446058,
     "foreign_netbuy": [
-      31341,
-      85692,
-      1994
+      162989,
+      25085,
+      38381,
+      -55371
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-04-16 18:11:11",
-    "saved_at": "2026-04-16T18:12:28.665368",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "012630",
-    "name": "HDC",
-    "score": 3,
-    "signals": [
-      "RSI매수신호",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 27250.0,
-    "volume": 85427,
-    "foreign_netbuy": [
-      66418,
-      9361,
-      3703
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-04-16 18:11:58",
-    "saved_at": "2026-04-16T18:12:28.665398",
+    "analysis_date": "2026-04-17 18:12:06",
+    "saved_at": "2026-04-17T18:12:55.768596",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
