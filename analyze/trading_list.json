@@ -1,26 +1,24 @@
 [
   {
-    "code": "003690",
-    "name": "코리안리",
-    "score": 4,
+    "code": "012630",
+    "name": "HDC",
+    "score": 3,
     "signals": [
       "RSI매수신호",
-      "MACD돌파직전",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 12310.0,
-    "volume": 446058,
+    "price": 27000.0,
+    "volume": 66175,
     "foreign_netbuy": [
-      162989,
-      25085,
-      38381,
-      -55371
+      35521,
+      17041,
+      66418
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-04-17 18:12:06",
-    "saved_at": "2026-04-17T18:12:55.768596",
+    "analysis_date": "2026-04-20 15:11:52",
+    "saved_at": "2026-04-20T15:12:16.281397",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
