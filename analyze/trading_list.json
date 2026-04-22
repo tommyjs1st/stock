@@ -1,0 +1,50 @@
+[
+  {
+    "code": "012630",
+    "name": "HDC",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 27000.0,
+    "volume": 103240,
+    "foreign_netbuy": [
+      10359,
+      5963,
+      35521
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-04-22 18:12:19",
+    "saved_at": "2026-04-22T18:12:47.162560",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "100090",
+    "name": "SK오션플랜트",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 23300.0,
+    "volume": 1213892,
+    "foreign_netbuy": [
+      147490,
+      88172,
+      26390
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-04-22 18:12:23",
+    "saved_at": "2026-04-22T18:12:47.162582",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  }
+]
