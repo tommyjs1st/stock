@@ -1,0 +1,28 @@
+[
+  {
+    "code": "017960",
+    "name": "한국카본",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 48800.0,
+    "volume": 351823,
+    "foreign_netbuy": [
+      7597,
+      73422,
+      102343,
+      97515,
+      181287
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-05-05 18:12:33",
+    "saved_at": "2026-05-05T18:13:34.694644",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  }
+]
