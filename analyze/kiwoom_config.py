@@ -52,11 +52,17 @@ class KiwoomConfig:
     
     def get_enabled_accounts(self) -> Dict:
         """활성화된 계좌 목록 반환"""
-        return {
-            alias: info 
-            for alias, info in self.ACCOUNTS.items() 
-            if info.get('enabled', False) and info.get('account_no')
-        }
+        enabled = {}
+        for alias, info in self.ACCOUNTS.items():
+            if not info.get('enabled', False) or not info.get('account_no'):
+                continue
+            # 계좌별 app_key 없으면 최상위 키 폴백
+            if not info.get('app_key'):
+                info = dict(info)
+                info['app_key'] = self.APP_KEY
+                info['app_secret'] = self.APP_SECRET
+            enabled[alias] = info
+        return enabled
     
     def get_account(self, alias: str) -> Dict:
         """특정 계좌 정보 반환"""

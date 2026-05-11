@@ -718,10 +718,18 @@ class RealTimeMonitor(QMainWindow):
                 self.holdings_table.setItem(i, 13, item_status)
         
         # 보유종목 상태 업데이트
+        # D+2 추정예수금 조회 (오늘 매수 대금 차감 반영)
+        total_deposit = 0
+        try:
+            total_deposit = self.kiwoom_client.get_deposit()
+        except Exception as e:
+            logger.warning(f"⚠️ 예수금 조회 실패: {e}")
+
+        total_assets = total_eval_amount + total_deposit
         total_profit_rate = (total_profit_loss / (total_eval_amount - total_profit_loss) * 100) if (total_eval_amount - total_profit_loss) > 0 else 0
         self.holdings_status_label.setText(
             f"보유종목: {len(self.holdings)}개 | "
-            f"총평가금액: {int(total_eval_amount):,}원 | "
+            f"총자산: {int(total_assets):,}원 (주식 {int(total_eval_amount):,} + 예수금 {int(total_deposit):,}) | "
             f"총손익: {int(total_profit_loss):+,}원 ({total_profit_rate:+.2f}%)"
         )
 

@@ -30,6 +30,9 @@ class KiwoomAPIClient(BaseAPIClient):
 
         self.access_token = None
         self.last_token_time = None
+        
+        # 계좌별 독립 토큰 캐시 {alias: {'token': ..., 'time': ...}}
+        self._account_tokens: Dict[str, dict] = {}
 
         self.logger = logging.getLogger(__name__)
 
@@ -131,6 +134,82 @@ class KiwoomAPIClient(BaseAPIClient):
 
         # 3. 신규 토큰 발급
         return self._request_new_token()
+
+    def get_account_token(self, alias: str, app_key: str, app_secret: str) -> str:
+        """
+        계좌별 독립 토큰 발급/캐시 반환
+
+        Args:
+            alias: 계좌 별칭 (토큰 파일 구분용)
+            app_key: 해당 계좌의 app_key
+            app_secret: 해당 계좌의 app_secret
+
+        Returns:
+            str: 액세스 토큰
+        """
+        token_file = f"kiwoom_token_{alias}.json"
+
+        # 캐시 확인
+        cached = self._account_tokens.get(alias)
+        if cached:
+            # 서버 검증
+            if self._is_token_valid(cached['token']):
+                return cached['token']
+            else:
+                self.logger.warning(f"⚠️ {alias} 캐시 토큰 만료, 재발급")
+                self._account_tokens.pop(alias, None)
+
+        # 파일 캐시 확인
+        try:
+            if os.path.exists(token_file):
+                with open(token_file, 'r', encoding='utf-8') as f:
+                    token_data = json.load(f)
+                expire_str = token_data.get('access_token_token_expired', '')
+                if expire_str:
+                    expire_time = datetime.strptime(expire_str, '%Y-%m-%d %H:%M:%S')
+                    if datetime.now() < expire_time - timedelta(minutes=10):
+                        token = token_data.get('access_token')
+                        if token and self._is_token_valid(token):
+                            self._account_tokens[alias] = {'token': token}
+                            self.logger.info(f"✅ {alias} 파일 토큰 재사용")
+                            return token
+        except Exception as e:
+            self.logger.warning(f"⚠️ {alias} 토큰 파일 로드 실패: {e}")
+
+        # 신규 발급
+        self.logger.info(f"🔄 {alias} 토큰 신규 발급 중...")
+        url = f"{self.base_url}/oauth2/token"
+        headers = {"Content-Type": "application/json; charset=UTF-8"}
+        data = {
+            "grant_type": "client_credentials",
+            "appkey": app_key,
+            "secretkey": app_secret
+        }
+
+        try:
+            response = requests.post(url, headers=headers,
+                                     data=json.dumps(data),
+                                     timeout=self.config.TIMEOUT)
+            response.raise_for_status()
+            token_response = response.json()
+
+            if token_response.get('return_code') != 0:
+                raise Exception(f"토큰 발급 실패: {token_response.get('return_msg', '')}")
+
+            token = token_response.get('token')
+            self._account_tokens[alias] = {'token': token}
+
+            # 파일 저장
+            token_response['requested_at'] = datetime.now().timestamp()
+            with open(token_file, 'w', encoding='utf-8') as f:
+                json.dump(token_response, f, ensure_ascii=False, indent=2)
+
+            self.logger.info(f"✅ {alias} 토큰 발급 완료")
+            return token
+
+        except Exception as e:
+            self.logger.error(f"❌ {alias} 토큰 발급 실패: {e}")
+            raise
 
     def _is_token_valid(self, token: str) -> bool:
         """토큰 서버 유효성 검증 (ka10080으로 실제 확인)"""
@@ -261,144 +340,203 @@ class KiwoomAPIClient(BaseAPIClient):
         
         return None
     
-    def get_account_balance(self, account_no: str) -> Dict:
+    def get_account_balance(self, account_no: str = None) -> Dict:
         """
-        계좌 잔고 조회 (일별잔고수익률 API 사용)
-
-        Args:
-            account_no: 계좌번호 (예: 6349-6548)
+        전체 활성 계좌 잔고 합산 조회
 
         Returns:
-            Dict: 계좌 잔고 정보
+            Dict: 합산 계좌 잔고 정보
         """
-        url = f"{self.base_url}/api/dostk/acnt"
-
-        # 오늘 날짜
-        from datetime import datetime
-        today = datetime.now().strftime('%Y%m%d')
-
-        params = {
-            'qry_dt': today  # 조회일자
+        enabled_accounts = self.config.get_enabled_accounts()
+        total = {
+            'total_eval_amount': 0.0,
+            'total_purchase_amount': 0.0,
+            'total_profit_loss': 0.0,
+            'deposit': 0.0,
+            'holdings_count': 0,
         }
 
-        try:
-            data = self.api_request(url, params, api_id="ka01690")
+        for alias, account_info in enabled_accounts.items():
+            try:
+                token = self.get_account_token(
+                    alias,
+                    account_info['app_key'],
+                    account_info['app_secret']
+                )
+                data = self._request_with_token(token, params={'qry_dt': datetime.now().strftime('%Y%m%d')}, api_id="ka01690")
+                if not data:
+                    continue
 
-            if not data:
-                return {}
+                total['total_eval_amount']    += float(data.get('tot_evlt_amt', 0))
+                total['total_purchase_amount']+= float(data.get('tot_buy_amt', 0))
+                total['total_profit_loss']    += float(data.get('tot_evltv_prft', 0))
+                total['deposit']              += float(data.get('dbst_bal', 0))
+                total['holdings_count']       += len(data.get('day_bal_rt', []))
 
-            return {
-                'account_no': account_no,
-                'total_eval_amount': float(data.get('tot_evlt_amt', 0)),  # 총평가금액
-                'total_purchase_amount': float(data.get('tot_buy_amt', 0)),  # 총매입가
-                'total_profit_loss': float(data.get('tot_evltv_prft', 0)),  # 총평가손익
-                'profit_loss_rate': float(data.get('tot_prft_rt', 0)),  # 수익률
-                'deposit': float(data.get('dbst_bal', 0)),  # 예수금
-                'holdings_count': len(data.get('day_bal_rt', [])),  # 보유종목수
-                'query_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            }
+                self.logger.info(
+                    f"💰 {alias} 잔고: 평가 {float(data.get('tot_evlt_amt',0)):,.0f}원 "
+                    f"/ 예수금 {float(data.get('dbst_bal',0)):,.0f}원"
+                )
+            except Exception as e:
+                self.logger.error(f"❌ {alias} 잔고 조회 실패: {e}")
 
-        except Exception as e:
-            self.logger.error(f"❌ 계좌 잔고 조회 실패 ({account_no}): {e}")
-            return {}
+        # 합산 수익률 계산
+        purchase = total['total_purchase_amount']
+        total['profit_loss_rate'] = (
+            total['total_profit_loss'] / purchase * 100 if purchase > 0 else 0.0
+        )
+        total['query_time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        return total
     
-    def get_holdings(self, account_no: str) -> pd.DataFrame:
+    def get_deposit(self) -> float:
         """
-        보유종목 조회 (일별잔고수익률 API 사용)
-
-        Args:
-            account_no: 계좌번호
+        전체 활성 계좌의 D+2 추정예수금 합산 조회
+        (kt00001 - 예수금상세현황요청, 계좌별 독립 토큰 사용)
 
         Returns:
-            DataFrame: 보유종목 정보
+            float: 전 계좌 D+2 추정예수금 합계
         """
         url = f"{self.base_url}/api/dostk/acnt"
+        params = {'qry_tp': '2'}  # 2:일반조회
 
-        # 오늘 날짜
-        today = datetime.now().strftime('%Y%m%d')
+        enabled_accounts = self.config.get_enabled_accounts()
+        total_deposit = 0.0
 
-        params = {
-            'qry_dt': today  # 조회일자
-        }
+        for alias, account_info in enabled_accounts.items():
+            try:
+                token = self.get_account_token(
+                    alias,
+                    account_info['app_key'],
+                    account_info['app_secret']
+                )
+                data = self._request_with_token(token, params, api_id="kt00001")
+
+                if not data:
+                    self.logger.warning(f"⚠️ {alias} 예수금 조회 응답 없음")
+                    continue
+
+                deposit = float(data.get('100stk_ord_alow_amt', 0))
+                total_deposit += deposit
+                self.logger.debug(f"💰 {alias} 주문가능금액(100%): {deposit:,.0f}원")
+
+            except Exception as e:
+                self.logger.error(f"❌ {alias} 예수금 조회 실패: {e}")
+
+        self.logger.info(f"💰 전계좌 D+2 추정예수금 합계: {total_deposit:,.0f}원")
+        return total_deposit
+    
+    def get_holdings(self, account_no: str = None) -> pd.DataFrame:
+        """
+        단일 토큰 기준 보유종목 조회 (내부용)
+        계좌별 조회는 get_holdings_all() 사용 권장
+        """
+        url = f"{self.base_url}/api/dostk/acnt"
+        params = {'qry_dt': datetime.now().strftime('%Y%m%d')}
 
         try:
             data = self.api_request(url, params, api_id="ka01690")
-
             if not data:
                 return pd.DataFrame()
-
-            holdings_list = []
-
-            # day_bal_rt: 일별잔고수익률 리스트
-            day_bal_rt = data.get('day_bal_rt', [])
-
-            for item in day_bal_rt:
-                stock_code = item.get('stk_cd', '')  # 종목코드
-                if not stock_code or stock_code.strip() == '':
-                    continue
-
-                # 보유수량이 0이면 스킵
-                quantity = int(item.get('rmnd_qty', 0))
-                if quantity == 0:
-                    continue
-
-                holdings_list.append({
-                    'account_no': account_no,
-                    'stock_code': stock_code,
-                    'stock_name': item.get('stk_nm', ''),  # 종목명
-                    'quantity': quantity,  # 잔고수량
-                    'avg_price': float(item.get('buy_uv', 0)),  # 매입단가
-                    'current_price': float(item.get('cur_prc', 0)),  # 현재가
-                    'eval_amount': float(item.get('evlt_amt', 0)),  # 평가금액
-                    'purchase_amount': float(item.get('buy_uv', 0)) * quantity,  # 매입금액
-                    'profit_loss': float(item.get('evltv_prft', 0)),  # 평가손익
-                    'profit_rate': float(item.get('prft_rt', 0)),  # 수익률
-                })
-
-            df = pd.DataFrame(holdings_list)
-
-            if not df.empty:
-                self.logger.info(f"✅ 보유종목 조회 완료 ({account_no}): {len(df)}개")
-
-            return df
-
+            return self._parse_holdings(data, account_no or 'main')
         except Exception as e:
-            self.logger.error(f"❌ 보유종목 조회 실패 ({account_no}): {e}")
+            self.logger.error(f"❌ 보유종목 조회 실패: {e}")
             return pd.DataFrame()
+
+    def _parse_holdings(self, data: dict, account_no: str) -> pd.DataFrame:
+        """API 응답에서 보유종목 DataFrame 파싱 (공통)"""
+        holdings_list = []
+        for item in data.get('day_bal_rt', []):
+            stock_code = item.get('stk_cd', '').strip()
+            if not stock_code:
+                continue
+            quantity = int(item.get('rmnd_qty', 0))
+            if quantity == 0:
+                continue
+            holdings_list.append({
+                'account_no':       account_no,
+                'stock_code':       stock_code,
+                'stock_name':       item.get('stk_nm', ''),
+                'quantity':         quantity,
+                'avg_price':        float(item.get('buy_uv', 0)),
+                'current_price':    float(item.get('cur_prc', 0)),
+                'eval_amount':      float(item.get('evlt_amt', 0)),
+                'purchase_amount':  float(item.get('buy_uv', 0)) * quantity,
+                'profit_loss':      float(item.get('evltv_prft', 0)),
+                'profit_rate':      float(item.get('prft_rt', 0)),
+            })
+        return pd.DataFrame(holdings_list)
+
+    def _request_with_token(self, token: str, params: dict, api_id: str) -> Optional[dict]:
+        """지정 토큰으로 API 요청"""
+        url = f"{self.base_url}/api/dostk/acnt"
+        headers = {
+            "Content-Type": "application/json;charset=UTF-8",
+            "authorization": f"Bearer {token}",
+            "api-id": api_id,
+        }
+        try:
+            time.sleep(self.config.API_DELAY)
+            response = requests.post(url, headers=headers,
+                                     json=params or {},
+                                     timeout=self.config.TIMEOUT)
+            if response.status_code == 200:
+                return response.json()
+            self.logger.error(f"❌ HTTP {response.status_code}: {response.text[:300]}")
+            return None
+        except Exception as e:
+            self.logger.error(f"❌ _request_with_token 실패: {e}")
+            return None
     
     def get_holdings_all(self) -> pd.DataFrame:
         """
-        활성화된 모든 계좌의 보유종목 조회
-        
+        활성화된 모든 계좌의 보유종목 조회 (계좌별 독립 토큰 사용, 로컬 합산)
+
         Returns:
-            DataFrame: 전체 보유종목 정보 (계좌별 구분 포함)
+            DataFrame: 전체 보유종목 (계좌별 구분 포함)
         """
         enabled_accounts = self.config.get_enabled_accounts()
-        
+
         if not enabled_accounts:
             self.logger.warning("⚠️ 활성화된 계좌가 없습니다.")
             return pd.DataFrame()
-        
+
         all_holdings = []
-        
+
         for alias, account_info in enabled_accounts.items():
             account_no = account_info['account_no']
             self.logger.info(f"📊 계좌 조회 중: {alias} ({account_no})")
-            
-            df = self.get_holdings(account_no)
-            
-            if not df.empty:
-                df['account_alias'] = alias
-                df['account_description'] = account_info['description']
-                all_holdings.append(df)
-        
+            try:
+                token = self.get_account_token(
+                    alias,
+                    account_info['app_key'],
+                    account_info['app_secret']
+                )
+                data = self._request_with_token(
+                    token,
+                    params={'qry_dt': datetime.now().strftime('%Y%m%d')},
+                    api_id="ka01690"
+                )
+                if not data:
+                    self.logger.warning(f"⚠️ {alias} 데이터 없음")
+                    continue
+
+                df = self._parse_holdings(data, account_no)
+                if not df.empty:
+                    df['account_alias'] = alias
+                    df['account_description'] = account_info.get('description', alias)
+                    all_holdings.append(df)
+                    self.logger.info(f"✅ {alias} ({account_no}): {len(df)}개 종목")
+
+            except Exception as e:
+                self.logger.error(f"❌ {alias} 보유종목 조회 실패: {e}")
+
         if all_holdings:
             result_df = pd.concat(all_holdings, ignore_index=True)
-            self.logger.info(f"✅ 전체 조회 완료: {len(result_df)}개 종목")
+            self.logger.info(f"✅ 전체 조회 완료: {len(result_df)}개 종목 ({len(all_holdings)}개 계좌)")
             return result_df
         else:
             return pd.DataFrame()
-    
+
     def get_holdings_by_accounts(self, account_aliases: List[str]) -> pd.DataFrame:
         """
         특정 계좌들의 보유종목 조회

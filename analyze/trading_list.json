@@ -9,7 +9,7 @@
       "외국인강력매수"
     ],
     "price": 165800.0,
-    "volume": 1041722,
+    "volume": 1086998,
     "foreign_netbuy": [
       101536,
       3915,
@@ -17,32 +17,8 @@
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-05-11 15:10:34",
-    "saved_at": "2026-05-11T15:12:39.386998",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "298380",
-    "name": "에이비엘바이오",
-    "score": 3,
-    "signals": [
-      "RSI매수신호",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 128100.0,
-    "volume": 417771,
-    "foreign_netbuy": [
-      21744,
-      36648,
-      106948
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-05-11 15:10:55",
-    "saved_at": "2026-05-11T15:12:39.387031",
+    "analysis_date": "2026-05-11 18:10:28",
+    "saved_at": "2026-05-11T18:12:12.139669",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
@@ -56,8 +32,8 @@
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 70800.0,
-    "volume": 370218,
+    "price": 70700.0,
+    "volume": 392224,
     "foreign_netbuy": [
       32460,
       22993,
@@ -65,8 +41,8 @@
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-05-11 15:11:35",
-    "saved_at": "2026-05-11T15:12:39.387039",
+    "analysis_date": "2026-05-11 18:11:19",
+    "saved_at": "2026-05-11T18:12:12.139692",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
@@ -80,8 +56,8 @@
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 53300.0,
-    "volume": 100499,
+    "price": 53000.0,
+    "volume": 105744,
     "foreign_netbuy": [
       43336,
       33392,
@@ -89,8 +65,8 @@
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-05-11 15:12:08",
-    "saved_at": "2026-05-11T15:12:39.387046",
+    "analysis_date": "2026-05-11 18:11:46",
+    "saved_at": "2026-05-11T18:12:12.139696",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
