@@ -1,26 +1,96 @@
 [
   {
-    "code": "017960",
-    "name": "한국카본",
+    "code": "000720",
+    "name": "현대건설",
     "score": 3,
     "signals": [
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 48800.0,
-    "volume": 351823,
+    "price": 165800.0,
+    "volume": 1041722,
     "foreign_netbuy": [
-      7597,
-      73422,
-      102343,
-      97515,
-      181287
+      101536,
+      3915,
+      299930
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-05-05 18:12:33",
-    "saved_at": "2026-05-05T18:13:34.694644",
+    "analysis_date": "2026-05-11 15:10:34",
+    "saved_at": "2026-05-11T15:12:39.386998",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "298380",
+    "name": "에이비엘바이오",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 128100.0,
+    "volume": 417771,
+    "foreign_netbuy": [
+      21744,
+      36648,
+      106948
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-05-11 15:10:55",
+    "saved_at": "2026-05-11T15:12:39.387031",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "347850",
+    "name": "디앤디파마텍",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 70800.0,
+    "volume": 370218,
+    "foreign_netbuy": [
+      32460,
+      22993,
+      100400
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-05-11 15:11:35",
+    "saved_at": "2026-05-11T15:12:39.387039",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "003570",
+    "name": "SNT다이내믹스",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 53300.0,
+    "volume": 100499,
+    "foreign_netbuy": [
+      43336,
+      33392,
+      22481
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-05-11 15:12:08",
+    "saved_at": "2026-05-11T15:12:39.387046",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
