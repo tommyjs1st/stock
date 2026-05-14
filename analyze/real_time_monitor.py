@@ -229,7 +229,7 @@ class RealTimeMonitor(QMainWindow):
         self.table.setColumnWidth(7, 80)
         self.table.setColumnWidth(8, 100)
         self.table.setColumnWidth(9, 50)
-        self.table.setColumnWidth(10, 200)
+        self.table.setColumnWidth(10, 300)
         self.table.setColumnWidth(11, 80)
 
         self.table.setAlternatingRowColors(True)
