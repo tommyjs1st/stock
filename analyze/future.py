@@ -110,9 +110,12 @@ class StockAnalyzer:
                 return False
             
             # 1. 기존 기술적 신호 점수 계산
-            signal_score, active_signals = self.signal_analyzer.calculate_buy_signal_score(
+            signal_score, active_signals, passes_absolute, exclude_reason = self.signal_analyzer.calculate_buy_signal_score(
                 df, name, code, foreign_trend=foreign_trend
             )
+            if not passes_absolute:
+                self.logger.debug(f"🚫 {name}({code}) 절대조건 미통과: {exclude_reason}")
+                return True
             
             # 2. 미래 상승 가능성 분석 (활성화된 경우에만)
             future_analysis = self.future_analyzer.calculate_future_potential(code)
