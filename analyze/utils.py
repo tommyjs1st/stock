@@ -177,8 +177,8 @@ def save_enhanced_backtest_candidates(candidates, logger, include_filter_info=Tr
         else:
             filtered_candidates = sorted_candidates
         
-        # 상위 20개만 저장 (절대조건 통과 종목이 많을 경우 대비)
-        final_candidates = filtered_candidates[:20]
+        # 상위 5개만 저장 (절대조건 통과 종목이 많을 경우 대비)
+        final_candidates = filtered_candidates[:5]
         
         # 추가 정보 포함
         for candidate in final_candidates:
