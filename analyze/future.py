@@ -354,7 +354,34 @@ class StockAnalyzer:
         summary_msg += f"⏱️ 처리시간: {summary['elapsed_time']/60:.1f}분"
         
         send_discord_message(summary_msg, self.webhook_url)
-        
+
+        # 골든크로스 / MACD골든크로스 발생 종목 별도 전송
+        all_stocks = []
+        for grade_stocks in self.multi_signal_stocks.values():
+            all_stocks.extend(grade_stocks)
+
+        golden_cross_stocks = [s for s in all_stocks
+                               if '골든크로스' in s.get('signals', [])
+                               and 'MACD골든크로스' not in s.get('signals', [])]
+        macd_golden_stocks  = [s for s in all_stocks
+                               if 'MACD골든크로스' in s.get('signals', [])]
+
+        cross_msg = ""
+        if golden_cross_stocks:
+            cross_msg += "🟡 **[골든크로스 발생 종목]**\n"
+            for s in sorted(golden_cross_stocks, key=lambda x: x.get('score', 0), reverse=True):
+                cross_msg += f"  · {s['name']} ({s['code']}) - {s['score']}점\n"
+            cross_msg += "\n"
+
+        if macd_golden_stocks:
+            cross_msg += "⚡ **[MACD골든크로스 발생 종목]**\n"
+            for s in sorted(macd_golden_stocks, key=lambda x: x.get('score', 0), reverse=True):
+                cross_msg += f"  · {s['name']} ({s['code']}) - {s['score']}점\n"
+
+        if cross_msg:
+            send_discord_message(cross_msg, self.webhook_url)
+            self.logger.info("✅ 골든크로스/MACD골든크로스 종목 전송 완료")
+
         # 고잠재력 종목 수 로깅
         high_potential_count = len(self.backtest_candidates)
         if high_potential_count > 0:
