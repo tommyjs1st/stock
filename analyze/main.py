@@ -348,14 +348,14 @@ class EnhancedStockAnalyzer:
                         f"절대조건 통과 {filter_passed_count}개, "
                         f"절대조건 미통과 {filter_failed_count}개")
         
+        # 강화된 요약 통계 전송 (골든크로스 목록 포함)
+        self._send_enhanced_summary_results(summary, filter_passed_count, filter_failed_count)
+
         # 다중신호 종목 전송 (절대조건 통과만)
         self._send_filtered_multi_signal_results()
         
         # 신호 조합 패턴 분석 결과 전송
         self._send_combination_results()
-        
-        # 강화된 요약 통계 전송
-        self._send_enhanced_summary_results(summary, filter_passed_count, filter_failed_count)
         
         # 상세 신호 (환경변수로 제어)
         detail_mode = os.getenv("DETAIL_MODE", "false").lower() == "true"

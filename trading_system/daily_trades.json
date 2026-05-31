@@ -358,5 +358,55 @@
     "price": 18550,
     "amount": 37100,
     "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2026-05-28T11:24:00.539931",
+    "symbol": "010120",
+    "stock_name": "LS ELECTRIC",
+    "action": "SELL",
+    "quantity": 1,
+    "price": 244000.0,
+    "amount": 244000.0,
+    "reason": "극한손절"
+  },
+  {
+    "timestamp": "2026-05-28T11:24:00.542710",
+    "symbol": "010120",
+    "stock_name": "LS ELECTRIC",
+    "action": "SELL",
+    "quantity": 1,
+    "price": 244000.0,
+    "amount": 244000.0,
+    "reason": "극한손절"
+  },
+  {
+    "timestamp": "2026-05-28T11:24:01.995259",
+    "symbol": "064350",
+    "stock_name": "현대로템",
+    "action": "BUY",
+    "quantity": 2,
+    "price": 201500,
+    "amount": 403000,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2026-05-28T11:24:05.652212",
+    "symbol": "035720",
+    "stock_name": "카카오",
+    "action": "BUY",
+    "quantity": 9,
+    "price": 39700,
+    "amount": 357300,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2026-05-28T11:24:09.212479",
+    "symbol": "024110",
+    "stock_name": "기업은행",
+    "action": "BUY",
+    "quantity": 8,
+    "price": 20450,
+    "amount": 163600,
+    "reason": "hybrid_strategy"
   }
 ]

@@ -1,1 +1,14 @@
-{}
+{
+  "91256": {
+    "order_no": "91256",
+    "symbol": "024110",
+    "stock_name": "기업은행",
+    "side": "BUY",
+    "quantity": 8,
+    "limit_price": 20450,
+    "strategy": "patient_limit",
+    "order_time": "2026-05-28T11:24:09.210987",
+    "check_count": 0,
+    "last_check": null
+  }
+}
