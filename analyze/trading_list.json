@@ -1,123 +1,125 @@
 [
   {
-    "code": "005830",
-    "name": "DB손해보험",
-    "score": 5,
+    "code": "032640",
+    "name": "LG유플러스",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "MACD돌파직전",
+      "볼린저밴드내위치"
+    ],
+    "price": 14200.0,
+    "volume": 604325,
+    "foreign_netbuy": [
+      184923,
+      150915,
+      -253196,
+      62192
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-07-03 18:20:56",
+    "saved_at": "2026-07-03T18:22:43.848073",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "058470",
+    "name": "리노공업",
+    "score": 3,
     "signals": [
       "볼린저밴드복귀",
-      "거래량급증",
-      "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 143100.0,
-    "volume": 862160,
+    "price": 78600.0,
+    "volume": 1083659,
     "foreign_netbuy": [
-      40528,
-      80238,
-      297
+      1072405,
+      1390636,
+      434907,
+      181712
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-05-29 18:20:44",
-    "saved_at": "2026-05-29T18:22:44.242725",
+    "analysis_date": "2026-07-03 18:20:57",
+    "saved_at": "2026-07-03T18:22:43.848102",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "035720",
-    "name": "카카오",
-    "score": 4,
-    "signals": [
-      "거래량급증",
-      "RSI매수신호",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 41950.0,
-    "volume": 7448112,
-    "foreign_netbuy": [
-      20549,
-      125862,
-      12674
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-05-29 18:20:30",
-    "saved_at": "2026-05-29T18:22:44.242749",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "086790",
-    "name": "하나금융지주",
+    "code": "440110",
+    "name": "파두",
     "score": 3,
     "signals": [
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 115100.0,
-    "volume": 1532538,
+    "price": 79600.0,
+    "volume": 680769,
     "foreign_netbuy": [
-      81840,
-      104236,
-      35355
+      233419,
+      174587,
+      46971,
+      -49774
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-05-29 18:20:20",
-    "saved_at": "2026-05-29T18:22:44.242757",
+    "analysis_date": "2026-07-03 18:21:13",
+    "saved_at": "2026-07-03T18:22:43.848109",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "267250",
-    "name": "HD현대",
+    "code": "095340",
+    "name": "ISC",
+    "score": 3,
+    "signals": [
+      "볼린저밴드복귀",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 167000.0,
+    "volume": 306384,
+    "foreign_netbuy": [
+      284508,
+      592938,
+      207260,
+      78395
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-07-03 18:21:20",
+    "saved_at": "2026-07-03T18:22:43.848116",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "251270",
+    "name": "넷마블",
     "score": 3,
     "signals": [
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 277500.0,
-    "volume": 358725,
+    "price": 38200.0,
+    "volume": 131984,
     "foreign_netbuy": [
-      46946,
-      71232,
-      42232
+      7750,
+      21669,
+      69815,
+      38454
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-05-29 18:20:25",
-    "saved_at": "2026-05-29T18:22:44.242764",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "064350",
-    "name": "현대로템",
-    "score": 3,
-    "signals": [
-      "RSI매수신호",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 200500.0,
-    "volume": 1158750,
-    "foreign_netbuy": [
-      172423,
-      180224,
-      95092
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-05-29 18:20:25",
-    "saved_at": "2026-05-29T18:22:44.242771",
+    "analysis_date": "2026-07-03 18:21:25",
+    "saved_at": "2026-07-03T18:22:43.848123",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true

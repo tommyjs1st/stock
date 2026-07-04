@@ -1175,5 +1175,91 @@
     "today_trades": [],
     "has_holdings": true,
     "program_trade_only": true
+  },
+  {
+    "date": "2026-06-01",
+    "timestamp": "2026-06-01T15:08:06.732378",
+    "total_assets": 1200632.0,
+    "cash": 143582.0,
+    "stock_value": 1057050.0,
+    "total_profit_loss": 17250.0,
+    "total_return_pct": 1.6589728793998848,
+    "position_count": 4,
+    "position_details": [
+      {
+        "symbol": "024110",
+        "stock_name": "기업은행",
+        "quantity": 8,
+        "avg_price": 20450.0,
+        "current_price": 20100.0,
+        "total_value": 160800.0,
+        "profit_loss": -2800.0,
+        "profit_loss_pct": -1.7114914425427872
+      },
+      {
+        "symbol": "064350",
+        "stock_name": "현대로템",
+        "quantity": 2,
+        "avg_price": 201500.0,
+        "current_price": 212000.0,
+        "total_value": 424000.0,
+        "profit_loss": 21000.0,
+        "profit_loss_pct": 5.2109181141439205
+      },
+      {
+        "symbol": "229640",
+        "stock_name": "LS에코에너지",
+        "quantity": 2,
+        "avg_price": 70200.0,
+        "current_price": 70000.0,
+        "total_value": 140000.0,
+        "profit_loss": -400.0,
+        "profit_loss_pct": -0.2849002849002849
+      },
+      {
+        "symbol": "323410",
+        "stock_name": "카카오뱅크",
+        "quantity": 15,
+        "avg_price": 22186.6667,
+        "current_price": 22150.0,
+        "total_value": 332250.0,
+        "profit_loss": -550.0,
+        "profit_loss_pct": -0.16526442307692307
+      }
+    ],
+    "today_trades": [
+      {
+        "timestamp": "2026-06-01T10:14:57.612157",
+        "symbol": "323410",
+        "stock_name": "카카오뱅크",
+        "action": "BUY",
+        "quantity": 4,
+        "price": 22150,
+        "amount": 88600,
+        "reason": "hybrid_strategy"
+      },
+      {
+        "timestamp": "2026-06-01T15:07:45.572705",
+        "symbol": "323410",
+        "stock_name": "카카오뱅크",
+        "action": "BUY",
+        "quantity": 11,
+        "price": 22200,
+        "amount": 244200,
+        "reason": "hybrid_strategy"
+      },
+      {
+        "timestamp": "2026-06-01T15:07:49.143688",
+        "symbol": "229640",
+        "stock_name": "LS에코에너지",
+        "action": "BUY",
+        "quantity": 2,
+        "price": 70200,
+        "amount": 140400,
+        "reason": "hybrid_strategy"
+      }
+    ],
+    "has_holdings": true,
+    "program_trade_only": false
   }
 ]

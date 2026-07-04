@@ -408,5 +408,35 @@
     "price": 20450,
     "amount": 163600,
     "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2026-06-01T10:14:57.612157",
+    "symbol": "323410",
+    "stock_name": "카카오뱅크",
+    "action": "BUY",
+    "quantity": 4,
+    "price": 22150,
+    "amount": 88600,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2026-06-01T15:07:45.572705",
+    "symbol": "323410",
+    "stock_name": "카카오뱅크",
+    "action": "BUY",
+    "quantity": 11,
+    "price": 22200,
+    "amount": 244200,
+    "reason": "hybrid_strategy"
+  },
+  {
+    "timestamp": "2026-06-01T15:07:49.143688",
+    "symbol": "229640",
+    "stock_name": "LS에코에너지",
+    "action": "BUY",
+    "quantity": 2,
+    "price": 70200,
+    "amount": 140400,
+    "reason": "hybrid_strategy"
   }
 ]

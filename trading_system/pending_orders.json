@@ -1,13 +1,13 @@
 {
   "91256": {
     "order_no": "91256",
-    "symbol": "024110",
-    "stock_name": "기업은행",
+    "symbol": "229640",
+    "stock_name": "LS에코에너지",
     "side": "BUY",
-    "quantity": 8,
-    "limit_price": 20450,
+    "quantity": 2,
+    "limit_price": 70200,
     "strategy": "patient_limit",
-    "order_time": "2026-05-28T11:24:09.210987",
+    "order_time": "2026-06-01T15:07:49.142010",
     "check_count": 0,
     "last_check": null
   }
