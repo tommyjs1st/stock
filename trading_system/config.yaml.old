@@ -1,0 +1,319 @@
+# KIS API 자동매매 시스템 설정 파일
+# 한국투자증권 OpenAPI 정보: https://apiportal.koreainvestment.com
+
+# =============================================================================
+# KIS API 인증 정보 (필수 입력)
+# =============================================================================
+kis:
+  # 앱키 (KIS Developers에서 발급받은 App Key)
+  app_key: "PSObFpwCFGJ8wi3hFaQYOiAKqg52aRL2WDR2"
+  
+  # 앱 시크릿 (KIS Developers에서 발급받은 App Secret)  
+  app_secret: "vC5UkRa2hBN/PDxIYPUSAdWHMmwZHJJydtliMfTP9nwqQzQXIIZtV/5cFyigrlmxNw+tBPa1OGgt7R90wyJaNyLIArVTxXgRyvk+I1588OWew/a2EhoYFsuu4KwQJ3wJM2ThnCvlLkNBGcJwox6ShsFvmJib7knU1wnma9FuE7wE+X6KCrw="
+  
+  # API 서버 URL
+  # 실전투자: https://openapi.koreainvestment.com:9443
+  # 모의투자: https://openapivts.koreainvestment.com:29443
+  base_url: "https://openapi.koreainvestment.com:9443"    # 실전투자!!!
+  
+  # 계좌번호 (종합계좌번호-상품코드, 예: 50123456-01)
+  account_no: "68152676-01"
+
+# =============================================================================
+# 종목 선별 설정 (수정됨)
+# =============================================================================
+selection:
+  # 하이브리드 모드 설정
+  mode: "hybrid"               # hybrid, backtest_only, selection_only
+  
+  # 선별 대상 지수
+  universe: ['KOSPI200', 'KOSDAQ150']
+  
+  # 필터링 조건
+  min_market_cap: 1000      # 최소 시가총액 1000억원
+  min_volume: 100000        # 최소 일평균 거래량
+  max_price_ratio: 0.20     # 최대 주가 비율 (가용자금의 20% 이하)
+  
+  # 선별 기준 (점수 계산)
+  criteria:
+    - 'momentum'            # 모멘텀 점수 (20일 수익률)
+    - 'volume'              # 거래량 증가 점수
+    - 'volatility'          # 변동성 점수
+    - 'technical'           # 기술적 지표 점수
+    - 'accessibility'       # 가격 접근성 점수 (소액투자자용)
+
+# =============================================================================
+# 거래 설정 (수정됨)
+# =============================================================================
+trading:
+  # 동적 종목 선별 설정
+  max_symbols: 5            # 동시 거래 최대 종목 수 (매일 선별)
+  #symbols: ['278470', '062040'] # 거래종목(필수), 에이피알(278470)
+  symbols: [] # 거래종목(필수)
+  
+  # 리스크 관리 설정
+  max_position_ratio: 0.25   # 종목당 최대 투자 비율 (20%) -> 25%
+  daily_loss_limit: 0.05    # 일일 최대 손실 한도 (2%) -> 5%
+  stop_loss_pct: 0.10       # 개별 종목 손절선 (5%) -> 10%
+  take_profit_pct: 0.20     # 개별 종목 익절선 (15%) -> 20%
+  
+  # 거래 제한
+  max_daily_trades: 20      # 일일 최대 거래 횟수
+  min_order_amount: 50000  # 최소 주문 금액 (5만원)
+
+  #  주문전략 등
+  order_strategy: 'adaptive'        # 기본 주문 전략
+  price_offset_pct: 0.003          # 지정가 오프셋 (0.3%)
+  order_timeout_minutes: 5         # 주문 대기 시간
+  partial_fill_allowed: false       # 부분 체결 허용
+
+  max_position_ratio: 0.3  # MACD 신호 활용을 위해 증가
+# =============================================================================
+# 포지션 관리 설정
+# =============================================================================
+position_management:
+  max_purchases_per_symbol: 3      # 종목당 최대 매수 횟수
+  max_quantity_per_symbol: 10      # 종목당 최대 보유 수량 (주)
+  min_holding_period_hours: 48     # 최소 보유 기간 (시간)
+  purchase_cooldown_hours: 3       # 재매수 금지 기간 (시간)
+  
+  # 추가 옵션들
+  allow_emergency_sell: true       # 손절 시 최소보유기간 무시
+  position_scaling: true           # 신호 강도에 따른 수량 조절
+  max_daily_purchases: 10          # 일일 최대 매수 횟수 (전체)
+
+# =============================================================================
+# 모멘텀 전략 설정
+# =============================================================================
+momentum:
+  # 모멘텀 계산 설정
+  period: 20                 # 모멘텀 계산 기간 (20개 봉)
+  threshold: 0.02            # 모멘텀 임계값 (2% 이상 상승)
+  volume_threshold: 1.5      # 거래량 증가 배수 (평균의 1.5배)
+  
+  # 이동평균선 설정
+  ma_short: 5                # 단기 이동평균 (5개 봉)
+  ma_long: 20                # 장기 이동평균 (20개 봉)
+  
+  # 신호 강도 조정
+  min_signal_strength: 1.0   # 최소 신호 강도
+  max_signal_strength: 5.0   # 최대 신호 강도
+
+# =============================================================================
+# MACD 설정
+# =============================================================================
+macd:
+  fast_period: 12
+  slow_period: 26
+  signal_period: 9
+  cross_lookback: 3
+  enable_notifications: true
+
+# =============================================================================
+# 시간 설정
+# =============================================================================
+schedule:
+  # 거래 실행 간격 (분)
+  trading_interval: 5        # 5분마다 신호 체크
+  
+  # 장 시간 설정 (한국 표준시)
+  market_open: "09:00"       # 장 시작
+  market_close: "15:30"      # 장 마감
+  
+  # 점심시간 거래 여부
+  lunch_trading: true        # 점심시간(12:00-13:00) 거래 허용
+
+# =============================================================================
+# 로깅 및 알림 설정
+# =============================================================================
+logging:
+  # 로그 레벨 (DEBUG, INFO, WARNING, ERROR)
+  level: "INFO"
+  
+  # 로그 파일 설정
+  file_name: "autotrader.log"
+  max_file_size: "10MB"      # 최대 파일 크기
+  backup_count: 5            # 백업 파일 개수
+  
+  # 콘솔 출력 여부
+  console_output: true
+
+# =============================================================================
+# 알림 설정 (선택사항)
+# =============================================================================
+notification:
+  # Discord 웹훅 (올바른 전체 URL 입력)
+  #discord_webhook: "https://discord.com/api/webhooks/1392715031149285420/cnDqqfbTc_dRrKSY2ZSlpznjXGVQLMBLn4cJ6CfriiGdkvX1Ly7WsjXLlPJJUdkcy1En"
+  discord_webhook: "https://discord.com/api/webhooks/1398285993458798592/vp7JtbavvOwduAgO4laIk8T2TOye_ZwkEtB59MPvqJmJJ7bjmpqxXmNVL_p8q65g4NKg"
+  discord_webhook_auto: "https://discord.com/api/webhooks/1399716878439415858/s0JY_kU-Kwh7pJjmkyvbBDoxfyHBwbi2IxFl7guSFPKnfTj1gjN2_lHoU2XO63xDgrWb"
+  
+  # 이메일 알림 (선택)
+  email:
+    enabled: false
+    smtp_server: "smtp.gmail.com"
+    smtp_port: 587
+    username: "your_email@gmail.com"
+    password: "your_app_password"
+    recipient: "your_email@gmail.com"
+  
+  # 알림 조건
+  notify_on_trade: true      # 매매 시 알림
+  notify_on_error: true      # 오류 시 알림
+  notify_on_daily_summary: true  # 일일 요약 알림
+  notify_on_selection: true  # 종목 선별 알림 (새로 추가)
+
+# =============================================================================
+# 백테스트 연동 설정
+# =============================================================================
+backtest:
+  # 백테스트 결과 파일 경로
+  results_file: "backtest_results.json"
+  
+  # 실전 vs 백테스트 성과 비교
+  performance_tracking: true
+  
+  # 전략 자동 조정
+  auto_adjustment: false     # 실전 성과에 따른 자동 파라미터 조정
+
+# =============================================================================
+# 고급 설정
+# =============================================================================
+advanced:
+  # API 호출 제한
+  api_call_delay: 0.2        # API 호출 간 지연시간 (초)
+  max_retries: 3             # 최대 재시도 횟수
+  
+  # 슬리피지 관리
+  slippage_tolerance: 0.005  # 슬리피지 허용 범위 (0.5%)
+  
+  # 메모리 관리
+  max_data_points: 1000      # 최대 데이터 보관 개수
+
+
+# =============================================================================
+# OPENAPI API 인증 정보 (필수 입력)
+# =============================================================================
+openapi:
+  # 앱키 (KIS Developers에서 발급받은 App Key)
+  encoding_key: "qiExR1Lgwdx5aZBQnFvwXEG2T17LjnzyT1lynMRZiyTwDdsHjohgl3FirBGWc9Tayx5DhOodgXaHWjpheMZpCQ%3D%3D"
+  decoding_key: "qiExR1Lgwdx5aZBQnFvwXEG2T17LjnzyT1lynMRZiyTwDdsHjohgl3FirBGWc9Tayx5DhOodgXaHWjpheMZpCQ=="
+  
+# =============================================================================
+# 기타
+# =============================================================================
+daily_strategy:
+  trend_analysis_days: 180
+  min_buy_score: 3.5              # 기존 5.0 → 3.5
+  min_sell_score: 4.0             # 기존 3.0 → 4.0 (더 엄격한 매도)
+
+minute_timing:
+  min_timing_score: 4             # 기존 4 유지
+  sell_timing_score: 3
+  rsi_period: 14
+  volume_lookback: 20
+  max_spread: 500
+
+system:
+  auto_shutdown_enabled: true      # 장 마감 후 자동 종료
+  weekend_shutdown_enabled: true   # 주말 자동 종료
+  shutdown_delay_hours: 1          # 장 마감 후 몇 시간 뒤 종료 (기본 1시간)
+
+# =============================================================================
+# 종목 발굴 절대조건 설정 (analyze/main.py용)
+# =============================================================================
+analysis:
+  # 절대조건 필터
+  absolute_conditions:
+    price_below_ma20: true              # 현재가 < 20일선
+    min_volume: 1000                    # 최소 거래량
+    bollinger_band_check: true          # 볼린저밴드 하단선 위
+    min_trading_value: 100000000        # 최소 거래대금 (1억원)
+    
+    # 투자자 매수 조건 (4가지 옵션 중 선택)
+    investor_condition: "foreign_only"   # foreign_only, institution_only, both, either
+    consecutive_days: 2                  # 연속 매수 일수 (2~3일)
+  
+  # 괴리율 기반 우선순위
+  ma20_divergence:
+    enabled: true
+    ranges:
+      mild: [-5, 0]         # 약조정: 보너스 +1점
+      moderate: [-10, -5]   # 중간조정: 보너스 +0.5점
+      strong: [-100, -10]   # 강조정: 보너스 0점
+    bonus_scores:
+      mild: 1.0
+      moderate: 0.5
+      strong: 0.0
+
+  # 신호 점수 설정
+  scoring:
+    min_score_for_messaging: 3    # 메신저 전송 최소 점수
+    min_score_for_detail: 3       # 상세 로깅 최소 점수
+
+database:
+  host: localhost
+  port: 3306
+  user: stock_user
+  password: stock2026!
+  database: stock_trading
+  charset: utf8mb4
+
+batch:
+  data_days: 365  # 수집할 일봉 일수
+  retry_count: 3
+  api_delay: 0.2  # API 호출 간격
+
+# =============================================================================
+# 분봉 데이터 수집 설정
+# =============================================================================
+minute_collection:
+  # 관심종목 리스트 (보유종목 외에 추가로 수집할 종목)
+  watchlist:
+    - "005930"  # 삼성전자
+    - "272210"  # 한화시스템
+    - "347850"  # 디앤디파마텍
+    - "034020"  # 두산에너빌리티
+    # 필요한 종목을 계속 추가하세요
+
+  # 분봉 수집 개수 (기본값)
+  default_minute_count: 120  # 120분 = 2시간
+
+  # 관심종목 수집 활성화
+  collect_watchlist: true  # true: 관심종목 수집, false: 보유종목만 수집
+
+# =============================================================================
+# 키움증권 REST API 설정
+# =============================================================================
+kiwoom:
+  app_key: "auu5cEGVmiKI9cEtcbItuaDOIeTlsWXlUikAYQa48vw"
+  app_secret: "WCens6a8InPiU3NM6b2QtLu2YB8stcbVCAnmJoPuepI"
+  base_url: "https://api.kiwoom.com"
+  
+  accounts:
+    main:
+      account_no: "6349-6548"
+      app_key: "auu5cEGVmiKI9cEtcbItuaDOIeTlsWXlUikAYQa48vw"
+      app_secret: "WCens6a8InPiU3NM6b2QtLu2YB8stcbVCAnmJoPuepI"
+      enabled: true
+      description: "ISA 계좌"
+  
+    sub:
+      account_no: "3320-1560" 
+      app_key: "KRNqh8skn-ctd1Kk3Ooxwmkmq0ihOPEbC93SKsMTb70"
+      app_secret: "gLBeb_xwLB4goy7XiTRLSTWc693-ZtAA8vwUPuIo_Sk"
+      enabled: true
+      description: "보조계좌"
+
+  monitor:
+    update_interval: 60
+    save_history: true
+    save_balance: true
+    active_hours:
+      start: "09:00"
+      end: "15:30"
+    run_on_weekend: false
+  
+  api:
+    call_delay: 0.2
+    max_retries: 3
+    timeout: 30
