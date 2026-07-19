@@ -1,8 +1,8 @@
 {
-  "expires_dt": "20260717210009",
+  "expires_dt": "20260718210006",
   "return_msg": "정상적으로 처리되었습니다",
   "token_type": "Bearer",
   "return_code": 0,
-  "token": "4-_stjPxo09Ucz0Yn2WMRQXpseG9JkuEG1Fv6AcuY-XgNyugEZZtdrzx674-LOljknMX59JMFKeKGcBrGgj22g",
-  "requested_at": 1784203209.252305
+  "token": "0sw7YPl4YS3ZDJtVHTDQPAoaKMLPh39B3sQXV36WPRlC34gYGujhxz-G0ljSWp7pImDID46574CqSsAt-N_N_Q",
+  "requested_at": 1784289606.284111
 }
