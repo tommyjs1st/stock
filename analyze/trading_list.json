@@ -1,83 +1,5 @@
 [
   {
-    "code": "035420",
-    "name": "NAVER",
-    "score": 4,
-    "signals": [
-      "RSI매수신호",
-      "MACD돌파직전",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 190000.0,
-    "volume": 737459,
-    "foreign_netbuy": [
-      163942,
-      162875,
-      53314,
-      45481
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-17 09:20:33",
-    "saved_at": "2026-07-17T09:23:06.337201",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "000720",
-    "name": "현대건설",
-    "score": 4,
-    "signals": [
-      "RSI매수신호",
-      "MACD돌파직전",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 99000.0,
-    "volume": 380664,
-    "foreign_netbuy": [
-      46041,
-      49576,
-      13619,
-      31873
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-17 09:20:53",
-    "saved_at": "2026-07-17T09:23:06.337248",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "005850",
-    "name": "에스엘",
-    "score": 4,
-    "signals": [
-      "RSI매수신호",
-      "MACD돌파직전",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 54400.0,
-    "volume": 79344,
-    "foreign_netbuy": [
-      15592,
-      17106,
-      15131,
-      -9278
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-17 09:21:56",
-    "saved_at": "2026-07-17T09:23:06.337259",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
     "code": "120110",
     "name": "코오롱인더",
     "score": 4,
@@ -87,8 +9,8 @@
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 53600.0,
-    "volume": 198230,
+    "price": 52100.0,
+    "volume": 8333,
     "foreign_netbuy": [
       28119,
       17899,
@@ -97,34 +19,109 @@
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-17 09:22:25",
-    "saved_at": "2026-07-17T09:23:06.337270",
+    "analysis_date": "2026-07-20 09:23:47",
+    "saved_at": "2026-07-20T09:24:51.757245",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "034230",
-    "name": "파라다이스",
+    "code": "100090",
+    "name": "SK오션플랜트",
     "score": 4,
     "signals": [
-      "볼린저밴드복귀",
+      "RSI매수신호",
+      "MACD돌파직전",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 13370.0,
+    "volume": 128175,
+    "foreign_netbuy": [
+      23191,
+      87740,
+      63931,
+      -112967
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-07-20 09:24:40",
+    "saved_at": "2026-07-20T09:24:51.757297",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "006800",
+    "name": "미래에셋증권",
+    "score": 3,
+    "signals": [
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 10190.0,
-    "volume": 1772630,
+    "price": 39000.0,
+    "volume": 167192,
     "foreign_netbuy": [
-      730090,
-      888743,
-      39195,
-      -22886
+      31580,
+      638357,
+      300272,
+      344354
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-17 09:22:50",
-    "saved_at": "2026-07-17T09:23:06.337281",
+    "analysis_date": "2026-07-20 09:20:38",
+    "saved_at": "2026-07-20T09:24:51.757306",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "015760",
+    "name": "한국전력",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 33700.0,
+    "volume": 213568,
+    "foreign_netbuy": [
+      471034,
+      54117,
+      205411,
+      -210107
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-07-20 09:20:38",
+    "saved_at": "2026-07-20T09:24:51.757313",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "000720",
+    "name": "현대건설",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 94300.0,
+    "volume": 61200,
+    "foreign_netbuy": [
+      46041,
+      49576,
+      13619,
+      31873
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-07-20 09:21:05",
+    "saved_at": "2026-07-20T09:24:51.757320",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
