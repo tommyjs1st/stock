@@ -1,125 +1,127 @@
 [
   {
-    "code": "034020",
-    "name": "두산에너빌리티",
-    "score": 4,
-    "signals": [
-      "RSI매수신호",
-      "MACD돌파직전",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 73200.0,
-    "volume": 1764464,
-    "foreign_netbuy": [
-      482817,
-      539303,
-      250746
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-23 18:20:17",
-    "saved_at": "2026-07-23T18:22:48.099385",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "064400",
-    "name": "LG씨엔에스",
-    "score": 4,
-    "signals": [
-      "RSI매수신호",
-      "MACD돌파직전",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 69900.0,
-    "volume": 1042015,
-    "foreign_netbuy": [
-      74507,
-      30529,
-      26044
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-23 18:20:49",
-    "saved_at": "2026-07-23T18:22:48.099419",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
     "code": "009830",
     "name": "한화솔루션",
-    "score": 4,
+    "score": 5,
     "signals": [
+      "거래량급증",
       "RSI매수신호",
-      "MACD돌파직전",
+      "MACD골든크로스",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
     "price": 30000.0,
-    "volume": 4432384,
+    "volume": 5848241,
     "foreign_netbuy": [
+      5566,
       334968,
       192510,
       169403
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-23 18:20:59",
-    "saved_at": "2026-07-23T18:22:48.099426",
+    "analysis_date": "2026-07-24 18:20:56",
+    "saved_at": "2026-07-24T18:22:41.195012",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "000990",
-    "name": "DB하이텍",
-    "score": 4,
+    "code": "005930",
+    "name": "삼성전자",
+    "score": 3,
     "signals": [
       "RSI매수신호",
-      "MACD돌파직전",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 110100.0,
-    "volume": 147444,
+    "price": 249500.0,
+    "volume": 26175580,
     "foreign_netbuy": [
-      39813,
-      3252,
-      106912
+      1299490,
+      2136159,
+      1943936,
+      1129083
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-23 18:21:03",
-    "saved_at": "2026-07-23T18:22:48.099433",
+    "analysis_date": "2026-07-24 18:20:09",
+    "saved_at": "2026-07-24T18:22:41.195037",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "178320",
-    "name": "서진시스템",
-    "score": 4,
+    "code": "032830",
+    "name": "삼성생명",
+    "score": 3,
     "signals": [
       "RSI매수신호",
-      "MACD돌파직전",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 42500.0,
-    "volume": 1208044,
+    "price": 318000.0,
+    "volume": 234813,
     "foreign_netbuy": [
-      26827,
-      143575,
-      104977
+      79591,
+      47533,
+      49764,
+      -18378
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-23 18:21:31",
-    "saved_at": "2026-07-23T18:22:48.099440",
+    "analysis_date": "2026-07-24 18:20:13",
+    "saved_at": "2026-07-24T18:22:41.195045",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "034020",
+    "name": "두산에너빌리티",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 72100.0,
+    "volume": 2017878,
+    "foreign_netbuy": [
+      195539,
+      482817,
+      539303,
+      250746
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-07-24 18:20:16",
+    "saved_at": "2026-07-24T18:22:41.195052",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "010120",
+    "name": "LS ELECTRIC",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 202000.0,
+    "volume": 1120437,
+    "foreign_netbuy": [
+      74574,
+      43862,
+      38666,
+      4870
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-07-24 18:20:19",
+    "saved_at": "2026-07-24T18:22:41.195059",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
