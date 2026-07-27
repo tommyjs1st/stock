@@ -1,127 +1,122 @@
 [
   {
-    "code": "009830",
-    "name": "한화솔루션",
-    "score": 5,
+    "code": "001740",
+    "name": "SK네트웍스",
+    "score": 4,
     "signals": [
-      "거래량급증",
       "RSI매수신호",
-      "MACD골든크로스",
+      "MACD돌파직전",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 30000.0,
-    "volume": 5848241,
+    "price": 7900.0,
+    "volume": 159807,
     "foreign_netbuy": [
-      5566,
-      334968,
-      192510,
-      169403
+      8848,
+      41432,
+      154117
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-24 18:20:56",
-    "saved_at": "2026-07-24T18:22:41.195012",
+    "analysis_date": "2026-07-27 09:22:09",
+    "saved_at": "2026-07-27T09:22:48.959471",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "005930",
-    "name": "삼성전자",
+    "code": "192080",
+    "name": "더블유게임즈",
+    "score": 4,
+    "signals": [
+      "RSI매수신호",
+      "MACD돌파직전",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 61300.0,
+    "volume": 3413,
+    "foreign_netbuy": [
+      25036,
+      12387,
+      1168
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-07-27 09:22:21",
+    "saved_at": "2026-07-27T09:22:48.959502",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "0126Z0",
+    "name": "삼성에피스홀딩스",
     "score": 3,
     "signals": [
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 249500.0,
-    "volume": 26175580,
+    "price": 392000.0,
+    "volume": 4956,
     "foreign_netbuy": [
-      1299490,
-      2136159,
-      1943936,
-      1129083
+      5405,
+      4577,
+      1561
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-24 18:20:09",
-    "saved_at": "2026-07-24T18:22:41.195037",
+    "analysis_date": "2026-07-27 09:20:44",
+    "saved_at": "2026-07-27T09:22:48.959511",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "032830",
-    "name": "삼성생명",
+    "code": "001040",
+    "name": "CJ",
     "score": 3,
     "signals": [
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 318000.0,
-    "volume": 234813,
+    "price": 135400.0,
+    "volume": 7324,
     "foreign_netbuy": [
-      79591,
-      47533,
-      49764,
-      -18378
+      9706,
+      7947,
+      18121
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-24 18:20:13",
-    "saved_at": "2026-07-24T18:22:41.195045",
+    "analysis_date": "2026-07-27 09:21:11",
+    "saved_at": "2026-07-27T09:22:48.959518",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "034020",
-    "name": "두산에너빌리티",
+    "code": "214370",
+    "name": "케어젠",
     "score": 3,
     "signals": [
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 72100.0,
-    "volume": 2017878,
+    "price": 59300.0,
+    "volume": 7045,
     "foreign_netbuy": [
-      195539,
-      482817,
-      539303,
-      250746
+      20284,
+      1364,
+      24363
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-24 18:20:16",
-    "saved_at": "2026-07-24T18:22:41.195052",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "010120",
-    "name": "LS ELECTRIC",
-    "score": 3,
-    "signals": [
-      "RSI매수신호",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 202000.0,
-    "volume": 1120437,
-    "foreign_netbuy": [
-      74574,
-      43862,
-      38666,
-      4870
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-24 18:20:19",
-    "saved_at": "2026-07-24T18:22:41.195059",
+    "analysis_date": "2026-07-27 09:21:20",
+    "saved_at": "2026-07-27T09:22:48.959524",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
