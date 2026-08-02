@@ -1,33 +1,7 @@
 [
   {
-    "code": "003550",
-    "name": "LG",
-    "score": 5,
-    "signals": [
-      "볼린저밴드복귀",
-      "RSI매수신호",
-      "MACD골든크로스",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 96400.0,
-    "volume": 519717,
-    "foreign_netbuy": [
-      82396,
-      51594,
-      2195
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-30 18:20:26",
-    "saved_at": "2026-07-30T18:22:16.678123",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "016360",
-    "name": "삼성증권",
+    "code": "066570",
+    "name": "LG전자",
     "score": 4,
     "signals": [
       "볼린저밴드복귀",
@@ -35,24 +9,25 @@
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 90300.0,
-    "volume": 543457,
+    "price": 162100.0,
+    "volume": 1754895,
     "foreign_netbuy": [
-      88098,
-      136113,
-      102558
+      131571,
+      209682,
+      13776,
+      -44272
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-30 18:20:36",
-    "saved_at": "2026-07-30T18:22:16.678151",
+    "analysis_date": "2026-07-31 18:20:19",
+    "saved_at": "2026-07-31T18:22:14.860815",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "039490",
-    "name": "키움증권",
+    "code": "006800",
+    "name": "미래에셋증권",
     "score": 4,
     "signals": [
       "볼린저밴드복귀",
@@ -60,24 +35,25 @@
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 258500.0,
-    "volume": 162983,
+    "price": 34550.0,
+    "volume": 3037574,
     "foreign_netbuy": [
-      20999,
-      56212,
-      28356
+      708616,
+      982075,
+      147596,
+      214731
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-30 18:20:39",
-    "saved_at": "2026-07-30T18:22:16.678158",
+    "analysis_date": "2026-07-31 18:20:22",
+    "saved_at": "2026-07-31T18:22:14.860851",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "489790",
-    "name": "한화비전",
+    "code": "000720",
+    "name": "현대건설",
     "score": 4,
     "signals": [
       "볼린저밴드복귀",
@@ -85,41 +61,70 @@
       "RSI매수신호",
       "볼린저밴드내위치"
     ],
-    "price": 35000.0,
-    "volume": 662110,
+    "price": 94600.0,
+    "volume": 1391976,
     "foreign_netbuy": [
-      123936,
-      45734,
-      -42847
+      30527,
+      17588,
+      -28933,
+      -38427
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-30 18:21:28",
-    "saved_at": "2026-07-30T18:22:16.678166",
+    "analysis_date": "2026-07-31 18:20:32",
+    "saved_at": "2026-07-31T18:22:14.860858",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "051910",
-    "name": "LG화학",
-    "score": 3,
+    "code": "036930",
+    "name": "주성엔지니어링",
+    "score": 4,
     "signals": [
       "볼린저밴드복귀",
       "RSI매수신호",
-      "볼린저밴드내위치"
+      "볼린저밴드내위치",
+      "외국인강력매수"
     ],
-    "price": 245500.0,
-    "volume": 273961,
+    "price": 124500.0,
+    "volume": 2472009,
     "foreign_netbuy": [
-      20801,
-      1500,
-      -24580
+      174473,
+      461170,
+      121626,
+      30962
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-30 18:20:22",
-    "saved_at": "2026-07-30T18:22:16.678172",
+    "analysis_date": "2026-07-31 18:20:42",
+    "saved_at": "2026-07-31T18:22:14.860865",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "007660",
+    "name": "이수페타시스",
+    "score": 4,
+    "signals": [
+      "볼린저밴드복귀",
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 74500.0,
+    "volume": 1231888,
+    "foreign_netbuy": [
+      158148,
+      328949,
+      45090,
+      -110293
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-07-31 18:20:43",
+    "saved_at": "2026-07-31T18:22:14.860873",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
