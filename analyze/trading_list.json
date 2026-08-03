@@ -1,130 +1,124 @@
 [
   {
-    "code": "066570",
-    "name": "LG전자",
+    "code": "141080",
+    "name": "리가켐바이오",
     "score": 4,
     "signals": [
-      "볼린저밴드복귀",
       "RSI매수신호",
+      "MACD돌파직전",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 162100.0,
-    "volume": 1754895,
+    "price": 95400.0,
+    "volume": 355302,
     "foreign_netbuy": [
-      131571,
-      209682,
-      13776,
-      -44272
+      13636,
+      113072,
+      276815
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-31 18:20:19",
-    "saved_at": "2026-07-31T18:22:14.860815",
+    "analysis_date": "2026-08-03 18:21:10",
+    "saved_at": "2026-08-03T18:22:47.129632",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "006800",
-    "name": "미래에셋증권",
+    "code": "103590",
+    "name": "일진전기",
     "score": 4,
     "signals": [
-      "볼린저밴드복귀",
       "RSI매수신호",
+      "MACD돌파직전",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 34550.0,
-    "volume": 3037574,
+    "price": 53100.0,
+    "volume": 330461,
     "foreign_netbuy": [
-      708616,
-      982075,
-      147596,
-      214731
+      122039,
+      172412,
+      102042
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-31 18:20:22",
-    "saved_at": "2026-07-31T18:22:14.860851",
+    "analysis_date": "2026-08-03 18:21:29",
+    "saved_at": "2026-08-03T18:22:47.129728",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "000720",
-    "name": "현대건설",
+    "code": "001740",
+    "name": "SK네트웍스",
     "score": 4,
     "signals": [
-      "볼린저밴드복귀",
-      "거래량급증",
       "RSI매수신호",
-      "볼린저밴드내위치"
+      "MACD돌파직전",
+      "볼린저밴드내위치",
+      "외국인강력매수"
     ],
-    "price": 94600.0,
-    "volume": 1391976,
+    "price": 7060.0,
+    "volume": 879213,
     "foreign_netbuy": [
-      30527,
-      17588,
-      -28933,
-      -38427
+      114795,
+      45846,
+      651671
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-31 18:20:32",
-    "saved_at": "2026-07-31T18:22:14.860858",
+    "analysis_date": "2026-08-03 18:22:09",
+    "saved_at": "2026-08-03T18:22:47.129736",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "036930",
-    "name": "주성엔지니어링",
+    "code": "195870",
+    "name": "해성디에스",
     "score": 4,
     "signals": [
-      "볼린저밴드복귀",
       "RSI매수신호",
+      "MACD돌파직전",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 124500.0,
-    "volume": 2472009,
+    "price": 49000.0,
+    "volume": 140110,
     "foreign_netbuy": [
-      174473,
-      461170,
-      121626,
-      30962
+      10289,
+      19,
+      53968
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-31 18:20:42",
-    "saved_at": "2026-07-31T18:22:14.860865",
+    "analysis_date": "2026-08-03 18:22:35",
+    "saved_at": "2026-08-03T18:22:47.129743",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "007660",
-    "name": "이수페타시스",
-    "score": 4,
+    "code": "005380",
+    "name": "현대차",
+    "score": 3,
     "signals": [
-      "볼린저밴드복귀",
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 74500.0,
-    "volume": 1231888,
+    "price": 393000.0,
+    "volume": 826843,
     "foreign_netbuy": [
-      158148,
-      328949,
-      45090,
-      -110293
+      110551,
+      73521,
+      143339
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-07-31 18:20:43",
-    "saved_at": "2026-07-31T18:22:14.860873",
+    "analysis_date": "2026-08-03 18:20:11",
+    "saved_at": "2026-08-03T18:22:47.129751",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
