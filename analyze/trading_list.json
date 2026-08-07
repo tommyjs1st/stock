@@ -1,7 +1,33 @@
 [
   {
-    "code": "141080",
-    "name": "리가켐바이오",
+    "code": "005440",
+    "name": "현대지에프홀딩스",
+    "score": 4,
+    "signals": [
+      "거래량급증",
+      "MACD골든크로스",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 12190.0,
+    "volume": 844626,
+    "foreign_netbuy": [
+      32280,
+      5276,
+      45221,
+      -17359
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-08-07 18:21:49",
+    "saved_at": "2026-08-07T18:22:46.176282",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "008770",
+    "name": "호텔신라",
     "score": 4,
     "signals": [
       "RSI매수신호",
@@ -9,116 +35,94 @@
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 95400.0,
-    "volume": 355302,
+    "price": 42700.0,
+    "volume": 267726,
     "foreign_netbuy": [
-      13636,
-      113072,
-      276815
+      62439,
+      97075,
+      224657,
+      162753
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-08-03 18:21:10",
-    "saved_at": "2026-08-03T18:22:47.129632",
+    "analysis_date": "2026-08-07 18:22:04",
+    "saved_at": "2026-08-07T18:22:46.176301",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "103590",
-    "name": "일진전기",
+    "code": "415640",
+    "name": "KB발해인프라",
     "score": 4,
     "signals": [
+      "볼린저밴드복귀",
       "RSI매수신호",
-      "MACD돌파직전",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 53100.0,
-    "volume": 330461,
+    "price": 10340.0,
+    "volume": 35720,
     "foreign_netbuy": [
-      122039,
-      172412,
-      102042
+      944,
+      7288,
+      24144,
+      17491
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-08-03 18:21:29",
-    "saved_at": "2026-08-03T18:22:47.129728",
+    "analysis_date": "2026-08-07 18:22:19",
+    "saved_at": "2026-08-07T18:22:46.176308",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "001740",
-    "name": "SK네트웍스",
-    "score": 4,
-    "signals": [
-      "RSI매수신호",
-      "MACD돌파직전",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 7060.0,
-    "volume": 879213,
-    "foreign_netbuy": [
-      114795,
-      45846,
-      651671
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-08-03 18:22:09",
-    "saved_at": "2026-08-03T18:22:47.129736",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "195870",
-    "name": "해성디에스",
-    "score": 4,
-    "signals": [
-      "RSI매수신호",
-      "MACD돌파직전",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 49000.0,
-    "volume": 140110,
-    "foreign_netbuy": [
-      10289,
-      19,
-      53968
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-08-03 18:22:35",
-    "saved_at": "2026-08-03T18:22:47.129743",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "005380",
-    "name": "현대차",
+    "code": "006800",
+    "name": "미래에셋증권",
     "score": 3,
     "signals": [
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 393000.0,
-    "volume": 826843,
+    "price": 33900.0,
+    "volume": 1280355,
     "foreign_netbuy": [
-      110551,
-      73521,
-      143339
+      179701,
+      160814,
+      323116,
+      182368
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-08-03 18:20:11",
-    "saved_at": "2026-08-03T18:22:47.129751",
+    "analysis_date": "2026-08-07 18:20:27",
+    "saved_at": "2026-08-07T18:22:46.176315",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "005940",
+    "name": "NH투자증권",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 27800.0,
+    "volume": 692437,
+    "foreign_netbuy": [
+      3231,
+      104105,
+      39112,
+      -85303
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-08-07 18:20:40",
+    "saved_at": "2026-08-07T18:22:46.176321",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
