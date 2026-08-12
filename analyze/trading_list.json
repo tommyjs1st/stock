@@ -1,72 +1,24 @@
 [
   {
-    "code": "005940",
-    "name": "NH투자증권",
+    "code": "415640",
+    "name": "KB발해인프라",
     "score": 3,
     "signals": [
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 28250.0,
-    "volume": 453867,
+    "price": 10470.0,
+    "volume": 85318,
     "foreign_netbuy": [
-      95741,
-      3231,
-      104105
+      6633,
+      5412,
+      6688
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-08-10 18:20:42",
-    "saved_at": "2026-08-10T18:22:46.855818",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "031980",
-    "name": "피에스케이홀딩스",
-    "score": 3,
-    "signals": [
-      "RSI매수신호",
-      "MACD돌파직전",
-      "볼린저밴드내위치"
-    ],
-    "price": 105000.0,
-    "volume": 157939,
-    "foreign_netbuy": [
-      29353,
-      39833,
-      -33902
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-08-10 18:21:51",
-    "saved_at": "2026-08-10T18:22:46.855850",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "008770",
-    "name": "호텔신라",
-    "score": 3,
-    "signals": [
-      "RSI매수신호",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 44250.0,
-    "volume": 215617,
-    "foreign_netbuy": [
-      53246,
-      62439,
-      97075
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-08-10 18:22:08",
-    "saved_at": "2026-08-10T18:22:46.855857",
+    "analysis_date": "2026-08-12 18:22:20",
+    "saved_at": "2026-08-12T18:22:43.029403",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
