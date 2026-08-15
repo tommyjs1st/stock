@@ -1,24 +1,75 @@
 [
   {
-    "code": "415640",
-    "name": "KB발해인프라",
+    "code": "111770",
+    "name": "영원무역",
     "score": 3,
     "signals": [
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 10470.0,
-    "volume": 85318,
+    "price": 85900.0,
+    "volume": 57535,
     "foreign_netbuy": [
-      6633,
-      5412,
-      6688
+      31919,
+      6138,
+      1738,
+      -8388
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-08-12 18:22:20",
-    "saved_at": "2026-08-12T18:22:43.029403",
+    "analysis_date": "2026-08-14 18:21:14",
+    "saved_at": "2026-08-14T18:22:39.647138",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "069960",
+    "name": "현대백화점",
+    "score": 3,
+    "signals": [
+      "MACD돌파직전",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 102200.0,
+    "volume": 117886,
+    "foreign_netbuy": [
+      47319,
+      38227,
+      20565,
+      45384
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-08-14 18:21:51",
+    "saved_at": "2026-08-14T18:22:39.647172",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "322000",
+    "name": "HD현대에너지솔루션",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 123300.0,
+    "volume": 265329,
+    "foreign_netbuy": [
+      28660,
+      48110,
+      10085,
+      -105479
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-08-14 18:22:13",
+    "saved_at": "2026-08-14T18:22:39.647180",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
