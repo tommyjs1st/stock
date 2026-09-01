@@ -1,120 +1,96 @@
 [
   {
-    "code": "009540",
-    "name": "HD한국조선해양",
+    "code": "010140",
+    "name": "삼성중공업",
     "score": 3,
     "signals": [
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 362500.0,
-    "volume": 131790,
+    "price": 21000.0,
+    "volume": 1717861,
     "foreign_netbuy": [
-      10911,
-      11711,
-      12210
+      27878,
+      254669,
+      87318
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-08-25 18:20:24",
-    "saved_at": "2026-08-25T18:22:42.621049",
+    "analysis_date": "2026-09-01 18:20:29",
+    "saved_at": "2026-09-01T18:22:45.229979",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "015760",
-    "name": "한국전력",
+    "code": "016360",
+    "name": "삼성증권",
     "score": 3,
     "signals": [
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 32700.0,
-    "volume": 2523109,
+    "price": 88300.0,
+    "volume": 280715,
     "foreign_netbuy": [
-      141996,
-      19764,
-      213495
+      41592,
+      58028,
+      19297
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-08-25 18:20:26",
-    "saved_at": "2026-08-25T18:22:42.621074",
+    "analysis_date": "2026-09-01 18:20:48",
+    "saved_at": "2026-09-01T18:22:45.230013",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "071050",
-    "name": "한국금융지주",
+    "code": "319660",
+    "name": "피에스케이",
     "score": 3,
     "signals": [
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 191500.0,
-    "volume": 125635,
+    "price": 125700.0,
+    "volume": 193410,
     "foreign_netbuy": [
-      25370,
-      25634,
-      22318
+      40340,
+      9946,
+      19420
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-08-25 18:20:41",
-    "saved_at": "2026-08-25T18:22:42.621082",
+    "analysis_date": "2026-09-01 18:21:15",
+    "saved_at": "2026-09-01T18:22:45.230022",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "001040",
-    "name": "CJ",
+    "code": "069960",
+    "name": "현대백화점",
     "score": 3,
     "signals": [
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 128200.0,
-    "volume": 100043,
+    "price": 97800.0,
+    "volume": 204451,
     "foreign_netbuy": [
-      41372,
-      83852,
-      13217
+      4231,
+      1123,
+      11367
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-08-25 18:21:13",
-    "saved_at": "2026-08-25T18:22:42.621089",
-    "absolute_filter_applied": true,
-    "ma5_below_ma20_confirmed": true,
-    "foreign_selling_excluded": true
-  },
-  {
-    "code": "023530",
-    "name": "롯데쇼핑",
-    "score": 3,
-    "signals": [
-      "RSI매수신호",
-      "볼린저밴드내위치",
-      "외국인강력매수"
-    ],
-    "price": 98900.0,
-    "volume": 120487,
-    "foreign_netbuy": [
-      30579,
-      26498,
-      42657
-    ],
-    "filter_status": "절대조건통과",
-    "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-08-25 18:21:30",
-    "saved_at": "2026-08-25T18:22:42.621096",
+    "analysis_date": "2026-09-01 18:21:53",
+    "saved_at": "2026-09-01T18:22:45.230029",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
