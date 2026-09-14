@@ -1,96 +1,122 @@
 [
   {
-    "code": "010140",
-    "name": "삼성중공업",
-    "score": 3,
+    "code": "439260",
+    "name": "대한조선",
+    "score": 4,
     "signals": [
       "RSI매수신호",
+      "MACD돌파직전",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 21000.0,
-    "volume": 1717861,
+    "price": 47400.0,
+    "volume": 26630,
     "foreign_netbuy": [
-      27878,
-      254669,
-      87318
+      8991,
+      9911,
+      26081
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-09-01 18:20:29",
-    "saved_at": "2026-09-01T18:22:45.229979",
+    "analysis_date": "2026-09-10 18:22:01",
+    "saved_at": "2026-09-10T18:22:44.491670",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "016360",
-    "name": "삼성증권",
-    "score": 3,
+    "code": "140860",
+    "name": "파크시스템스",
+    "score": 4,
     "signals": [
+      "거래량급증",
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 88300.0,
-    "volume": 280715,
+    "price": 255000.0,
+    "volume": 59014,
     "foreign_netbuy": [
-      41592,
-      58028,
-      19297
+      24280,
+      2478,
+      1175
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-09-01 18:20:48",
-    "saved_at": "2026-09-01T18:22:45.230013",
+    "analysis_date": "2026-09-10 18:22:02",
+    "saved_at": "2026-09-10T18:22:44.491692",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "319660",
-    "name": "피에스케이",
+    "code": "018260",
+    "name": "삼성에스디에스",
     "score": 3,
     "signals": [
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 125700.0,
-    "volume": 193410,
+    "price": 227000.0,
+    "volume": 293698,
     "foreign_netbuy": [
-      40340,
-      9946,
-      19420
+      11992,
+      9051,
+      21084
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-09-01 18:21:15",
-    "saved_at": "2026-09-01T18:22:45.230022",
+    "analysis_date": "2026-09-10 18:20:31",
+    "saved_at": "2026-09-10T18:22:44.491696",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
   },
   {
-    "code": "069960",
-    "name": "현대백화점",
+    "code": "141080",
+    "name": "리가켐바이오",
     "score": 3,
     "signals": [
       "RSI매수신호",
       "볼린저밴드내위치",
       "외국인강력매수"
     ],
-    "price": 97800.0,
-    "volume": 204451,
+    "price": 87600.0,
+    "volume": 412937,
     "foreign_netbuy": [
-      4231,
-      1123,
-      11367
+      39542,
+      55720,
+      1245
     ],
     "filter_status": "절대조건통과",
     "filter_reason": "절대조건 모두 통과",
-    "analysis_date": "2026-09-01 18:21:53",
-    "saved_at": "2026-09-01T18:22:45.230029",
+    "analysis_date": "2026-09-10 18:21:21",
+    "saved_at": "2026-09-10T18:22:44.491700",
+    "absolute_filter_applied": true,
+    "ma5_below_ma20_confirmed": true,
+    "foreign_selling_excluded": true
+  },
+  {
+    "code": "310210",
+    "name": "보로노이",
+    "score": 3,
+    "signals": [
+      "RSI매수신호",
+      "볼린저밴드내위치",
+      "외국인강력매수"
+    ],
+    "price": 146700.0,
+    "volume": 115126,
+    "foreign_netbuy": [
+      23187,
+      7859,
+      7974
+    ],
+    "filter_status": "절대조건통과",
+    "filter_reason": "절대조건 모두 통과",
+    "analysis_date": "2026-09-10 18:21:31",
+    "saved_at": "2026-09-10T18:22:44.491703",
     "absolute_filter_applied": true,
     "ma5_below_ma20_confirmed": true,
     "foreign_selling_excluded": true
